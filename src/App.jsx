@@ -273,6 +273,12 @@ const DB = {
   set: async (k,v) => { try { await SB.setSetting(k,v); } catch {} },
 };
 
+// LS — localStorage for per-device display preferences (never shared)
+const LS = {
+  get: k => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):null; } catch { return null; } },
+  set: (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch {} },
+};
+
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
 const SEED = [
   {id:"e1",email:"boss@mnu.edu",      name:"Boss",          role:"boss",      pin:"",status:"online"},
@@ -1557,7 +1563,7 @@ export default function App() {
         SB.select("system_logs","?order=at.desc&limit=200"),
         SB.select("backups","?order=at.desc&limit=10"),
         SB.select("direct_messages","?order=at.asc"),
-        DB.get("nl3-notice"),DB.get("nl3-dark"),DB.get("nl3-compact"),DB.get("nl3-accent"),DB.get("nl3-offline"),
+        DB.get("nl3-notice"),Promise.resolve(LS.get("nl3-dark")),Promise.resolve(LS.get("nl3-compact")),Promise.resolve(LS.get("nl3-accent")),DB.get("nl3-offline"),
       ]);
       if(!alive) return;
       // Map Supabase rows back to app format
@@ -1580,9 +1586,9 @@ export default function App() {
       setDk(d); setCompact(c); setAccent(av); setT(mkTheme(d,c,av));
       if(offlineVal) setSiteOffline(offlineVal);
       // Sound prefs loaded separately
-      const sOn=await DB.get("nl3-sound-on"); if(sOn!==null)setSoundOn(sOn);
-      const sVol=await DB.get("nl3-sound-vol"); if(sVol!==null)setSoundVol(sVol);
-      const dMode=await DB.get("nl3-device-mode"); if(dMode)setDeviceMode(dMode);
+      const sOn=LS.get("nl3-sound-on"); if(sOn!==null)setSoundOn(sOn);
+      const sVol=LS.get("nl3-sound-vol"); if(sVol!==null)setSoundVol(sVol);
+      const dMode=LS.get("nl3-device-mode"); if(dMode)setDeviceMode(dMode);
     })();
     return()=>{alive=false;};
   },[]);
@@ -1652,12 +1658,12 @@ export default function App() {
     setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3200);
   },[]);
 
-  const applyTheme=useCallback(async(d,c,a)=>{const ac=a!==undefined?a:accent;setDk(d);setCompact(c);setAccent(ac);setT(mkTheme(d,c,ac));await DB.set("nl3-dark",d);await DB.set("nl3-compact",c);if(a!==undefined)await DB.set("nl3-accent",a);},[accent]);
+  const applyTheme=useCallback(async(d,c,a)=>{const ac=a!==undefined?a:accent;setDk(d);setCompact(c);setAccent(ac);setT(mkTheme(d,c,ac));LS.set("nl3-dark",d);LS.set("nl3-compact",c);if(a!==undefined)LS.set("nl3-accent",a);},[accent]);
 
   const applySoundSettings=useCallback(async(on,vol)=>{
     setSoundOn(on);setSoundVol(vol);
     window._soundOn=on;window._soundVol=vol;
-    await DB.set("nl3-sound-on",on);await DB.set("nl3-sound-vol",vol);
+    LS.set("nl3-sound-on",on);LS.set("nl3-sound-vol",vol);
   },[]);
 
   // Keep window globals in sync
@@ -1666,7 +1672,7 @@ export default function App() {
   // Apply device mode scaling to root element
   const applyDeviceMode=useCallback(async(mode)=>{
     setDeviceMode(mode);
-    await DB.set("nl3-device-mode",mode);
+    LS.set("nl3-device-mode",mode);
     const root=document.documentElement;
     // Detect actual screen size for "auto"
     const isMobileScreen=window.innerWidth<=768;
@@ -2483,7 +2489,7 @@ export default function App() {
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Adjust the base font size across the app.</div>
                           <div style={{display:"flex",gap:8}}>
                             {[{label:"Small",val:"13px"},{label:"Default",val:"15px"},{label:"Large",val:"17px"}].map(sz=>(
-                              <button key={sz.val} onClick={async()=>{playSound("click");document.documentElement.style.fontSize=sz.val;await DB.set("nl3-fontsize",sz.val);toast(`Text size: ${sz.label}`);}}
+                              <button key={sz.val} onClick={async()=>{playSound("click");document.documentElement.style.fontSize=sz.val;LS.set("nl3-fontsize",sz.val);toast(`Text size: ${sz.label}`);}}
                                 style={{flex:1,background:T.bg,border:`2px solid ${T.bor}`,borderRadius:10,padding:"10px 6px",cursor:"pointer",fontFamily:"inherit",fontSize:sz.val,fontWeight:700,color:T.sub,transition:"all .15s"}}
                                 onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet;e.currentTarget.style.color=T.scarlet;}}
                                 onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
