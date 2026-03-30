@@ -1593,6 +1593,33 @@ export default function App() {
     return()=>{alive=false;};
   },[]);
 
+  // Refresh shared data from Supabase — called on interval and on key actions
+  const refreshData=useCallback(async()=>{
+    const [empRows,taskRows,invRows,annRows,actRows,errRows,dmRows]=await Promise.all([
+      SB.select("employees","?order=created_at.asc"),
+      SB.select("tasks","?order=created_at.desc"),
+      SB.select("inventory","?order=created_at.asc"),
+      SB.select("announcements","?order=at.desc"),
+      SB.select("activity","?order=at.desc&limit=300"),
+      SB.select("system_logs","?order=at.desc&limit=200"),
+      SB.select("direct_messages","?order=at.asc"),
+    ]);
+    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",createdAt:e.created_at})));
+    if(taskRows) setTasks(taskRows.map(t=>({id:t.id,title:t.title,priority:t.priority,assignedTo:t.assigned_to,dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
+    if(invRows) setInv(invRows.map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
+    if(annRows) setAnns(annRows.map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build})));
+    if(actRows) setAct(actRows.map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
+    if(errRows) setErrs(errRows.map(e=>({id:e.id,level:e.level,msg:e.msg,at:e.at})));
+    if(dmRows) setDms(dmRows.map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback})));
+  },[]);
+
+  // Poll every 8 seconds when app is open — keeps all data fresh across devices
+  useEffect(()=>{
+    if(screen!=="app"&&screen!=="tech") return;
+    const interval=setInterval(refreshData, 8000);
+    return()=>clearInterval(interval);
+  },[screen, refreshData]);
+
   // Auto logout on inactivity
   const resetInactive=useCallback(()=>{
     clearTimeout(inactiveRef.current);
