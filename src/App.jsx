@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.0.0";
+const VERSION   = "1.0.1";
 const BUILD_TAG = "Beta";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.0.1": [
+    "Nav: Menu circle button now always appears above the header bar",
+  ],
   "1.0.0": [
     "Tasks: Tap any task to expand and see full details — description, assignee, due date, creator",
     "PWA: App icon and splash screen for iPhone and Android home screen",
@@ -844,7 +847,7 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T}) {
 
       {/* Dropdown panel */}
       {open&&(
-        <div style={{position:"fixed",top:116,left:10,background:T.surf,border:`1px solid ${T.bor}`,borderRadius:16,padding:"6px 6px 10px",minWidth:248,zIndex:400,boxShadow:`0 16px 48px rgba(0,0,0,.22),0 2px 0 ${T.scarlet}18`,animation:"fadeUp .18s cubic-bezier(.23,1,.32,1) both"}}>
+        <div style={{position:"fixed",top:116,left:10,background:T.surf,border:`1px solid ${T.bor}`,borderRadius:16,padding:"6px 6px 10px",minWidth:248,zIndex:500,boxShadow:`0 16px 48px rgba(0,0,0,.22),0 2px 0 ${T.scarlet}18`,animation:"fadeUp .18s cubic-bezier(.23,1,.32,1) both"}}>
           {/* User chip at top of dropdown */}
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px 10px",borderBottom:`1px solid ${T.bor}`,marginBottom:6}}>
             <div style={{position:"relative",flexShrink:0}}>
@@ -2199,7 +2202,7 @@ export default function App() {
             </header>
 
             {/* Floating circle NavMenu — always visible top-left */}
-            <div style={{position:"fixed",left:10,top:62,zIndex:290}}>
+            <div style={{position:"fixed",left:10,top:62,zIndex:350}}>
               <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T}/>
             </div>
 
