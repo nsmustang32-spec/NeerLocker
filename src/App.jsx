@@ -1,11 +1,18 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "0.4.7";
-const BUILD_TAG = "Alpha";
+const VERSION   = "1.0.0";
+const BUILD_TAG = "Beta";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.0.0": [
+    "Tasks: Tap any task to expand and see full details — description, assignee, due date, creator",
+    "PWA: App icon and splash screen for iPhone and Android home screen",
+    "Navigation: Help banner and ? modal now include install instructions for iOS and Android",
+    "Header: Fixed overlap with phone status bar and notch on mobile",
+    "Version: 1.0.0 Beta — first full production release",
+  ],
   "0.4.7": [
     "Tech Admin: Custom animated access screen on login",
     "Loading quotes: One random quote picked per login — stays fixed during load",
@@ -300,7 +307,7 @@ const buildCSS = T => `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
   @import url('https://api.fontshare.com/v2/css?f[]=clash-display@700,800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  body{min-height:100vh;font-family:'DM Sans',sans-serif;background:${T.bg};color:${T.txt};}
+  body{min-height:100vh;font-family:'DM Sans',sans-serif;background:${T.bg};color:${T.txt};padding-top:env(safe-area-inset-top,0px);}
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-thumb{background:${T.bor};border-radius:10px;}
   option{background:${T.surf};color:${T.txt};}
@@ -1042,11 +1049,16 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast}) {
         <div>
           <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:4}}>Need help navigating?</div>
           <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>
-            Tap the <strong>circle button</strong> fixed in the <strong>top-left</strong> to open the navigation menu — it stays there as you scroll.<br/>
-            Click <strong>🎓 MNU's Neer Locker</strong> in the header to return here.<br/>
-            Hit the <strong style={{color:T.scarlet}}>? button</strong> (bottom-right) for a full guide.<br/>
-            Have an idea or found a bug? Use the <strong style={{color:"#b45309"}}>💡 Ideas</strong> button (just above the ?) to reach the Tech Admin.<br/>
-            To adjust text size and button size for your device, go to <strong>Settings → Display & Sound → Device & UI Scaling</strong>.
+            Tap the <strong>circle button</strong> (top-left) to open the menu — it stays visible while you scroll.<br/>
+            Tap <strong>🎓 MNU's Neer Locker</strong> in the header to return home anytime.<br/>
+            Use the <strong style={{color:T.scarlet}}>?</strong> button (bottom-right) for a full guide and the <strong style={{color:"#b45309"}}>💡</strong> button to send ideas to Tech Admin.
+          </div>
+          <div style={{marginTop:10,padding:"10px 14px",background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:12}}>
+            <div style={{fontWeight:700,fontSize:13,color:T.txt,marginBottom:6}}>📲 Add to your home screen</div>
+            <div style={{fontSize:12,color:T.sub,lineHeight:1.7}}>
+              <strong>iPhone:</strong> Open in <strong>Safari</strong> → tap the Share button → <strong>"Add to Home Screen"</strong><br/>
+              <strong>Android:</strong> Open in <strong>Chrome</strong> → tap ⋮ menu → <strong>"Add to Home Screen"</strong>
+            </div>
           </div>
         </div>
       </div>
@@ -1225,35 +1237,84 @@ function DMSection({user,emps,dms,setDms,T,toast}) {
 // ─── TASK CARD ────────────────────────────────────────────────────────────────
 function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
   const [hov,setHov]=useState(false);
+  const [expanded,setExpanded]=useState(false);
   const assignee=task.assignedTo==="all"?null:emps.find(e=>e.id===task.assignedTo);
   const creator=emps.find(e=>e.id===task.createdBy);
   const overdue=task.dueDate&&!task.done&&new Date(task.dueDate)<new Date();
   const pc={Low:T.mut,Medium:T.blue,High:T.scarlet};
+  const dl=daysLeft(task.dueDate);
   return (
     <div className="card" onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      style={{background:isDone?T.bg:T.card,border:`1px solid ${overdue?T.scarlet+"55":hov?T.borH:T.bor}`,borderRadius:T.sp.r+4,padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"flex-start",gap:12,opacity:isDone?0.55:1,animation:`fadeUp .25s ${delay||0}ms ease both`}}>
-      <button onClick={()=>onToggle(task.id)} style={{width:22,height:22,borderRadius:6,border:`2px solid ${isDone?T.blue:hov?T.blue:T.bor}`,background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:1,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
-        onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
-        onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
-      >{isDone?"✓":""}</button>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
-          <span style={{fontWeight:700,fontSize:T.fs.lg,textDecoration:isDone?"line-through":"none",color:isDone?T.mut:T.txt,transition:"color .18s"}}>{task.title}</span>
-          <Tag label={task.priority} color={pc[task.priority]||T.mut}/>
-          {overdue&&<Tag label="OVERDUE" color={T.scarlet}/>}
-          {task.repeat&&<Tag label="🔁 Repeat" color={T.blue}/>}
+      style={{background:isDone?T.bg:T.card,border:`1px solid ${expanded?T.scarlet+"66":overdue?T.scarlet+"55":hov?T.borH:T.bor}`,borderRadius:T.sp.r+4,opacity:isDone?0.55:1,animation:`fadeUp .25s ${delay||0}ms ease both`,overflow:"hidden",transition:"border-color .2s"}}>
+      {/* Main row */}
+      <div style={{padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"flex-start",gap:12}}>
+        <button onClick={e=>{e.stopPropagation();onToggle(task.id);}} style={{width:22,height:22,borderRadius:6,border:`2px solid ${isDone?T.blue:hov?T.blue:T.bor}`,background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
+          onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
+          onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
+        >{isDone?"✓":""}</button>
+        <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setExpanded(e=>!e)}>
+          <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
+            <span style={{fontWeight:700,fontSize:T.fs.lg,textDecoration:isDone?"line-through":"none",color:isDone?T.mut:T.txt,transition:"color .18s"}}>{task.title}</span>
+            <Tag label={task.priority} color={pc[task.priority]||T.mut}/>
+            {overdue&&<Tag label="OVERDUE" color={T.scarlet}/>}
+            {task.repeat&&<Tag label="🔁" color={T.blue}/>}
+          </div>
+          <div style={{display:"flex",gap:10,marginTop:4,fontSize:T.fs.xs+1,color:T.mut,flexWrap:"wrap",alignItems:"center"}}>
+            <span>👤 {assignee?assignee.name:"Everyone"}</span>
+            {task.dueDate&&<span style={{color:overdue?T.scarlet:dl!==null&&dl<=2?T.warn:T.mut}}>📅 {fmtD(task.dueDate)}</span>}
+          </div>
         </div>
-        {task.description&&<div style={{fontSize:T.fs.sm,color:T.sub,marginTop:4,lineHeight:1.55}}>{task.description}</div>}
-        <div style={{display:"flex",gap:10,marginTop:5,fontSize:T.fs.xs+1,color:T.mut,flexWrap:"wrap"}}>
-          <span>👤 {assignee?assignee.name:"Everyone"}</span>
-          {creator&&<span>by {creator.name}</span>}
-          {task.dueDate&&<span style={{color:overdue?T.scarlet:T.mut}}>due {fmtD(task.dueDate)}</span>}
-        </div>
+        {/* Expand toggle */}
+        <button onClick={()=>setExpanded(e=>!e)} title="View details"
+          style={{background:expanded?T.scarlet+"18":"none",border:`1px solid ${expanded?T.scarlet+"55":T.bor}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:expanded?T.scarlet:T.sub,fontWeight:700,flexShrink:0,transition:"all .18s",fontFamily:"inherit"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"88";e.currentTarget.style.color=T.scarlet;}}
+          onMouseLeave={e=>{if(!expanded){e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}}
+        >{expanded?"▲":"▼ Details"}</button>
+        {canManage&&<button onClick={e=>{e.stopPropagation();onDelete(task.id);}} style={{background:"none",border:"none",color:T.faint,cursor:"pointer",fontSize:16,padding:"2px 4px",transition:"color .15s,transform .15s",flexShrink:0}}
+          onMouseEnter={e=>{e.currentTarget.style.color=T.scarlet;e.currentTarget.style.transform="scale(1.3) rotate(8deg)";}}
+          onMouseLeave={e=>{e.currentTarget.style.color=T.faint;e.currentTarget.style.transform="scale(1)";}}
+        >✕</button>}
       </div>
-      {canManage&&<button onClick={()=>onDelete(task.id)} style={{background:"none",border:"none",color:T.faint,cursor:"pointer",fontSize:16,padding:"2px 4px",transition:"color .15s,transform .15s",flexShrink:0}}
-        onMouseEnter={e=>{e.currentTarget.style.color=T.scarlet;e.currentTarget.style.transform="scale(1.3) rotate(8deg)";}}
-        onMouseLeave={e=>{e.currentTarget.style.color=T.faint;e.currentTarget.style.transform="scale(1)";}}
-      >✕</button>}
+      {/* Expanded detail panel */}
+      {expanded&&(
+        <div style={{borderTop:`1px solid ${T.bor}`,padding:"12px 16px",background:T.bg,display:"grid",gap:10,animation:"fadeUp .2s ease both"}}>
+          {task.description?(
+            <div>
+              <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>DESCRIPTION</div>
+              <div style={{fontSize:T.fs.md,color:T.txt,lineHeight:1.6,background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>{task.description}</div>
+            </div>
+          ):(
+            <div style={{fontSize:13,color:T.sub,fontStyle:"italic"}}>No description added.</div>
+          )}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>
+              <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>ASSIGNED TO</div>
+              <div style={{fontSize:13,fontWeight:600,color:T.txt}}>👤 {assignee?assignee.name:"Everyone"}</div>
+            </div>
+            <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>
+              <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>PRIORITY</div>
+              <div style={{fontSize:13,fontWeight:600,color:pc[task.priority]||T.mut}}>{task.priority||"Medium"}</div>
+            </div>
+            {task.dueDate&&(
+              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${overdue?T.scarlet+"55":T.bor}`}}>
+                <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>DUE DATE</div>
+                <div style={{fontSize:13,fontWeight:600,color:overdue?T.scarlet:T.txt}}>📅 {fmtD(task.dueDate)} {overdue?"(Overdue)":dl===0?"(Today)":dl===1?"(Tomorrow)":""}</div>
+              </div>
+            )}
+            {creator&&(
+              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>
+                <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>CREATED BY</div>
+                <div style={{fontSize:13,fontWeight:600,color:T.txt}}>{creator.name}</div>
+              </div>
+            )}
+          </div>
+          {task.repeat&&(
+            <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:T.blue,fontWeight:600}}>
+              🔁 This task repeats automatically when completed
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1605,7 +1666,7 @@ export default function App() {
       SB.select("direct_messages","?order=at.asc"),
     ]);
     if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",createdAt:e.created_at})));
-    if(taskRows) setTasks(taskRows.map(t=>({id:t.id,title:t.title,priority:t.priority,assignedTo:t.assigned_to,dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
+    if(taskRows?.length>=0) setTasks(taskRows.map(t=>({id:t.id,title:t.title,priority:t.priority,assignedTo:t.assigned_to,dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
     if(invRows) setInv(invRows.map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
     if(annRows) setAnns(annRows.map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build})));
     if(actRows) setAct(actRows.map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
@@ -1643,8 +1704,14 @@ export default function App() {
       await SB.upsert("employees",{id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",created_at:e.createdAt||Date.now()});
     }
   },[]);
+  // upsertTask — save a single task to Supabase
+  const upsertTask=useCallback(async t=>{
+    await SB.upsert("tasks",{id:t.id,title:t.title,priority:t.priority||"Medium",assigned_to:t.assignedTo||"all",due_date:t.dueDate||"",done:t.done||false,repeat:t.repeat||false,created_at:t.createdAt||Date.now()});
+  },[]);
+
   const saveTasks=useCallback(async v=>{
     setTasks(v);
+    // Only upsert — don't delete. Individual deletes handled by delTask.
     for(const t of v){
       await SB.upsert("tasks",{id:t.id,title:t.title,priority:t.priority||"Medium",assigned_to:t.assignedTo||"all",due_date:t.dueDate||"",done:t.done||false,repeat:t.repeat||false,created_at:t.createdAt||Date.now()});
     }
@@ -1803,21 +1870,25 @@ export default function App() {
   };
 
   // TASKS
-  const createTask=()=>{
+  const createTask=async()=>{
     const title=String(form.tTitle||"").trim();
     if(!title){toast("Task title required","err");return;}
     const task={id:uid(),title:san(title),description:san(String(form.tDesc||"").trim()),priority:form.tPri||"Medium",assignedTo:form.tAssign||"all",createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:form.tDue||"",repeat:form.tRepeat||false};
-    // Close modal immediately so user sees it worked, save in background
     setModal(null);setForm({});
     toast("Task created! ✅");
-    saveTasks([task,...tasks]);
+    // Update local state immediately — don't wait for Supabase
+    setTasks(prev=>[task,...prev]);
+    // Save just this one task to Supabase
+    await upsertTask(task);
     addAct("task_created",`Task created: "${task.title}" by ${user?.name}`,user?.id);
   };
 
   const toggleTask=async id=>{
     const task=tasks.find(t=>t.id===id);if(!task) return;
     const completing=!task.done;
-    await saveTasks(tasks.map(t=>t.id===id?{...t,done:completing}:t));
+    const updated={...tasks.find(t=>t.id===id),done:completing};
+    setTasks(prev=>prev.map(t=>t.id===id?{...t,done:completing}:t));
+    await upsertTask(updated);
     if(completing){
       addAct("task_done",`"${task.title}" completed by ${user?.name}`,user?.id);
       playSound("task");
@@ -1827,7 +1898,8 @@ export default function App() {
       if(task.repeat){
         setTimeout(async()=>{
           const newTask={...task,id:uid(),done:false,createdAt:Date.now()};
-          await saveTasks([newTask,...tasks]);
+          setTasks(prev=>[newTask,...prev]);
+          await upsertTask(newTask);
           toast("Repeating task recreated 🔁");
         },500);
       }
@@ -1837,11 +1909,17 @@ export default function App() {
   const doUndo=async()=>{
     if(!undoId) return;
     clearTimeout(undoRef.current);setUndoId(null);
-    await saveTasks(tasks.map(t=>t.id===undoId?{...t,done:false}:t));
+    const undoneTask={...tasks.find(t=>t.id===undoId),done:false};
+    setTasks(prev=>prev.map(t=>t.id===undoId?{...t,done:false}:t));
+    await upsertTask(undoneTask);
     toast("Undone!");
   };
 
-  const deleteTask=async id=>{await saveTasks(tasks.filter(t=>t.id!==id));toast("Task removed","warn");};
+  const deleteTask=async id=>{
+    await SB.delete("tasks",{id});
+    setTasks(prev=>prev.filter(t=>t.id!==id));
+    toast("Task removed","warn");
+  };
 
   // INVENTORY
   const createItem=()=>{
@@ -2089,7 +2167,7 @@ export default function App() {
         <div style={{display:"flex",minHeight:"100vh"}}>
           <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflowX:"hidden"}}>
             {/* Top bar */}
-            <header style={{background:T.surf,borderBottom:`1px solid ${T.bor}`,padding:"0 16px",position:"sticky",top:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.06)"}}>
+            <header style={{background:T.surf,borderBottom:`1px solid ${T.bor}`,padding:"env(safe-area-inset-top, 0px) 16px 0",position:"sticky",top:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.06)"}}>
               <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.scarlet},${T.blue})`}}/>
               <div style={{display:"flex",alignItems:"center",gap:12,minHeight:56,padding:"0 4px"}}>
                 {/* Brand — tappable, goes home */}
@@ -3128,6 +3206,8 @@ function HelpModal({T,bottom}) {
     {icon:"⚙️",title:"Settings",desc:"Update your name, email, PIN, status, display preferences, and sound settings."},
     {icon:"📱",title:"Device & UI Scaling",desc:"Go to Settings → Display & Sound → Device & UI Scaling to switch between Mobile, Desktop, or Auto mode. This resizes the whole app for your screen."},
     {icon:"🎓",title:"Logo — Go Home",desc:"Click 'MNU\'s Neer Locker' in the header anytime to return to the Home page."},
+    {icon:"📲",title:"Add to Home Screen (iPhone)",desc:"Open neer-locker.vercel.app in Safari → tap the Share button (box with arrow) → tap 'Add to Home Screen' → tap Add. Opens like a real app with no browser bar."},
+    {icon:"📲",title:"Add to Home Screen (Android)",desc:"Open in Chrome → tap the three-dot menu (⋮) → tap 'Add to Home Screen' → tap Add. Works like a native app icon on your home screen."},
     {icon:"💡",title:"Feedback Button",desc:"Use the 💡 button (bottom-right area) to send feature requests or report bugs to the Tech Admin."},
   ];
   return (
