@@ -1655,7 +1655,7 @@ export default function App() {
       SB.select("direct_messages","?order=at.asc"),
     ]);
     if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",createdAt:e.created_at})));
-    if(taskRows?.length>=0) setTasks(taskRows.map(t=>({id:t.id,title:t.title,priority:t.priority,assignedTo:t.assigned_to,dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
+    if(taskRows?.length>=0) setTasks(taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
     if(invRows) setInv(invRows.map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
     if(annRows) setAnns(annRows.map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build})));
     if(actRows) setAct(actRows.map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
