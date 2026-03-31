@@ -1,11 +1,20 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.0.1";
+const VERSION   = "1.0.2";
 const BUILD_TAG = "Beta";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.0.2": [
+    "Tasks: Description now saves correctly to Supabase and persists",
+    "Tasks: Tech admin can select and bulk-delete tasks",
+    "DMs: Can now message anyone regardless of online status",
+    "Status: Fixed users appearing online when they are not",
+    "UI: Long text no longer overflows off screen",
+    "Announcements: Fixed oversized font in announcement cards",
+    "Header: Sign Out button and profile shifted left to stay on screen",
+  ],
   "1.0.1": [
     "Nav: Menu circle button now always appears above the header bar",
   ],
@@ -310,7 +319,9 @@ const buildCSS = T => `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
   @import url('https://api.fontshare.com/v2/css?f[]=clash-display@700,800&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  body{min-height:100vh;font-family:'DM Sans',sans-serif;background:${T.bg};color:${T.txt};padding-top:env(safe-area-inset-top,0px);}
+  body{min-height:100vh;font-family:'DM Sans',sans-serif;background:${T.bg};color:${T.txt};padding-top:env(safe-area-inset-top,0px);overflow-x:hidden;}
+  *{box-sizing:border-box;max-width:100%;}
+  input,textarea,select{max-width:100%;}
   ::-webkit-scrollbar{width:5px;height:5px;}
   ::-webkit-scrollbar-thumb{background:${T.bor};border-radius:10px;}
   option{background:${T.surf};color:${T.txt};}
@@ -1581,6 +1592,7 @@ export default function App() {
 
   // Tech PIN gate for viewing employee PINs
   const [techPinGate,setTechPinGate]=useState(false);
+  const [selectedTasks,setSelectedTasks]=useState(new Set());
   const [showFeedback,setShowFeedback]=useState(false);
   const [feedbackForm,setFeedbackForm]=useState({type:"feature",msg:""});
   const [techPinInput,setTechPinInput]=useState("");
@@ -1638,7 +1650,7 @@ export default function App() {
       // Seed initial employees if none exist
       if(!empRows?.length){for(const s of SEED)await SB.upsert("employees",{id:s.id,email:s.email,name:s.name,role:s.role,pin:s.pin||"",status:"offline",created_at:s.createdAt||Date.now()});}
 
-      setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,priority:t.priority,assignedTo:t.assigned_to,dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
+      setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
       setInv((invRows||[]).map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
       setAnns((annRows||[]).map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build})));
       setAct((actRows||[]).map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
@@ -1709,14 +1721,14 @@ export default function App() {
   },[]);
   // upsertTask — save a single task to Supabase
   const upsertTask=useCallback(async t=>{
-    await SB.upsert("tasks",{id:t.id,title:t.title,priority:t.priority||"Medium",assigned_to:t.assignedTo||"all",due_date:t.dueDate||"",done:t.done||false,repeat:t.repeat||false,created_at:t.createdAt||Date.now()});
+    await SB.upsert("tasks",{id:t.id,title:t.title,description:t.description||"",priority:t.priority||"Medium",assigned_to:t.assignedTo||"all",created_by:t.createdBy||"",due_date:t.dueDate||"",done:t.done||false,repeat:t.repeat||false,created_at:t.createdAt||Date.now()});
   },[]);
 
   const saveTasks=useCallback(async v=>{
     setTasks(v);
     // Only upsert — don't delete. Individual deletes handled by delTask.
     for(const t of v){
-      await SB.upsert("tasks",{id:t.id,title:t.title,priority:t.priority||"Medium",assigned_to:t.assignedTo||"all",due_date:t.dueDate||"",done:t.done||false,repeat:t.repeat||false,created_at:t.createdAt||Date.now()});
+      await SB.upsert("tasks",{id:t.id,title:t.title,description:t.description||"",priority:t.priority||"Medium",assigned_to:t.assignedTo||"all",created_by:t.createdBy||"",due_date:t.dueDate||"",done:t.done||false,repeat:t.repeat||false,created_at:t.createdAt||Date.now()});
     }
   },[]);
   const saveInv  =useCallback(async v=>{
@@ -2182,21 +2194,21 @@ export default function App() {
                   <span style={{display:"flex",gap:4}}>MNU's <span style={{color:T.scarlet}}>Neer Locker</span></span>
                 </button>
                 <div style={{flex:1,minWidth:0}}/>
-                <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,paddingRight:8,overflow:"hidden",maxWidth:"calc(100vw - 160px)"}}>
                   {/* Clickable profile area → Settings/Profile */}
                   <button onClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}
-                    style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:10,transition:"background .15s",fontFamily:"inherit"}}
+                    style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:10,transition:"background .15s",fontFamily:"inherit",minWidth:0,overflow:"hidden"}}
                     onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
                     onMouseLeave={e=>e.currentTarget.style.background="none"}
                     title="Go to Profile Settings"
                   >
-                    <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={34}/>
+                    <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={30}/>
                     <div style={{display:"flex",flexDirection:"column",lineHeight:1.2,minWidth:0,textAlign:"left"}}>
-                      <span style={{fontSize:14,color:T.txt,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:110}}>{user.name.split(" ")[0]}</span>
+                      <span style={{fontSize:13,color:T.txt,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:90}}>{user.name.split(" ")[0]}</span>
                       <span style={{fontSize:10,color:T.sub,fontWeight:500}}>{ROLES[user.role]?.label||""}</span>
                     </div>
                   </button>
-                  <Btn T={T} sm variant="ghost" onClick={doLogout} style={{flexShrink:0}}>Sign Out</Btn>
+                  <Btn T={T} xs variant="ghost" onClick={doLogout} style={{flexShrink:0,whiteSpace:"nowrap",padding:"5px 8px",fontSize:11}}>Sign Out</Btn>
                 </div>
               </div>
             </header>
@@ -2331,7 +2343,7 @@ export default function App() {
                             <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
                               <span style={{fontSize:18}}>{{info:"ℹ️",warn:"⚠️",danger:"🚨"}[a.level]||"ℹ️"}</span>
                               <div style={{flex:1}}>
-                                <div style={{fontWeight:700,fontSize:T.fs.lg,color:T.txt}}>{a.msg}</div>
+                                <div style={{fontWeight:700,fontSize:13,color:T.txt,lineHeight:1.5,wordBreak:"break-word",overflowWrap:"anywhere"}}>{a.msg}</div>
                                 <div style={{fontSize:T.fs.xs+1,color:T.sub,marginTop:4}}>By {a.by} · {fmtDT(a.at)}</div>
                               </div>
                               <button onClick={()=>{playSound("delete");dismissAnn(a.id);}} style={{background:"none",border:"none",color:T.mut,cursor:"pointer",fontSize:18,lineHeight:1,transition:"color .15s"}} onMouseEnter={e=>e.currentTarget.style.color=T.scarlet} onMouseLeave={e=>e.currentTarget.style.color=T.mut}>✕</button>
@@ -3120,6 +3132,48 @@ export default function App() {
                             onMouseLeave={e=>e.currentTarget.style.background="#fef3c7"}
                             title="Delete and notify both users"
                           >📢 Notify</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Task Manager */}
+            <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{fontWeight:700,color:T.txt}}>✅ Task Manager ({tasks.length} tasks)</div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  {selectedTasks.size>0&&(
+                    <Btn T={T} sm variant="danger" onClick={async()=>{
+                      if(!window.confirm(`Delete ${selectedTasks.size} selected task(s)?`))return;
+                      for(const id of selectedTasks){
+                        await SB.delete("tasks",{id});
+                      }
+                      setTasks(prev=>prev.filter(t=>!selectedTasks.has(t.id)));
+                      setSelectedTasks(new Set());
+                      playSound("delete");
+                      toast(`${selectedTasks.size} task(s) deleted`,"warn");
+                    }}>🗑️ Delete Selected ({selectedTasks.size})</Btn>
+                  )}
+                  <Btn T={T} sm variant="ghost" onClick={()=>setSelectedTasks(new Set())}>Clear</Btn>
+                </div>
+              </div>
+              {tasks.length===0?<div style={{color:T.sub,fontSize:12}}>No tasks.</div>:(
+                <div style={{maxHeight:260,overflowY:"auto",display:"grid",gap:5}}>
+                  {tasks.map(t=>{
+                    const checked=selectedTasks.has(t.id);
+                    const assignee=t.assignedTo==="all"?"Everyone":emps.find(e=>e.id===t.assignedTo)?.name||"Unknown";
+                    return (
+                      <div key={t.id} onClick={()=>{setSelectedTasks(prev=>{const n=new Set(prev);checked?n.delete(t.id):n.add(t.id);return n;});}}
+                        style={{display:"flex",alignItems:"center",gap:10,background:checked?T.scarlet+"18":T.bg,border:`1px solid ${checked?T.scarlet+"66":T.bor}`,borderRadius:10,padding:"8px 12px",cursor:"pointer",transition:"all .15s"}}>
+                        <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${checked?T.scarlet:T.bor}`,background:checked?T.scarlet:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                          {checked&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:13,fontWeight:700,color:t.done?T.mut:T.txt,textDecoration:t.done?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
+                          <div style={{fontSize:11,color:T.sub,marginTop:1}}>👤 {assignee} · {t.priority} · {t.done?"Done":"Open"}</div>
                         </div>
                       </div>
                     );
