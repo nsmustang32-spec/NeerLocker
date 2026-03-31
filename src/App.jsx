@@ -1,11 +1,17 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.0.2";
+const VERSION   = "1.0.3";
 const BUILD_TAG = "Beta";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.0.3": [
+    "DMs: Fixed messages not sending (saveDMs naming mismatch)",
+    "Tasks: Fixed description not saving to Supabase",
+    "Status: Fixed users appearing online when they are not",
+    "Patch notes: Removed 0.4.0–0.4.7 entries to save space",
+  ],
   "1.0.2": [
     "Tasks: Description now saves correctly to Supabase and persists",
     "Tasks: Tech admin can select and bulk-delete tasks",
@@ -25,59 +31,7 @@ const PATCH_NOTES = {
     "Header: Fixed overlap with phone status bar and notch on mobile",
     "Version: 1.0.0 Beta — first full production release",
   ],
-  "0.4.7": [
-    "Tech Admin: Custom animated access screen on login",
-    "Loading quotes: One random quote picked per login — stays fixed during load",
-  ],
-  "0.4.6": [
-    "Mobile: Swipe right from left edge to go back to home (iOS-style)",
-    "UI: All corners now fully rounded — no square edges anywhere",
-    "Display: Device scaling more dramatic — Mobile is noticeably larger",
-    "Login: Animated particle burst welcome screen",
-    "Logout: Smooth scarlet wipe-out animation",
-  ],
-  "0.4.5": [
-    "Home: Profile/role badge now correctly navigates to Settings → Profile",
-    "DMs: Help and Ideas buttons move higher only in DMs to clear send bar",
-    "Header: Avatar + name now clickable — goes directly to Profile Settings",
-  ],
-  "0.4.4": [
-    "Header: Full-width sticky bar, no overflow on any screen size",
-    "Menu: Circle button enlarged to 48px, easier to tap on mobile",
-    "Help/Ideas: Buttons enlarged to 40px, touch-friendly",
-    "Layout: Responsive CSS — mobile gets larger tap targets automatically",
-    "ClaudeTag: Repositioned, stacked two lines, left side",
-  ],
-  "0.4.3": [
-    "Nav: Menu button now a fixed floating circle — stays visible while scrolling",
-    "Help: Sticky × close button always visible no matter how far you scroll",
-    "Help & Ideas buttons moved to bottom-right, clear of version badge",
-    "Help text updated to reference the new floating circle menu button",
-  ],
-  "0.4.2": [
-    "Tech Admin: Site offline mode — blocks all non-admin logins when enabled",
-    "Tech Admin: Offline toggle with red/green status card in dashboard",
-    "Performance: Animation intervals halved — 50% fewer re-renders",
-    "Performance: useMemo on all expensive computed values",
-    "Login screen: Particles reduced for faster rendering",
-  ],
-  "0.4.1": [
-    "Login: Replaced corny taglines with clean, professional ones",
-    "Welcome screen: Time-of-day quotes after signing in",
-    "Login briefing popup: Moved to center, no longer covers action buttons",
-    "Help: Both banner and ? modal now mention the 💡 Ideas button",
-    "Sign Out: Smaller button, still fully tappable",
-    "Sounds: Login and click sounds softened to match app tone",
-  ],
-  "0.4.0": [
-    "Settings: Renamed Display → Display & Sound, added volume slider and on/off toggle",
-    "Settings: Added email change with green checkmark confirmation",
-    "Profile: Clicking avatar on home now goes to Profile Settings",
-    "Tech Admin: Clear Demo now also wipes activity logs and backups",
-    "Login: 12 clean tagline quotes (replaced corny ones)",
-    "New: 💡 Ideas/feedback button sends directly to Tech Admin",
-    "Navigation: Help banner and ? modal updated for hamburger menu",
-  ],
+
 };
 const TECH_EMAIL = "nrsmith2@mnu.edu";
 const TECH_PIN   = "0000";
@@ -1106,7 +1060,7 @@ function DMSection({user,emps,dms,setDms,T,toast}) {
       if(d.from===user.id&&d.to===otherId) return{...d,read:true};
       return d;
     });
-    await saveDMs(next);
+    await saveDms(next);
   };
   const selectConvo=async(emp)=>{setSelected(emp);await markRead(emp.id);setTimeout(()=>inputRef.current?.focus(),100);};
 
@@ -1118,7 +1072,7 @@ function DMSection({user,emps,dms,setDms,T,toast}) {
     playSound("dm");
     // When I send, mark ALL my previous messages to them as read (they're actively chatting)
     const updated=dms.map(d=>d.from===selected.id&&d.to===user.id?{...d,read:true}:d);
-    await saveDMs([...updated,newMsg]);
+    await saveDms([...updated,newMsg]);
     setTimeout(()=>msgEndRef.current?.scrollIntoView({behavior:"smooth"}),50);
     inputRef.current?.focus();
   };
@@ -1696,6 +1650,19 @@ export default function App() {
     return()=>clearInterval(interval);
   },[screen, refreshData]);
 
+  // Set offline when user closes tab/browser
+  useEffect(()=>{
+    const handleUnload=()=>{
+      if(user?.id){
+        navigator.sendBeacon(`${SUPABASE_URL}/rest/v1/employees?id=eq.${user.id}`,
+          new Blob([JSON.stringify({status:"offline"})],{type:"application/json"})
+        );
+      }
+    };
+    window.addEventListener("beforeunload",handleUnload);
+    return()=>window.removeEventListener("beforeunload",handleUnload);
+  },[user?.id]);
+
   // Auto logout on inactivity
   const resetInactive=useCallback(()=>{
     clearTimeout(inactiveRef.current);
@@ -1721,7 +1688,21 @@ export default function App() {
   },[]);
   // upsertTask — save a single task to Supabase
   const upsertTask=useCallback(async t=>{
-    await SB.upsert("tasks",{id:t.id,title:t.title,description:t.description||"",priority:t.priority||"Medium",assigned_to:t.assignedTo||"all",created_by:t.createdBy||"",due_date:t.dueDate||"",done:t.done||false,repeat:t.repeat||false,created_at:t.createdAt||Date.now()});
+    const row={
+      id:t.id,
+      title:t.title||"",
+      description:t.description||"",
+      priority:t.priority||"Medium",
+      assigned_to:t.assignedTo||"all",
+      created_by:t.createdBy||"",
+      due_date:t.dueDate||"",
+      done:t.done||false,
+      repeat:t.repeat||false,
+      created_at:t.createdAt||Date.now()
+    };
+    const r=await SB.upsert("tasks",row);
+    if(!r) console.warn("upsertTask failed for:",t.title);
+    return r;
   },[]);
 
   const saveTasks=useCallback(async v=>{
@@ -1843,8 +1824,9 @@ export default function App() {
     setScreen("welcome");
     setTries(0);
     // Non-blocking: mark online + log, don't await so timer starts immediately
-    const next=emps.map(e=>e.id===emp.id?{...e,status:"online"}:e);
-    saveEmps(next);
+    // Patch just this employee's status to online — don't upsert all employees
+    setEmps(prev=>prev.map(e=>e.id===emp.id?{...e,status:"online"}:e));
+    fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${emp.id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({status:"online"})}).catch(()=>{});
     addAct("login",`${emp.name} signed in`,emp.id);
     // Switch to app after animation completes
     playSound("login");
@@ -1869,10 +1851,10 @@ export default function App() {
       setPage("home");setForm({});setShowBriefing(false);
     },1600);
     if(lu){
-      const next=emps.map(e=>e.id===lu.id?{...e,status:"offline"}:e);
-      saveEmps(next);
+      // Patch just this employee's status to offline
+      setEmps(prev=>prev.map(e=>e.id===lu.id?{...e,status:"offline"}:e));
+      fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${lu.id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({status:"offline"})}).catch(()=>{});
       addAct("logout",`${lu.name} signed out`,lu.id);
-      // Data already synced to Supabase on every change — no batch save needed
     }
   };
 
