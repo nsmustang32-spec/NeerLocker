@@ -1052,15 +1052,14 @@ function DMSection({user,emps,dms,setDms,T,toast}) {
   }).sort((a,b)=>a.at-b.at);
   const markRead=async(otherId)=>{
     const next=dms.map(d=>{
-      // Mark messages FROM other person TO me as read
       if(d.to===user.id&&d.from===otherId) return{...d,read:true};
-      // Mark system msgs in this thread as read
       if(d.system&&d.to===user.id&&d.threadWith===otherId) return{...d,read:true};
-      // Mark MY sent messages to them as read (they opened the chat = they saw them)
       if(d.from===user.id&&d.to===otherId) return{...d,read:true};
       return d;
     });
-    await saveDms(next);
+    setDms(next);
+    // Patch read status in Supabase for messages from otherId to me
+    await fetch(`${SUPABASE_URL}/rest/v1/direct_messages?from_id=eq.${otherId}&to_id=eq.${user.id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({read:true})}).catch(()=>{});
   };
   const selectConvo=async(emp)=>{setSelected(emp);await markRead(emp.id);setTimeout(()=>inputRef.current?.focus(),100);};
 
@@ -1070,9 +1069,22 @@ function DMSection({user,emps,dms,setDms,T,toast}) {
     setMsgInput("");
     const newMsg={id:uid(),from:user.id,to:selected.id,text:san(text),at:Date.now(),read:false};
     playSound("dm");
-    // When I send, mark ALL my previous messages to them as read (they're actively chatting)
+    // Update local state immediately
     const updated=dms.map(d=>d.from===selected.id&&d.to===user.id?{...d,read:true}:d);
-    await saveDms([...updated,newMsg]);
+    const next=[...updated,newMsg];
+    setDms(next);
+    // Save new message to Supabase directly
+    await SB.upsert("direct_messages",{
+      id:newMsg.id,
+      from_id:newMsg.from,
+      to_id:newMsg.to,
+      text:newMsg.text,
+      at:newMsg.at,
+      read:false,
+      system:false,
+      thread_with:selected.id,
+      feedback:false
+    });
     setTimeout(()=>msgEndRef.current?.scrollIntoView({behavior:"smooth"}),50);
     inputRef.current?.focus();
   };
@@ -1437,29 +1449,37 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
 
       <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:5}}>
 
-        {/* Logo — icon left, title centered above form */}
-        <div className="fu" style={{marginBottom:14,display:"flex",alignItems:"flex-end",gap:14}}>
-          {/* Icon on the left with pulse rings */}
-          <div style={{position:"relative",flexShrink:0,alignSelf:"center"}}>
-            <div style={{position:"absolute",inset:-6,borderRadius:20,border:`2px solid ${T.scarlet}`,opacity:0.3,animation:"pulse 2s ease-in-out infinite"}}/>
-            <div style={{position:"absolute",inset:-14,borderRadius:26,border:`1px solid ${T.scarlet}`,opacity:0.12,animation:"pulse 2.2s ease-in-out infinite",animationDelay:"0.5s"}}/>
-            <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:58,height:58,borderRadius:18,background:`linear-gradient(135deg,${T.scarlet} 0%,${T.sD} 60%,#7c0020 100%)`,boxShadow:`0 8px 28px ${T.scarlet}50,0 0 0 2px ${T.scarlet}44`,fontSize:28,animation:"popIn .6s cubic-bezier(.34,1.56,.64,1)"}}>🎓</div>
-          </div>
-          {/* Title + tagline centered above form */}
-          <div style={{flex:1,textAlign:"center"}}>
-            <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:26,fontWeight:800,color:T.txt,letterSpacing:"-0.5px",lineHeight:1.05}}>
-              MNU's <span style={{color:T.scarlet,textShadow:`0 0 24px ${T.scarlet}45`}}>Neer Locker</span>
+        {/* Logo — centered title, icon to the left with rings fully visible */}
+        <div className="fu" style={{marginBottom:14,textAlign:"center"}}>
+          {/* Row: icon + title side by side, centered */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:18,marginBottom:8}}>
+            {/* Icon with pulse rings — padding gives rings room to breathe */}
+            {/* Icon container — oversized to give outer ring room on all sides */}
+            <div style={{position:"relative",flexShrink:0,width:90,height:90,display:"flex",alignItems:"center",justifyContent:"center",overflow:"visible"}}>
+              {/* Inner ring — tight around the 58px icon, centered in 90px box = 16px margin each side */}
+              <div style={{position:"absolute",width:70,height:70,top:"50%",left:"50%",transform:"translate(-50%,-50%)",borderRadius:22,border:`2px solid ${T.scarlet}`,opacity:0.3,animation:"pulse 2s ease-in-out infinite"}}/>
+              {/* Outer ring — 86px, still centered */}
+              <div style={{position:"absolute",width:86,height:86,top:"50%",left:"50%",transform:"translate(-50%,-50%)",borderRadius:26,border:`1px solid ${T.scarlet}`,opacity:0.15,animation:"pulse 2.2s ease-in-out infinite",animationDelay:"0.5s"}}/>
+              {/* Icon square */}
+              <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:58,height:58,borderRadius:18,background:`linear-gradient(135deg,${T.scarlet} 0%,${T.sD} 60%,#7c0020 100%)`,boxShadow:`0 8px 28px ${T.scarlet}50,0 0 0 2px ${T.scarlet}44`,fontSize:28,animation:"popIn .6s cubic-bezier(.34,1.56,.64,1)",position:"relative",zIndex:1}}>🎓</div>
             </div>
-            <div style={{color:T.sub,fontSize:11,fontWeight:500,marginTop:2}}>Staff Portal · MidAmerica Nazarene University</div>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:6}}>
-              <div key={tagLine} style={{animation:"fadeUp .4s ease both"}}>
-                <span style={{fontSize:11,color:T.scarlet,fontWeight:700,fontStyle:"italic",opacity:0.75}}>{taglines[tagLine]}</span>
+            {/* Title */}
+            <div style={{textAlign:"left"}}>
+              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:26,fontWeight:800,color:T.txt,letterSpacing:"-0.5px",lineHeight:1.05}}>
+                MNU's <span style={{color:T.scarlet,textShadow:`0 0 24px ${T.scarlet}45`}}>Neer Locker</span>
               </div>
-              <div style={{width:1,height:10,background:T.bor}}/>
-              <div style={{display:"inline-flex",alignItems:"center",gap:4,background:T.dark?"rgba(200,16,46,0.12)":"rgba(200,16,46,0.06)",border:`1px solid ${T.scarlet}28`,borderRadius:20,padding:"2px 8px"}}>
-                <span style={{width:5,height:5,borderRadius:"50%",background:T.ok,display:"inline-block",animation:"pulse 1.5s infinite"}}/>
-                <span style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.04em"}}>ONLINE</span>
-              </div>
+              <div style={{color:T.sub,fontSize:11,fontWeight:500,marginTop:2}}>Staff Portal · MidAmerica Nazarene University</div>
+            </div>
+          </div>
+          {/* Tagline + status pill row */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+            <div key={tagLine} style={{animation:"fadeUp .4s ease both"}}>
+              <span style={{fontSize:11,color:T.scarlet,fontWeight:700,fontStyle:"italic",opacity:0.75}}>{taglines[tagLine]}</span>
+            </div>
+            <div style={{width:1,height:10,background:T.bor}}/>
+            <div style={{display:"inline-flex",alignItems:"center",gap:4,background:T.dark?"rgba(200,16,46,0.12)":"rgba(200,16,46,0.06)",border:`1px solid ${T.scarlet}28`,borderRadius:20,padding:"2px 8px"}}>
+              <span style={{width:5,height:5,borderRadius:"50%",background:T.ok,display:"inline-block",animation:"pulse 1.5s infinite"}}/>
+              <span style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.04em"}}>ONLINE</span>
             </div>
           </div>
         </div>
@@ -1870,12 +1890,16 @@ export default function App() {
   const createTask=async()=>{
     const title=String(form.tTitle||"").trim();
     if(!title){toast("Task title required","err");return;}
-    const task={id:uid(),title:san(title),description:san(String(form.tDesc||"").trim()),priority:form.tPri||"Medium",assignedTo:form.tAssign||"all",createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:form.tDue||"",repeat:form.tRepeat||false};
+    // Capture all form values BEFORE clearing form
+    const desc=san(String(form.tDesc||"").trim());
+    const pri=form.tPri||"Medium";
+    const assign=form.tAssign||"all";
+    const due=form.tDue||"";
+    const rep=form.tRepeat||false;
+    const task={id:uid(),title:san(title),description:desc,priority:pri,assignedTo:assign,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:due,repeat:rep};
     setModal(null);setForm({});
     toast("Task created! ✅");
-    // Update local state immediately — don't wait for Supabase
     setTasks(prev=>[task,...prev]);
-    // Save just this one task to Supabase
     await upsertTask(task);
     addAct("task_created",`Task created: "${task.title}" by ${user?.name}`,user?.id);
   };
