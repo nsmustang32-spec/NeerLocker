@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.0.4";
+const VERSION   = "1.1.0";
 const BUILD_TAG = "Beta";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.1.0": [
+    "Notifications: Push notifications for new tasks, announcements, and messages",
+    "Settings: Tablet UI scaling option added alongside Mobile, Desktop, Auto",
+  ],
   "1.0.4": [
     "Auth: Face ID / Touch ID / fingerprint login via WebAuthn passkeys",
     "Settings: Managers and Asst. Managers can now manage team in Settings",
@@ -1350,6 +1354,96 @@ function TechMetrics({T}) {
 
 
 
+
+// ─── PUSH NOTIFICATIONS ───────────────────────────────────────────────────────
+const VAPID_PUBLIC_KEY = "BAGb6AhUiDuVvc-Gmpr5K_yDVZei06jPW3VnHf3A8C17EnN6rzzB6fvSohhT5esZBFl0dcKMpS2CxBYEJwkm18M";
+
+const NOTIF = {
+  supported: ()=>"Notification" in window && "serviceWorker" in navigator && "PushManager" in window,
+  permission: ()=>Notification.permission,
+  // Only allow in standalone PWA mode (installed to home screen)
+  isPWA: ()=>window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true,
+
+  b64urlToUint8(b64) {
+    const pad = "=".repeat((4 - b64.length % 4) % 4);
+    const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from({length: raw.length}, (_, i) => raw.charCodeAt(i));
+  },
+
+  async register() {
+    if(!NOTIF.supported()) return null;
+    try {
+      const reg = await navigator.serviceWorker.register("/service-worker.js", {scope:"/"});
+      await navigator.serviceWorker.ready;
+      return reg;
+    } catch(e) { console.warn("SW register failed:", e); return null; }
+  },
+
+  async subscribe(userId) {
+    if(!NOTIF.supported()||!NOTIF.isPWA()) return null;
+    try {
+      const reg = await NOTIF.register();
+      if(!reg) return null;
+      const permission = await Notification.requestPermission();
+      if(permission !== "granted") return null;
+      let sub = await reg.pushManager.getSubscription();
+      if(!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: NOTIF.b64urlToUint8(VAPID_PUBLIC_KEY),
+        });
+      }
+      const json = sub.toJSON();
+      // Save to Supabase
+      await SB.upsert("push_subscriptions", {
+        id: btoa(json.endpoint).slice(0,40).replace(/[^a-zA-Z0-9]/g,""),
+        user_id: userId,
+        endpoint: json.endpoint,
+        p256dh: json.keys.p256dh,
+        auth: json.keys.auth,
+        created_at: Date.now(),
+      });
+      return sub;
+    } catch(e) { console.warn("Push subscribe failed:", e); return null; }
+  },
+
+  async unsubscribe(userId) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration("/");
+      if(!reg) return;
+      const sub = await reg.pushManager.getSubscription();
+      if(sub) {
+        const json = sub.toJSON();
+        const id = btoa(json.endpoint).slice(0,40).replace(/[^a-zA-Z0-9]/g,"");
+        await SB.delete("push_subscriptions", {id});
+        await sub.unsubscribe();
+      }
+    } catch(e) { console.warn("Unsubscribe failed:", e); }
+  },
+
+  // Trigger server-side push (calls Vercel function)
+  async send(userId, title, body, tag="neer-locker") {
+    try {
+      await fetch("/api/send-push", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({userId, title, body, tag}),
+      });
+    } catch(e) { console.warn("Send push failed:", e); }
+  },
+
+  // Broadcast to all users (no userId filter)
+  async broadcast(title, body, tag="neer-locker") {
+    try {
+      await fetch("/api/send-push", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({title, body, tag}),
+      });
+    } catch(e) { console.warn("Broadcast push failed:", e); }
+  },
+};
+
 // ─── WEBAUTHN / PASSKEY HELPERS ───────────────────────────────────────────────
 const WA = {
   supported: ()=>window.PublicKeyCredential!==undefined,
@@ -1646,6 +1740,14 @@ export default function App() {
   const [techLoading,setTechLoading]=useState(false);
   const [techExiting,setTechExiting]=useState(false);
   const [passkeyAvailable,setPasskeyAvailable]=useState(false);
+  const [notifEnabled,setNotifEnabled]=useState(false);
+  const [notifPerms,setNotifPerms]=useState(NOTIF.supported()?NOTIF.permission():"unsupported");
+
+  useEffect(()=>{
+    const saved=LS.get("nl3-notif-enabled");
+    if(saved&&NOTIF.permission()==="granted") setNotifEnabled(true);
+    setNotifPerms(NOTIF.supported()?NOTIF.permission():"unsupported");
+  },[]);
   const [passkeyEmail,setPasskeyEmail]=useState("");
 
   useEffect(()=>{
@@ -1746,12 +1848,50 @@ export default function App() {
       SB.select("direct_messages","?order=at.asc"),
     ]);
     if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",createdAt:e.created_at})));
-    if(taskRows?.length>=0) setTasks(taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
+    if(taskRows?.length>=0){
+      const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at}));
+      setTasks(prev=>{
+        // Detect brand new tasks assigned to me
+        if(notifEnabled&&user){
+          newMapped.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id)).forEach(t=>{
+            if(!prev.find(p=>p.id===t.id)){
+              NOTIF.send(user.id,"New Task 📋",`${t.title} — assigned to you`,"task");
+            }
+          });
+        }
+        return newMapped;
+      });
+    }
     if(invRows) setInv(invRows.map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
-    if(annRows) setAnns(annRows.map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build})));
+    if(annRows){
+      const newAnns=annRows.map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build}));
+      setAnns(prev=>{
+        if(notifEnabled&&user){
+          newAnns.filter(a=>!(a.dismissed||[]).includes(user.id)).forEach(a=>{
+            if(!prev.find(p=>p.id===a.id)){
+              NOTIF.broadcast("New Announcement 📢",a.msg.slice(0,80),"announcement");
+            }
+          });
+        }
+        return newAnns;
+      });
+    }
     if(actRows) setAct(actRows.map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
     if(errRows) setErrs(errRows.map(e=>({id:e.id,level:e.level,msg:e.msg,at:e.at})));
-    if(dmRows) setDms(dmRows.map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback})));
+    if(dmRows){
+      const newDms=dmRows.map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback}));
+      setDms(prev=>{
+        if(notifEnabled&&user){
+          newDms.filter(d=>d.to===user.id&&!d.read&&!d.system).forEach(d=>{
+            if(!prev.find(p=>p.id===d.id)){
+              const sender=emps.find(e=>e.id===d.from);
+              NOTIF.send(user.id,`Message from ${sender?.name||"Someone"} 💬`,d.text.slice(0,80),"dm");
+            }
+          });
+        }
+        return newDms;
+      });
+    }
   },[]);
 
   // Poll every 8 seconds when app is open — keeps all data fresh across devices
@@ -1875,15 +2015,17 @@ export default function App() {
     setDeviceMode(mode);
     LS.set("nl3-device-mode",mode);
     const root=document.documentElement;
-    // Detect actual screen size for "auto"
     const isMobileScreen=window.innerWidth<=768;
+    const isTabletScreen=window.innerWidth>768&&window.innerWidth<=1024;
+    const useTablet=mode==="tablet"||(mode==="auto"&&isTabletScreen);
     const useMobile=mode==="mobile"||(mode==="auto"&&isMobileScreen);
     if(useMobile){
-      root.style.setProperty("--app-scale","1");
       root.style.fontSize="18px";
       root.setAttribute("data-device","mobile");
+    } else if(useTablet){
+      root.style.fontSize="15px";
+      root.setAttribute("data-device","tablet");
     } else {
-      root.style.setProperty("--app-scale","1");
       root.style.fontSize="13px";
       root.setAttribute("data-device","desktop");
     }
@@ -1893,9 +2035,13 @@ export default function App() {
   // Apply on mount based on saved mode
   useEffect(()=>{
     const isMobileScreen=window.innerWidth<=768;
+    const isTabletScreen=window.innerWidth>768&&window.innerWidth<=1024;
+    const useTablet=deviceMode==="tablet"||(deviceMode==="auto"&&isTabletScreen);
     const useMobile=deviceMode==="mobile"||(deviceMode==="auto"&&isMobileScreen);
-    document.documentElement.style.fontSize=useMobile?"18px":"13px";
-    document.documentElement.setAttribute("data-device",useMobile?"mobile":"desktop");
+    const fs=useMobile?"18px":useTablet?"15px":"13px";
+    const dev=useMobile?"mobile":useTablet?"tablet":"desktop";
+    document.documentElement.style.fontSize=fs;
+    document.documentElement.setAttribute("data-device",dev);
   },[deviceMode]);
 
   // AUTH
@@ -2569,7 +2715,7 @@ export default function App() {
                         <Hr T={T}/>
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:10}}>Your Stats</div>
-                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
                             <div style={{background:T.bg,borderRadius:10,padding:12,textAlign:"center"}}>
                               <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:26,fontWeight:800,color:T.ok}}>{myCompletedCount}</div>
                               <div style={{fontSize:11,color:T.sub,fontWeight:600}}>Completed</div>
@@ -2727,9 +2873,10 @@ export default function App() {
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12,lineHeight:1.5}}>Choose how the app scales to your device. This adjusts font sizes and tap target sizes across the whole app.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                             {[
-                              {mode:"auto",  icon:"🔄", label:"Auto",    desc:"Detects your screen size automatically"},
-                              {mode:"mobile",icon:"📱", label:"Mobile",  desc:"Larger text & buttons, optimized for touch"},
-                              {mode:"desktop",icon:"🖥️",label:"Desktop", desc:"Compact, more information visible at once"},
+                              {mode:"auto",   icon:"🔄", label:"Auto",    desc:"Detects your screen size automatically"},
+                              {mode:"mobile", icon:"📱", label:"Mobile",  desc:"Larger text & buttons, optimized for touch"},
+                              {mode:"tablet", icon:"📟", label:"Tablet",  desc:"Medium size, great for iPad & tablet web app"},
+                              {mode:"desktop",icon:"🖥️", label:"Desktop", desc:"Compact, more information visible at once"},
                             ].map(opt=>{
                               const active=deviceMode===opt.mode;
                               return (
@@ -2744,9 +2891,67 @@ export default function App() {
                             })}
                           </div>
                           <div style={{marginTop:10,fontSize:11,color:T.sub,background:T.bg,borderRadius:8,padding:"8px 12px"}}>
-                            Current: <strong style={{color:T.scarlet}}>{deviceMode==="auto"?(window.innerWidth<=768?"Auto (Mobile)":"Auto (Desktop)"):deviceMode==="mobile"?"Mobile":"Desktop"}</strong>
-                            {" · "}Base font: <strong>{deviceMode==="mobile"?"18px":"13px"}</strong>
+                            Current: <strong style={{color:T.scarlet}}>{deviceMode==="auto"?(window.innerWidth<=768?"Auto (Mobile)":window.innerWidth<=1024?"Auto (Tablet)":"Auto (Desktop)"):deviceMode==="mobile"?"Mobile":deviceMode==="tablet"?"Tablet":"Desktop"}</strong>
+                            {" · "}Base font: <strong>{deviceMode==="mobile"?"18px":deviceMode==="tablet"?"15px":"13px"}</strong>
                           </div>
+                        </div>
+
+                        {/* Push Notifications */}
+                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
+                          <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>🔔 Push Notifications</div>
+                          <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:10,lineHeight:1.5}}>
+                            Get notified for new tasks, announcements, and messages — even when the app is in the background.
+                          </div>
+                          {notifPerms==="unsupported"?(
+                            <div style={{fontSize:12,color:T.sub,fontStyle:"italic"}}>Your browser doesn't support notifications.</div>
+                          ):notifPerms==="denied"?(
+                            <div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#991b1b",fontWeight:600}}>
+                              ⚠️ Notifications are blocked. Go to your browser settings and allow notifications for this site, then come back here.
+                            </div>
+                          ):(
+                            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                                <div>
+                                  <div style={{fontWeight:600,color:T.txt,fontSize:13}}>Enable Notifications</div>
+                                  <div style={{fontSize:11,color:T.sub,marginTop:1}}>Tasks · Announcements · Messages</div>
+                                </div>
+                                {/* Toggle */}
+                                <button onClick={async()=>{
+                                  if(!notifEnabled){
+                                    if(!NOTIF.isPWA()){
+                                      toast("Add app to home screen first — then enable notifications","err");
+                                      return;
+                                    }
+                                    const sub=await NOTIF.subscribe(user.id);
+                                    setNotifPerms(NOTIF.permission());
+                                    if(sub){
+                                      setNotifEnabled(true);
+                                      LS.set("nl3-notif-enabled",true);
+                                      playSound("notify");
+                                      toast("Notifications enabled! ✅");
+                                    } else {
+                                      toast("Notification setup failed — check permissions","err");
+                                    }
+                                  } else {
+                                    await NOTIF.unsubscribe(user.id);
+                                    setNotifEnabled(false);
+                                    LS.set("nl3-notif-enabled",false);
+                                    playSound("click");
+                                    toast("Notifications disabled","warn");
+                                  }
+                                }} style={{flexShrink:0,width:48,height:26,borderRadius:13,background:notifEnabled?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s"}}>
+                                  <div style={{position:"absolute",top:3,left:notifEnabled?24:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
+                                </button>
+                              </div>
+                              {notifEnabled&&(
+                                <div style={{fontSize:11,color:T.ok,fontWeight:600}}>✓ Notifications active — you'll be alerted when the app is in the background</div>
+                              )}
+                              <div style={{fontSize:11,color:T.sub,lineHeight:1.6,background:T.bg,borderRadius:8,padding:"8px 12px"}}>
+                                {!NOTIF.isPWA()&&<div style={{color:T.warn,fontWeight:700,marginBottom:4}}>⚠️ You must open this app from your home screen for notifications to work.</div>}
+                                <strong>iPhone:</strong> Add to home screen from Safari · <strong>Android:</strong> Add to home screen from Chrome
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* Accent color */}
