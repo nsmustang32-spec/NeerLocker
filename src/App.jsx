@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.0.3";
+const VERSION   = "1.0.4";
 const BUILD_TAG = "Beta";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.0.4": [
+    "Auth: Face ID / Touch ID / fingerprint login via WebAuthn passkeys",
+    "Settings: Managers and Asst. Managers can now manage team in Settings",
+  ],
   "1.0.3": [
     "DMs: Fixed messages not sending (saveDMs naming mismatch)",
     "Tasks: Fixed description not saving to Supabase",
@@ -262,7 +266,7 @@ const SEED = [
 const ROLES = {
   boss:      {label:"Boss",        color:"#C8102E", p:["home","tasks","inv","ann","act","emp","assign","settings","boss","dms","online"]},
   manager:   {label:"Manager",     color:"#1e7fa8", p:["home","tasks","inv","ann","act","emp","assign","settings","dms","online"]},
-  assistant: {label:"Asst. Mgr",  color:"#7c3aed", p:["home","tasks","inv","ann","assign","dms"]},
+  assistant: {label:"Asst. Mgr",  color:"#7c3aed", p:["home","tasks","inv","ann","assign","settings","emp","dms"]},
   employee:  {label:"Employee",   color:"#6b7280", p:["home","tasks","ann","dms"]},
   superadmin:{label:"Technical Administrator", color:"#f59e0b", p:["*"]},
 };
@@ -1345,8 +1349,80 @@ function TechMetrics({T}) {
 }
 
 
+
+// ─── WEBAUTHN / PASSKEY HELPERS ───────────────────────────────────────────────
+const WA = {
+  supported: ()=>window.PublicKeyCredential!==undefined,
+
+  // Encode/decode helpers
+  b64url: (buf)=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,""),
+  b64decode: (str)=>Uint8Array.from(atob(str.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)),
+
+  // Register a new passkey for a user
+  async register(userId, userName, userEmail) {
+    try {
+      // Random challenge
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const cred = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: "MNU Neer Locker", id: window.location.hostname },
+          user: {
+            id: new TextEncoder().encode(userId),
+            name: userEmail,
+            displayName: userName,
+          },
+          pubKeyCredParams: [
+            { alg: -7,  type: "public-key" }, // ES256
+            { alg: -257, type: "public-key" }, // RS256
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: "platform", // use device biometric only
+            userVerification: "required",
+            residentKey: "preferred",
+          },
+          timeout: 60000,
+        }
+      });
+      if (!cred) return null;
+      return {
+        credentialId: WA.b64url(cred.rawId),
+        credentialType: cred.type,
+      };
+    } catch(e) {
+      console.warn("WebAuthn register failed:", e.message);
+      return null;
+    }
+  },
+
+  // Authenticate with existing passkey
+  async authenticate(credentialIdB64) {
+    try {
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const allowCreds = credentialIdB64 ? [{
+        id: WA.b64decode(credentialIdB64),
+        type: "public-key",
+        transports: ["internal"],
+      }] : [];
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          rpId: window.location.hostname,
+          userVerification: "required",
+          allowCredentials: allowCreds,
+          timeout: 60000,
+        }
+      });
+      return assertion ? WA.b64url(assertion.rawId) : null;
+    } catch(e) {
+      console.warn("WebAuthn auth failed:", e.message);
+      return null;
+    }
+  },
+};
+
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline}) {
+function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin}) {
   const [tick,setTick]=useState(0);
   const [focused,setFocused]=useState(false);
   const [typeIdx,setTypeIdx]=useState(0);
@@ -1449,37 +1525,33 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
 
       <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:5}}>
 
-        {/* Logo — centered title, icon to the left with rings fully visible */}
-        <div className="fu" style={{marginBottom:14,textAlign:"center"}}>
-          {/* Row: icon + title side by side, centered */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:18,marginBottom:8}}>
-            {/* Icon with pulse rings — padding gives rings room to breathe */}
-            {/* Icon container — oversized to give outer ring room on all sides */}
-            <div style={{position:"relative",flexShrink:0,width:90,height:90,display:"flex",alignItems:"center",justifyContent:"center",overflow:"visible"}}>
-              {/* Inner ring — tight around the 58px icon, centered in 90px box = 16px margin each side */}
-              <div style={{position:"absolute",width:70,height:70,top:"50%",left:"50%",transform:"translate(-50%,-50%)",borderRadius:22,border:`2px solid ${T.scarlet}`,opacity:0.3,animation:"pulse 2s ease-in-out infinite"}}/>
-              {/* Outer ring — 86px, still centered */}
-              <div style={{position:"absolute",width:86,height:86,top:"50%",left:"50%",transform:"translate(-50%,-50%)",borderRadius:26,border:`1px solid ${T.scarlet}`,opacity:0.15,animation:"pulse 2.2s ease-in-out infinite",animationDelay:"0.5s"}}/>
-              {/* Icon square */}
-              <div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:58,height:58,borderRadius:18,background:`linear-gradient(135deg,${T.scarlet} 0%,${T.sD} 60%,#7c0020 100%)`,boxShadow:`0 8px 28px ${T.scarlet}50,0 0 0 2px ${T.scarlet}44`,fontSize:28,animation:"popIn .6s cubic-bezier(.34,1.56,.64,1)",position:"relative",zIndex:1}}>🎓</div>
+        {/* Logo — centered */}
+        <div className="fu" style={{marginBottom:16,textAlign:"center"}}>
+          {/* Row 1: icon + title — centered */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:8}}>
+            {/* Icon with perfectly centered rings */}
+            <div style={{position:"relative",flexShrink:0,width:72,height:72,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{position:"absolute",top:"50%",left:"50%",width:64,height:64,transform:"translate(-50%,-50%)",borderRadius:19,border:`2px solid ${T.scarlet}`,opacity:0.45,animation:"pulse 2s ease-in-out infinite",pointerEvents:"none"}}/>
+              <div style={{position:"absolute",top:"50%",left:"50%",width:76,height:76,transform:"translate(-50%,-50%)",borderRadius:23,border:`1.5px solid ${T.scarlet}`,opacity:0.18,animation:"pulse 2.4s ease-in-out infinite",animationDelay:"0.4s",pointerEvents:"none"}}/>
+              <div style={{width:52,height:52,borderRadius:15,background:`linear-gradient(135deg,${T.scarlet} 0%,${T.sD} 60%,#7c0020 100%)`,boxShadow:`0 6px 20px ${T.scarlet}55,0 0 0 2px ${T.scarlet}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:25,animation:"popIn .6s cubic-bezier(.34,1.56,.64,1)",position:"relative",zIndex:1}}>🎓</div>
             </div>
             {/* Title */}
             <div style={{textAlign:"left"}}>
-              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:26,fontWeight:800,color:T.txt,letterSpacing:"-0.5px",lineHeight:1.05}}>
-                MNU's <span style={{color:T.scarlet,textShadow:`0 0 24px ${T.scarlet}45`}}>Neer Locker</span>
+              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:24,fontWeight:800,color:T.txt,letterSpacing:"-0.3px",lineHeight:1.1}}>
+                MNU's <span style={{color:T.scarlet,textShadow:`0 0 18px ${T.scarlet}44`}}>Neer Locker</span>
               </div>
-              <div style={{color:T.sub,fontSize:11,fontWeight:500,marginTop:2}}>Staff Portal · MidAmerica Nazarene University</div>
+              <div style={{color:T.sub,fontSize:11,fontWeight:400,marginTop:2}}>Staff Portal · MidAmerica Nazarene University</div>
             </div>
           </div>
-          {/* Tagline + status pill row */}
+          {/* Row 2: tagline + ONLINE — centered */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <div key={tagLine} style={{animation:"fadeUp .4s ease both"}}>
-              <span style={{fontSize:11,color:T.scarlet,fontWeight:700,fontStyle:"italic",opacity:0.75}}>{taglines[tagLine]}</span>
+              <span style={{fontSize:12,color:T.scarlet,fontWeight:700,fontStyle:"italic"}}>{taglines[tagLine]}</span>
             </div>
-            <div style={{width:1,height:10,background:T.bor}}/>
-            <div style={{display:"inline-flex",alignItems:"center",gap:4,background:T.dark?"rgba(200,16,46,0.12)":"rgba(200,16,46,0.06)",border:`1px solid ${T.scarlet}28`,borderRadius:20,padding:"2px 8px"}}>
+            <div style={{width:1,height:10,background:T.bor,flexShrink:0}}/>
+            <div style={{display:"inline-flex",alignItems:"center",gap:5,background:T.dark?"rgba(0,0,0,0.35)":"rgba(0,0,0,0.05)",border:`1px solid ${T.bor}`,borderRadius:20,padding:"3px 10px"}}>
               <span style={{width:5,height:5,borderRadius:"50%",background:T.ok,display:"inline-block",animation:"pulse 1.5s infinite"}}/>
-              <span style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.04em"}}>ONLINE</span>
+              <span style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.05em"}}>ONLINE</span>
             </div>
           </div>
         </div>
@@ -1500,6 +1572,16 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
           <Btn T={T} full onClick={()=>{playSound("click");showPin?doPin():doLogin();}} style={{padding:"14px 20px",fontSize:16,letterSpacing:"0.02em",boxShadow:`0 6px 24px ${T.scarlet}40,0 2px 0 ${T.scarlet}22 inset`}}>
             {showPin?"Confirm PIN →":"Sign In →"}
           </Btn>
+          {passkeyAvailable&&!showPin&&(
+            <button onClick={()=>{playSound("click");doPasskeyLogin();}}
+              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,width:"100%",padding:"13px 20px",background:T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)",border:`1px solid ${T.bor}`,borderRadius:T.sp.r,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:700,color:T.sub,transition:"all .18s"}}
+              onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"88";e.currentTarget.style.color=T.txt;}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
+            >
+              <span style={{fontSize:20}}>🔑</span>
+              <span>Sign in as <strong style={{color:T.txt}}>{passkeyEmail.split("@")[0]}</strong> with biometrics</span>
+            </button>
+          )}
           <div style={{textAlign:"center"}}>
             <button onClick={()=>setScreen("techLogin")} style={{background:"none",border:"none",color:T.faint,fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:"0.04em",transition:"color .15s"}}
               onMouseEnter={e=>e.currentTarget.style.color=T.sub}
@@ -1563,6 +1645,15 @@ export default function App() {
   const [tErr,setTErr]=useState("");
   const [techLoading,setTechLoading]=useState(false);
   const [techExiting,setTechExiting]=useState(false);
+  const [passkeyAvailable,setPasskeyAvailable]=useState(false);
+  const [passkeyEmail,setPasskeyEmail]=useState("");
+
+  useEffect(()=>{
+    if(WA.supported()){
+      const stored=localStorage.getItem("nl3-passkey-email");
+      if(stored){setPasskeyEmail(stored);setPasskeyAvailable(true);}
+    }
+  },[]);
 
   // Tech PIN gate for viewing employee PINs
   const [techPinGate,setTechPinGate]=useState(false);
@@ -1808,6 +1899,19 @@ export default function App() {
   },[deviceMode]);
 
   // AUTH
+  const doPasskeyLogin=async()=>{
+    const email=passkeyEmail;
+    if(!email){toast("No passkey found","err");return;}
+    const match=emps.find(e=>e.email.toLowerCase()===email.toLowerCase());
+    if(!match){toast("Account not found","err");return;}
+    const credId=localStorage.getItem("nl3-passkey-cred-"+match.id);
+    if(!credId){toast("No passkey registered","err");return;}
+    const result=await WA.authenticate(credId);
+    if(!result){setEmailErr("Biometric authentication failed. Try signing in with email.");return;}
+    setTries(0);
+    finishLogin(match);
+  };
+
   const doLogin=()=>{
     const email=String(emailIn||"").trim().toLowerCase();
     if(!email){setEmailErr("Please enter your MNU email.");return;}
@@ -2152,7 +2256,8 @@ export default function App() {
       {screen==="login"&&(
         <LoginScreen T={T} emailIn={emailIn} setEmailIn={setEmailIn} emailErr={emailErr} setEmailErr={setEmailErr}
           showPin={showPin} setShowPin={setShowPin} pinIn={pinIn} setPinIn={setPinIn}
-          doLogin={doLogin} doPin={doPin} notice={notice} setScreen={setScreen} siteOffline={siteOffline}/>
+          doLogin={doLogin} doPin={doPin} notice={notice} setScreen={setScreen} siteOffline={siteOffline}
+          passkeyAvailable={passkeyAvailable} passkeyEmail={passkeyEmail} doPasskeyLogin={doPasskeyLogin}/>
       )}
 
       {/* ═══ TECH LOGIN ════════════════════════════════════════════════════════ */}
@@ -2505,6 +2610,56 @@ export default function App() {
                             </div>
                           )}
                         </div>
+                        {/* Biometric / Passkey registration */}
+                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
+                          <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>🔑 Face ID / Touch ID / Fingerprint</div>
+                          <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:10,lineHeight:1.5}}>
+                            {WA.supported()
+                              ?"Register your device biometric to sign in without typing your email."
+                              :"Your browser does not support biometric login."}
+                          </div>
+                          {/* iOS/Android instructions */}
+                          {WA.supported()&&!localStorage.getItem("nl3-passkey-cred-"+user?.id)&&(
+                            <div style={{background:`${T.blue}12`,border:`1px solid ${T.blue}33`,borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:T.sub,lineHeight:1.7}}>
+                              <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>📱 Before you set this up:</div>
+                              <div><strong>iPhone:</strong> You must have the app <strong>added to your home screen from Safari</strong> and be using it from there — Face ID / Touch ID will not work in a regular browser tab. <a href="https://support.apple.com/guide/iphone/bookmark-a-website-iph42ab2f3a7/ios" target="_blank" style={{color:T.scarlet}}>How to add to home screen →</a></div>
+                              <div style={{marginTop:4}}><strong>Android:</strong> Works great in Chrome — no extra steps needed. ✅</div>
+                            </div>
+                          )}
+                          {WA.supported()&&(
+                            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                              <Btn T={T} sm onClick={async()=>{
+                                const result=await WA.register(user.id,user.name,user.email);
+                                if(result){
+                                  localStorage.setItem("nl3-passkey-cred-"+user.id,result.credentialId);
+                                  localStorage.setItem("nl3-passkey-email",user.email);
+                                  setPasskeyAvailable(true);
+                                  setPasskeyEmail(user.email);
+                                  playSound("success");
+                                  toast("Biometric login enabled! ✅");
+                                } else {
+                                  toast("Biometric setup failed — try again","err");
+                                }
+                              }}>
+                                {localStorage.getItem("nl3-passkey-cred-"+user?.id)?"Update Biometric":"Enable Biometric Login"}
+                              </Btn>
+                              {localStorage.getItem("nl3-passkey-cred-"+user?.id)&&(
+                                <Btn T={T} sm variant="danger" onClick={()=>{
+                                  localStorage.removeItem("nl3-passkey-cred-"+user.id);
+                                  localStorage.removeItem("nl3-passkey-email");
+                                  setPasskeyAvailable(false);
+                                  setPasskeyEmail("");
+                                  playSound("delete");
+                                  toast("Biometric login removed","warn");
+                                }}>Remove</Btn>
+                              )}
+                            </div>
+                          )}
+                          {localStorage.getItem("nl3-passkey-cred-"+user?.id)&&(
+                            <div style={{marginTop:8,fontSize:11,color:T.ok,fontWeight:600}}>✓ Biometric login is active on this device</div>
+                          )}
+                        </div>
+
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:8}}>Security Info</div>
                           {["Rate limiting — 5 attempts → 5 min lockout","Input sanitization on all fields","Session cleared on sign-out","Auto-save on logout","Auto logout after 30 min inactivity"].map(f=>(
