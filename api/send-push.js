@@ -1,11 +1,12 @@
 // Vercel serverless function — sends push notifications to subscribed devices
 // POST /api/send-push  { userId?, title, body, tag? }
 
-const VAPID_PUBLIC  = "BAGb6AhUiDuVvc-Gmpr5K_yDVZei06jPW3VnHf3A8C17EnN6rzzB6fvSohhT5esZBFl0dcKMpS2CxBYEJwkm18M";
-const VAPID_PRIVATE = "U-YX82VNvbGQqQZnJc-JwMv1giG2D00SKB2PypUk39w";
-const VAPID_SUBJECT = "mailto:nsmustang32@gmail.com";
-const SUPABASE_URL  = "https://ocpzvyjbuhznnhxsxlvy.supabase.co";
-const SUPABASE_KEY  = "sb_publishable_CwxgKLPpmI6M9Fa_2xFNLQ_IbYDrTpq";
+// Keys loaded from Vercel environment variables — never hardcoded
+const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:nsmustang32@gmail.com";
+const SUPABASE_URL  = process.env.SUPABASE_URL  || "https://ocpzvyjbuhznnhxsxlvy.supabase.co";
+const SUPABASE_KEY  = process.env.SUPABASE_KEY  || "sb_publishable_CwxgKLPpmI6M9Fa_2xFNLQ_IbYDrTpq";
 
 // ── Minimal VAPID JWT builder (no external deps) ──────────────────────────────
 function b64url(buf) {
