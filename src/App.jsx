@@ -1423,24 +1423,28 @@ const NOTIF = {
 
   // Trigger server-side push (calls Vercel function)
   async send(userId, title, body, tag="neer-locker") {
+    console.log("[NOTIF] send called", {userId, title, body});
     try {
-      await fetch("https://neer-locker.vercel.app/api/send-push", {
+      const r=await fetch("https://neer-locker.vercel.app/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({userId, title, body, tag}),
       });
-    } catch(e) { console.warn("Send push failed:", e); }
+      console.log("[NOTIF] send response", r.status);
+    } catch(e) { console.warn("[NOTIF] Send push failed:", e); }
   },
 
   // Broadcast to all users (no userId filter)
   async broadcast(title, body, tag="neer-locker") {
+    console.log("[NOTIF] broadcast called", {title, body});
     try {
-      await fetch("https://neer-locker.vercel.app/api/send-push", {
+      const r=await fetch("https://neer-locker.vercel.app/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({title, body, tag}),
       });
-    } catch(e) { console.warn("Broadcast push failed:", e); }
+      console.log("[NOTIF] broadcast response", r.status);
+    } catch(e) { console.warn("[NOTIF] Broadcast push failed:", e); }
   },
 };
 
@@ -1858,6 +1862,7 @@ export default function App() {
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at}));
       setTasks(prev=>{
         // Detect brand new tasks assigned to me
+        console.log("[NOTIF] refresh check — enabled:",notifEnabledRef.current,"user:",userRef.current?.id);
         if(notifEnabledRef.current&&userRef.current){
           newMapped.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===userRef.current.id)).forEach(t=>{
             if(!prev.find(p=>p.id===t.id)){
