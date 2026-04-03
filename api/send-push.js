@@ -18,6 +18,10 @@ async function getSubs(userId) {
   return await r.json();
 }
 
+async function getAllSubs() {
+  return await getSubs(null);
+}
+
 async function sendToSubs(subs, payload) {
   let sent = 0;
   const expired = [];
@@ -32,7 +36,6 @@ async function sendToSubs(subs, payload) {
       if (e.statusCode === 404 || e.statusCode === 410) expired.push(sub.id);
     }
   }
-  // Clean up expired
   for (const id of expired) {
     await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?id=eq.${id}`, {
       method: "DELETE",
@@ -49,21 +52,19 @@ module.exports = async function handler(req, res) {
 
   const body = req.body || {};
 
-  // ── Supabase webhook payload (from database trigger) ──────────────────────
+  // ── New DM ────────────────────────────────────────────────────────────────
   if (body.type === "INSERT" && body.table === "direct_messages") {
     const record = body.record;
     if (!record || record.system) return res.status(200).json({ skip: "system message" });
 
-    // Get sender name from employees table
     const empRes = await fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${record.from_id}`, {
       headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
     });
     const emps = await empRes.json();
     const senderName = emps?.[0]?.name || "Someone";
 
-    // Send to recipient only
     const subs = await getSubs(record.to_id);
-    if (!subs?.length) return res.status(200).json({ sent: 0, msg: "no sub for recipient" });
+    if (!subs?.length) return res.status(200).json({ sent: 0 });
 
     const result = await sendToSubs(subs, {
       title: `Message from ${senderName} 💬`,
@@ -73,7 +74,47 @@ module.exports = async function handler(req, res) {
     return res.status(200).json(result);
   }
 
-  // ── Manual call from app (tasks, announcements) ───────────────────────────
+  // ── New Task ──────────────────────────────────────────────────────────────
+  if (body.type === "INSERT" && body.table === "tasks") {
+    const record = body.record;
+    if (!record) return res.status(200).json({ skip: "no record" });
+
+    let subs;
+    if (record.assigned_to === "all") {
+      // Send to everyone
+      subs = await getAllSubs();
+    } else {
+      // Send to specific person
+      subs = await getSubs(record.assigned_to);
+    }
+    if (!subs?.length) return res.status(200).json({ sent: 0 });
+
+    const result = await sendToSubs(subs, {
+      title: "New Task 📋",
+      body: `${record.title}${record.priority ? ` · ${record.priority}` : ""}`,
+      tag: "task"
+    });
+    return res.status(200).json(result);
+  }
+
+  // ── New Announcement ──────────────────────────────────────────────────────
+  if (body.type === "INSERT" && body.table === "announcements") {
+    const record = body.record;
+    if (!record) return res.status(200).json({ skip: "no record" });
+
+    // Send to everyone
+    const subs = await getAllSubs();
+    if (!subs?.length) return res.status(200).json({ sent: 0 });
+
+    const result = await sendToSubs(subs, {
+      title: `New Announcement 📢`,
+      body: record.msg?.slice(0, 100) || "",
+      tag: "announcement"
+    });
+    return res.status(200).json(result);
+  }
+
+  // ── Manual call from app ──────────────────────────────────────────────────
   const { userId, title, body: msgBody, tag } = body;
   if (!title || !msgBody) return res.status(400).json({ error: "title and body required" });
 
