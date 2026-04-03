@@ -1386,13 +1386,13 @@ const NOTIF = {
       if(!reg) return null;
       const permission = await Notification.requestPermission();
       if(permission !== "granted") return null;
-      let sub = await reg.pushManager.getSubscription();
-      if(!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: NOTIF.b64urlToUint8(VAPID_PUBLIC_KEY),
-        });
-      }
+      // Always unsubscribe first to force a fresh subscription for this user
+      const existing = await reg.pushManager.getSubscription();
+      if(existing) await existing.unsubscribe().catch(()=>{});
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: NOTIF.b64urlToUint8(VAPID_PUBLIC_KEY),
+      });
       const json = sub.toJSON();
       // Save to Supabase — use userId as the key so there's only ever ONE row per user
       // First delete any existing subscriptions for this user
