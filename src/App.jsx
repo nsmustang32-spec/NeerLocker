@@ -1432,7 +1432,6 @@ const NOTIF = {
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({userId, title, body, tag}),
       });
-      console.log("[NOTIF] send response", r.status);
     } catch(e) { console.warn("[NOTIF] Send push failed:", e); }
   },
 
@@ -1445,7 +1444,6 @@ const NOTIF = {
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({title, body, tag}),
       });
-      console.log("[NOTIF] broadcast response", r.status);
     } catch(e) { console.warn("[NOTIF] Broadcast push failed:", e); }
   },
 };
@@ -1864,7 +1862,6 @@ export default function App() {
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at}));
       setTasks(prev=>{
         // Detect brand new tasks assigned to me
-        console.log("[NOTIF] refresh check — enabled:",notifEnabledRef.current,"user:",userRef.current?.id);
         if(notifEnabledRef.current&&userRef.current){
           newMapped.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===userRef.current.id)).forEach(t=>{
             if(!prev.find(p=>p.id===t.id)){
