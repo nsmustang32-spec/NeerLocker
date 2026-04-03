@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.1.0";
+const VERSION   = "1.1.1";
 const BUILD_TAG = "Beta";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.1.1": [
+    "Profile: Email field removed — contact your manager to change your email",
+    "Profile: Name field replaced with Nickname — only visible to you",
+  ],
   "1.1.0": [
     "Notifications: Push notifications for new tasks, announcements, and messages",
     "Settings: Tablet UI scaling option added alongside Mobile, Desktop, Auto",
@@ -2253,18 +2257,12 @@ export default function App() {
 
   // SETTINGS
   const saveName=async()=>{
-    const name=String(form.pName||"").trim();
-    if(!name){toast("Name required","err");return;}
-    const saved=san(name);
-    const next=emps.map(e=>e.id===user?.id?{...e,name:saved}:e);
-    // Update UI instantly
-    setUser(u=>({...u,name:saved}));
-    setForm(p=>({...p,pName:saved}));
+    const nick=String(form.pName||"").trim();
+    // Nickname is device-only — never saved to Supabase
+    LS.set("nl3-nickname",nick);
     setNameSaved(true);
     setTimeout(()=>setNameSaved(false),3000);
-    // Save in background
-    saveEmps(next);
-    DB.set("nl3-emps",next);
+    playSound("success");
   };
 
   const saveEmail=async()=>{
@@ -2692,22 +2690,17 @@ export default function App() {
                           </div>
                         </div>
                         <Hr T={T}/>
-                        <Inp T={T} label="DISPLAY NAME" placeholder="Your name" value={form.pName??user.name} onChange={e=>{setNameSaved(false);setForm(p=>({...p,pName:e.target.value}));}}/>
+                        <div>
+                          <Inp T={T} label="NICKNAME (only you can see this)" placeholder="Add a nickname…" value={form.pName??""} onChange={e=>{setNameSaved(false);setForm(p=>({...p,pName:e.target.value}));}}/>
+                          <div style={{fontSize:11,color:T.sub,marginTop:4,lineHeight:1.5}}>
+                            🔒 Your nickname is stored on this device only and is never shown to other staff members. Your display name shown to others is set by your manager.
+                          </div>
+                        </div>
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <Btn T={T} sm onClick={saveName}>Save Name</Btn>
+                          <Btn T={T} sm onClick={saveName}>Save Nickname</Btn>
                           {nameSaved&&(
                             <div style={{display:"flex",alignItems:"center",gap:5,animation:"fadeUp .2s ease",color:T.ok,fontWeight:700,fontSize:13}}>
-                              <span style={{fontSize:16}}>✅</span> Name saved!
-                            </div>
-                          )}
-                        </div>
-                        <Hr T={T}/>
-                        <Inp T={T} label="EMAIL ADDRESS" type="email" placeholder="your@mnu.edu" value={form.pEmail??user.email} onChange={e=>{setEmailSaved(false);setForm(p=>({...p,pEmail:e.target.value}));}}/>
-                        <div style={{display:"flex",alignItems:"center",gap:10}}>
-                          <Btn T={T} sm onClick={saveEmail}>Save Email</Btn>
-                          {emailSaved&&(
-                            <div style={{display:"flex",alignItems:"center",gap:5,animation:"fadeUp .2s ease",color:T.ok,fontWeight:700,fontSize:13}}>
-                              <span style={{fontSize:16}}>✅</span> Email updated!
+                              <span style={{fontSize:16}}>✅</span> Nickname saved!
                             </div>
                           )}
                         </div>
