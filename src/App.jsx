@@ -1394,9 +1394,11 @@ const NOTIF = {
         });
       }
       const json = sub.toJSON();
-      // Save to Supabase
+      // Save to Supabase — use userId as the key so there's only ever ONE row per user
+      // First delete any existing subscriptions for this user
+      await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?user_id=eq.${userId}`,{method:"DELETE",headers:SB.headers}).catch(()=>{});
       await SB.upsert("push_subscriptions", {
-        id: btoa(json.endpoint).slice(0,40).replace(/[^a-zA-Z0-9]/g,""),
+        id: userId, // one row per user, always
         user_id: userId,
         endpoint: json.endpoint,
         p256dh: json.keys.p256dh,
