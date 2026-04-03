@@ -1741,13 +1741,17 @@ export default function App() {
   const [techExiting,setTechExiting]=useState(false);
   const [passkeyAvailable,setPasskeyAvailable]=useState(false);
   const [notifEnabled,setNotifEnabled]=useState(false);
+  const notifEnabledRef=useRef(false);
   const [notifPerms,setNotifPerms]=useState(NOTIF.supported()?NOTIF.permission():"unsupported");
 
   useEffect(()=>{
     const saved=LS.get("nl3-notif-enabled");
-    if(saved&&NOTIF.permission()==="granted") setNotifEnabled(true);
+    if(saved&&NOTIF.permission()==="granted"){setNotifEnabled(true);notifEnabledRef.current=true;}
     setNotifPerms(NOTIF.supported()?NOTIF.permission():"unsupported");
   },[]);
+
+  // Keep ref in sync with state so refreshData always sees latest value
+  useEffect(()=>{notifEnabledRef.current=notifEnabled;},[notifEnabled]);
   const [passkeyEmail,setPasskeyEmail]=useState("");
 
   useEffect(()=>{
@@ -1852,7 +1856,7 @@ export default function App() {
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at}));
       setTasks(prev=>{
         // Detect brand new tasks assigned to me
-        if(notifEnabled&&user){
+        if(notifEnabledRef.current&&user){
           newMapped.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id)).forEach(t=>{
             if(!prev.find(p=>p.id===t.id)){
               NOTIF.send(user.id,"New Task 📋",`${t.title} — assigned to you`,"task");
@@ -1866,7 +1870,7 @@ export default function App() {
     if(annRows){
       const newAnns=annRows.map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build}));
       setAnns(prev=>{
-        if(notifEnabled&&user){
+        if(notifEnabledRef.current&&user){
           newAnns.filter(a=>!(a.dismissed||[]).includes(user.id)).forEach(a=>{
             if(!prev.find(p=>p.id===a.id)){
               NOTIF.broadcast("New Announcement 📢",a.msg.slice(0,80),"announcement");
@@ -1881,7 +1885,7 @@ export default function App() {
     if(dmRows){
       const newDms=dmRows.map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback}));
       setDms(prev=>{
-        if(notifEnabled&&user){
+        if(notifEnabledRef.current&&user){
           newDms.filter(d=>d.to===user.id&&!d.read&&!d.system).forEach(d=>{
             if(!prev.find(p=>p.id===d.id)){
               const sender=emps.find(e=>e.id===d.from);
@@ -2926,6 +2930,7 @@ export default function App() {
                                     setNotifPerms(NOTIF.permission());
                                     if(sub){
                                       setNotifEnabled(true);
+                                      notifEnabledRef.current=true;
                                       LS.set("nl3-notif-enabled",true);
                                       playSound("notify");
                                       toast("Notifications enabled! ✅");
@@ -2935,6 +2940,7 @@ export default function App() {
                                   } else {
                                     await NOTIF.unsubscribe(user.id);
                                     setNotifEnabled(false);
+                                    notifEnabledRef.current=false;
                                     LS.set("nl3-notif-enabled",false);
                                     playSound("click");
                                     toast("Notifications disabled","warn");
