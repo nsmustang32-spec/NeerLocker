@@ -1424,7 +1424,7 @@ const NOTIF = {
   // Trigger server-side push (calls Vercel function)
   async send(userId, title, body, tag="neer-locker") {
     try {
-      await fetch("/api/send-push", {
+      await fetch("https://neer-locker.vercel.app/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({userId, title, body, tag}),
@@ -1435,7 +1435,7 @@ const NOTIF = {
   // Broadcast to all users (no userId filter)
   async broadcast(title, body, tag="neer-locker") {
     try {
-      await fetch("/api/send-push", {
+      await fetch("https://neer-locker.vercel.app/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({title, body, tag}),
@@ -1722,6 +1722,7 @@ export default function App() {
 
   const [screen,setScreen]=useState("login");
   const [user,setUser]=useState(null);
+  const userRef=useRef(null);
   const [welData,setWelData]=useState({name:"",role:"employee"});
   const [showBriefing,setShowBriefing]=useState(false);
   const [loggingOut,setLoggingOut]=useState(false);
@@ -1750,8 +1751,9 @@ export default function App() {
     setNotifPerms(NOTIF.supported()?NOTIF.permission():"unsupported");
   },[]);
 
-  // Keep ref in sync with state so refreshData always sees latest value
+  // Keep refs in sync with state so refreshData always sees latest value
   useEffect(()=>{notifEnabledRef.current=notifEnabled;},[notifEnabled]);
+  useEffect(()=>{userRef.current=user;},[user]);
   const [passkeyEmail,setPasskeyEmail]=useState("");
 
   useEffect(()=>{
@@ -1856,10 +1858,10 @@ export default function App() {
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at}));
       setTasks(prev=>{
         // Detect brand new tasks assigned to me
-        if(notifEnabledRef.current&&user){
-          newMapped.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id)).forEach(t=>{
+        if(notifEnabledRef.current&&userRef.current){
+          newMapped.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===userRef.current.id)).forEach(t=>{
             if(!prev.find(p=>p.id===t.id)){
-              NOTIF.send(user.id,"New Task 📋",`${t.title} — assigned to you`,"task");
+              NOTIF.send(userRef.current.id,"New Task 📋",`${t.title} — assigned to you`,"task");
             }
           });
         }
@@ -1870,8 +1872,8 @@ export default function App() {
     if(annRows){
       const newAnns=annRows.map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build}));
       setAnns(prev=>{
-        if(notifEnabledRef.current&&user){
-          newAnns.filter(a=>!(a.dismissed||[]).includes(user.id)).forEach(a=>{
+        if(notifEnabledRef.current&&userRef.current){
+          newAnns.filter(a=>!(a.dismissed||[]).includes(userRef.current.id)).forEach(a=>{
             if(!prev.find(p=>p.id===a.id)){
               NOTIF.broadcast("New Announcement 📢",a.msg.slice(0,80),"announcement");
             }
@@ -1885,11 +1887,11 @@ export default function App() {
     if(dmRows){
       const newDms=dmRows.map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback}));
       setDms(prev=>{
-        if(notifEnabledRef.current&&user){
-          newDms.filter(d=>d.to===user.id&&!d.read&&!d.system).forEach(d=>{
+        if(notifEnabledRef.current&&userRef.current){
+          newDms.filter(d=>d.to===userRef.current.id&&!d.read&&!d.system).forEach(d=>{
             if(!prev.find(p=>p.id===d.id)){
               const sender=emps.find(e=>e.id===d.from);
-              NOTIF.send(user.id,`Message from ${sender?.name||"Someone"} 💬`,d.text.slice(0,80),"dm");
+              NOTIF.send(userRef.current.id,`Message from ${sender?.name||"Someone"} 💬`,d.text.slice(0,80),"dm");
             }
           });
         }
