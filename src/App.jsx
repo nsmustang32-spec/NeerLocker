@@ -1,11 +1,15 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.1.1";
-const BUILD_TAG = "Beta";
+const VERSION   = "1.1.2";
+const BUILD_TAG = "Release Candidate";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.1.2": [
+    "Login: Demo logins removed — staff sign in with their MNU email",
+    "Profile: Nickname field only visible to the user on their device",
+  ],
   "1.1.1": [
     "Profile: Email field removed — contact your manager to change your email",
     "Profile: Name field replaced with Nickname — only visible to you",
@@ -266,10 +270,16 @@ const LS = {
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
 const SEED = [
-  {id:"e1",email:"boss@mnu.edu",      name:"Boss",          role:"boss",      pin:"",status:"online"},
-  {id:"e2",email:"manager@mnu.edu",   name:"Manager",       role:"manager",   pin:"",status:"online"},
-  {id:"e3",email:"assistant@mnu.edu", name:"Asst. Manager", role:"assistant", pin:"",status:"online"},
-  {id:"e4",email:"employee@mnu.edu",  name:"Employee",      role:"employee",  pin:"",status:"online"},
+  {id:"e1", email:"tlsinclair@mnu.edu",  name:"Professor Sinclair", role:"boss",      pin:"",status:"offline",createdAt:1700000000000},
+  {id:"e2", email:"nrsmith2@mnu.edu",    name:"Nate Smith",         role:"manager",   pin:"",status:"offline",createdAt:1700000000001},
+  {id:"e3", email:"emburnett@mnu.edu",   name:"Ella Burnett",       role:"manager",   pin:"",status:"offline",createdAt:1700000000002},
+  {id:"e4", email:"afmccarthy@mnu.edu",  name:"Alexis McCarthy",    role:"assistant", pin:"",status:"offline",createdAt:1700000000003},
+  {id:"e5", email:"zwerth@mnu.edu",      name:"Zaylee Werth",       role:"employee",  pin:"",status:"offline",createdAt:1700000000004},
+  {id:"e6", email:"tlmiller3@mnu.edu",   name:"Trysta Miller",      role:"employee",  pin:"",status:"offline",createdAt:1700000000005},
+  {id:"e7", email:"bdgould@mnu.edu",     name:"Bethany Gould",      role:"employee",  pin:"",status:"offline",createdAt:1700000000006},
+  {id:"e8", email:"mrmanthe@mnu.edu",    name:"Mackenzie Manthe",   role:"employee",  pin:"",status:"offline",createdAt:1700000000007},
+  {id:"e9", email:"llvarney@mnu.edu",    name:"Lauren Varney",      role:"employee",  pin:"",status:"offline",createdAt:1700000000008},
+  {id:"e10",email:"blittle@mnu.edu",     name:"Brylee Little",      role:"employee",  pin:"",status:"offline",createdAt:1700000000009},
 ];
 const ROLES = {
   boss:      {label:"Boss",        color:"#C8102E", p:["home","tasks","inv","ann","act","emp","assign","settings","boss","dms","online"]},
@@ -691,7 +701,7 @@ function WelcomeAnim({name,role,T,onDone}) {
 
       {/* Name + rotating tagline */}
       <div style={{textAlign:"center",opacity:step>=1?1:0,transform:step>=1?"translateY(0)":"translateY(14px)",transition:"opacity .4s ease,transform .4s ease",maxWidth:300}}>
-        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:24,fontWeight:800,color:T.txt,lineHeight:1.2}}>Welcome back, {name}.</div>
+        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:24,fontWeight:800,color:T.txt,lineHeight:1.2}}>Welcome back, {name.split(" ")[0]}.</div>
         <div style={{color:T.scarlet,fontSize:13,fontWeight:600,marginTop:7,fontStyle:"italic",animation:"fadeUp .35s ease both"}}>
           {quote}
         </div>
@@ -1692,23 +1702,6 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
           </div>
         </div>
 
-        {/* Demo logins */}
-        <div className="fu" style={{animationDelay:".16s",marginTop:14,background:T.dark?"rgba(18,8,12,0.75)":T.surf,backdropFilter:"blur(20px)",border:`1px solid ${T.bor}`,borderRadius:16,padding:16,boxShadow:"0 4px 20px rgba(0,0,0,.08)"}}>
-          <div style={{fontSize:11,color:T.mut,fontWeight:700,marginBottom:10,letterSpacing:"0.06em"}}>DEMO LOGINS — click to autofill</div>
-          {SEED.map((e,i)=>(
-            <div key={e.id} onClick={()=>{setEmailIn(e.email);setEmailErr("");setShowPin(false);}}
-              style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 8px",cursor:"pointer",borderRadius:10,transition:"all .15s",animation:`fadeUp .3s ${0.18+i*0.06}s ease both`}}
-              onMouseEnter={ev=>{ev.currentTarget.style.background=T.surfH;ev.currentTarget.style.transform="translateX(4px)";ev.currentTarget.style.boxShadow=`2px 0 0 ${T.scarlet} inset`;}}
-              onMouseLeave={ev=>{ev.currentTarget.style.background="transparent";ev.currentTarget.style.transform="translateX(0)";ev.currentTarget.style.boxShadow="none";}}
-            >
-              <div style={{display:"flex",alignItems:"center",gap:9}}>
-                <div style={{width:30,height:30,borderRadius:"50%",background:ROLES[e.role].color+"28",border:`2px solid ${ROLES[e.role].color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color:ROLES[e.role].color,fontSize:13,boxShadow:`0 0 8px ${ROLES[e.role].color}22`}}>{e.email[0].toUpperCase()}</div>
-                <span style={{fontSize:13,color:T.sub}}>{e.email}</span>
-              </div>
-              <Tag label={ROLES[e.role].label} color={ROLES[e.role].color}/>
-            </div>
-          ))}
-        </div>
       </div>
 
       <ClaudeTag T={T}/><VersionBadge T={T}/>
