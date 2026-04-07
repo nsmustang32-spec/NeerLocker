@@ -1,11 +1,17 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.1.2";
-const BUILD_TAG = "Release Candidate";
+const VERSION   = "1.2.0";
+const BUILD_TAG = "PR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.2.0": [
+    "Finn: AI assistant built into the app — access from nav menu or bottom-right button",
+    "Finn: Knows your tasks, inventory, announcements, and team in real time",
+    "Finn: Custom hex compass logo, slides up as a chat panel",
+    "UI: Version badge hides smoothly when Finn chat is open",
+  ],
   "1.1.2": [
     "Login: Demo logins removed — staff sign in with their MNU email",
     "Profile: Nickname field only visible to the user on their device",
@@ -314,6 +320,11 @@ const buildCSS = T => `
   @keyframes swipeFlash{0%{opacity:0;transform:translateX(-100%);}30%{opacity:0.18;transform:translateX(0);}100%{opacity:0;transform:translateX(100%);}}
   @keyframes swipeReveal{from{transform:translateX(-100%);opacity:0;}to{transform:translateX(0);opacity:1;}}
   @keyframes swipeFade{from{opacity:1;}to{opacity:0;}}
+  @keyframes finnSlideUp{0%{opacity:0;transform:translateY(100%) scale(0.92);}60%{transform:translateY(-8px) scale(1.01);}100%{opacity:1;transform:translateY(0) scale(1);}}
+  @keyframes finnHexSpin{0%{transform:rotate(0deg) scale(0);}50%{transform:rotate(200deg) scale(1.3);}100%{transform:rotate(360deg) scale(1);}}
+  @keyframes finnRipple{0%{transform:scale(0);opacity:0.6;}100%{transform:scale(4);opacity:0;}}
+  @keyframes finnStagger{0%{opacity:0;transform:translateY(16px);}100%{opacity:1;transform:translateY(0);}}
+  @keyframes finnGlow{0%,100%{box-shadow:0 0 20px #1e7fa844;}50%{box-shadow:0 0 40px #1e7fa888,0 0 60px #C8102E33;}}
   @keyframes shimmer{0%{background-position:-200px 0;}100%{background-position:calc(200px + 100%) 0;}}
   .fu{animation:fadeUp .25s ease both;}
   .fi{animation:fadeIn .2s ease both;}
@@ -452,9 +463,9 @@ function ToastList({items}) {
   );
 }
 
-function VersionBadge({T}) {
+function VersionBadge({T,hide}) {
   return (
-    <div style={{position:"fixed",bottom:12,right:14,zIndex:9999,background:T.surf,border:`1px solid ${T.bor}`,borderRadius:8,padding:"4px 12px",fontSize:10,fontWeight:700,letterSpacing:"0.03em",userSelect:"none",display:"flex",gap:5,alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>
+    <div style={{position:"fixed",bottom:12,right:14,zIndex:9999,background:T.surf,border:`1px solid ${T.bor}`,borderRadius:8,padding:"4px 12px",fontSize:10,fontWeight:700,letterSpacing:"0.03em",userSelect:"none",display:"flex",gap:5,alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)",opacity:hide?0:1,transform:hide?"translateY(12px)":"translateY(0)",transition:"opacity .25s ease,transform .25s ease",pointerEvents:hide?"none":"auto"}}>
       <span style={{color:T.scarlet,fontWeight:800}}>MNU</span>
       <span style={{color:T.faint}}>·</span>
       <span style={{color:T.sub}}>Neer Locker</span>
@@ -782,7 +793,7 @@ function LoginBriefing({user,tasks,anns,dms,emps,T,onClose}) {
 }
 
 // ─── SIDEBAR NAV ─────────────────────────────────────────────────────────────
-function NavMenu({user,page,setPage,tasks,anns,dms,T}) {
+function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
   const [open,setOpen]=useState(false);
   const ref=useRef(null);
   const myAnns=anns.filter(a=>!(a.dismissed||[]).includes(user?.id)).length;
@@ -798,6 +809,7 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T}) {
     {key:"dms",    icon:"💬", label:"Messages",       badge:unreadDMs, perm:"dms"},
     {key:"act",    icon:"📊", label:"Activity",       perm:"act"},
     {key:"set",    icon:"⚙️", label:"Settings"},
+    {key:"finn",   icon:"finn",label:"Ask Finn",  finn:true},
   ].filter(i=>!i.perm||can(user,i.perm));
 
   // Close on outside click
@@ -807,7 +819,7 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T}) {
     return()=>document.removeEventListener("mousedown",handler);
   },[]);
 
-  const go=key=>{setPage(key);setOpen(false);playSound("click");};
+  const go=(key,finn)=>{if(finn){onFinn();setOpen(false);playSound("open");}else{setPage(key);setOpen(false);playSound("click");}};
 
   return (
     <div ref={ref} style={{position:"relative"}}>
@@ -850,12 +862,30 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T}) {
           {items.map((item,i)=>{
             const active=page===item.key;
             return (
-              <button key={item.key} onClick={()=>go(item.key)}
+              <button key={item.key} onClick={()=>go(item.key,item.finn)}
                 style={{width:"100%",background:active?T.scarlet+"18":"transparent",color:active?T.scarlet:T.sub,border:"none",borderRadius:12,padding:"13px 16px",fontWeight:700,fontSize:16,fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:12,cursor:"pointer",borderLeft:active?`4px solid ${T.scarlet}`:"4px solid transparent",transition:"all .15s",animation:`slideRight .18s ${i*25}ms ease both`}}
                 onMouseEnter={e=>{if(!active){e.currentTarget.style.background=T.surfH;e.currentTarget.style.color=T.txt;}}}
                 onMouseLeave={e=>{if(!active){e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.sub;}}}
               >
-                <span style={{fontSize:22,width:28,textAlign:"center",flexShrink:0}}>{item.icon}</span>
+                {item.finn?(
+                  <svg width="22" height="22" viewBox="0 0 22 22" style={{flexShrink:0}}>
+                    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+                    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.2"/>
+                    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.6" opacity="0.5"/>
+                    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+                    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+                    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+                    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+                    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+                    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+                    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+                    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+                    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+                    <circle cx="11" cy="11" r="1" fill="#fff"/>
+                  </svg>
+                ):(
+                  <span style={{fontSize:22,width:28,textAlign:"center",flexShrink:0}}>{item.icon}</span>
+                )}
                 <span style={{flex:1}}>{item.label}</span>
                 {(item.badge||0)>0&&<NumBadge count={item.badge} color={T.scarlet}/>}
                 {active&&<span style={{width:8,height:8,borderRadius:"50%",background:T.scarlet,flexShrink:0,display:"inline-block"}}/>}
@@ -1462,6 +1492,135 @@ const NOTIF = {
   },
 };
 
+// ─── FINN AI CHAT ─────────────────────────────────────────────────────────────
+function FinnChat({T,user,tasks,inv,anns,dms,emps,onClose}) {
+  const [msgs,setMsgs]=useState([{role:"assistant",content:"Hey! I'm Finn — your MNU Neer Locker guide. Ask me anything about your tasks, inventory, announcements, or how to use the app!"}]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const endRef=useRef(null);
+  const inputRef=useRef(null);
+
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
+  useEffect(()=>{setTimeout(()=>inputRef.current?.focus(),100);},[]);
+
+  const FinnLogo=()=>(
+    <svg width="28" height="28" viewBox="0 0 22 22" style={{flexShrink:0}}>
+      <rect width="22" height="22" rx="6" fill="#0f2744"/>
+      <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.2"/>
+      <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.6" opacity="0.5"/>
+      <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+      <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+      <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+      <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+      <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+      <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+      <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+      <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+      <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+      <circle cx="11" cy="11" r="1" fill="#fff"/>
+    </svg>
+  );
+
+  const send=async()=>{
+    const text=input.trim();
+    if(!text||loading) return;
+    setInput("");
+    const newMsgs=[...msgs,{role:"user",content:text}];
+    setMsgs(newMsgs);
+    setLoading(true);
+
+    // Build context about current data
+    const openTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id));
+    const overdueTasks=openTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
+    const lowInv=inv.filter(i=>i.stock<5);
+    const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).length;
+    const myRole=ROLES[user?.role]?.label||"Staff";
+
+    const systemPrompt=`You are Finn, the friendly AI assistant for MNU Neer Locker — a campus business at MidAmerica Nazarene University (MNU Pioneers). You help staff with their tasks, inventory, and app questions.
+
+Current user: ${user?.name} (${myRole})
+Open tasks assigned to them: ${openTasks.length} (${overdueTasks.length} overdue)
+Low inventory items (stock < 5): ${lowInv.map(i=>i.name+"("+i.stock+")").join(", ")||"none"}
+Unread messages: ${unreadDMs}
+Total team members: ${emps.length}
+Recent announcements: ${anns.slice(0,3).map(a=>a.msg).join(" | ")||"none"}
+
+Keep responses short, friendly, and direct — staff are busy. Use plain language. If asked about tasks or inventory, reference the actual data above. You're named Finn after the pioneer spirit of MNU. Occasionally be encouraging but never cheesy. Never mention you're built on Claude or any AI system — you're just Finn.`;
+
+    try {
+      const res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          model:"claude-sonnet-4-20250514",
+          max_tokens:1000,
+          system:systemPrompt,
+          messages:newMsgs.map(m=>({role:m.role,content:m.content})),
+        })
+      });
+      const data=await res.json();
+      const reply=data.content?.[0]?.text||"Sorry, I couldn't get a response. Try again!";
+      setMsgs(prev=>[...prev,{role:"assistant",content:reply}]);
+    } catch(e) {
+      setMsgs(prev=>[...prev,{role:"assistant",content:"Hmm, something went wrong on my end. Try again in a second!"}]);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{position:"fixed",bottom:0,right:0,width:"min(420px,100vw)",height:"min(600px,90vh)",zIndex:9999,display:"flex",flexDirection:"column",background:T.surf,border:`1px solid ${T.bor}`,borderRadius:"18px 18px 0 0",boxShadow:"0 -8px 40px rgba(0,0,0,.22)",animation:"finnSlideUp .45s cubic-bezier(.23,1,.32,1) both",animationDelay:"0.05s"}}>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",borderBottom:`1px solid ${T.bor}`,background:"#0f2744",borderRadius:"18px 18px 0 0",flexShrink:0}}>
+        <FinnLogo/>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-0.3px"}}>Finn</div>
+          <div style={{fontSize:11,color:"#ffffff88",fontWeight:500}}>MNU Neer Locker Guide</div>
+        </div>
+        <button onClick={onClose} style={{background:"none",border:"none",color:"#ffffff88",fontSize:20,cursor:"pointer",padding:"4px 8px",borderRadius:8,fontFamily:"inherit",lineHeight:1}}>✕</button>
+      </div>
+
+      {/* Messages */}
+      <div style={{flex:1,overflowY:"auto",padding:"14px 14px 8px",display:"flex",flexDirection:"column",gap:10}}>
+        {msgs.map((m,i)=>(
+          <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",flexDirection:m.role==="user"?"row-reverse":"row"}}>
+            {m.role==="assistant"&&<FinnLogo/>}
+            {m.role==="user"&&(
+              <div style={{width:28,height:28,borderRadius:"50%",background:ROLES[user?.role]?.color+"33",border:`2px solid ${ROLES[user?.role]?.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:11,color:ROLES[user?.role]?.color,flexShrink:0}}>
+                {user?.name?.[0]||"?"}
+              </div>
+            )}
+            <div style={{maxWidth:"78%",background:m.role==="user"?"#0f2744":T.surfH,color:m.role==="user"?"#fff":T.txt,borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",padding:"10px 14px",fontSize:13,lineHeight:1.55,border:`1px solid ${m.role==="user"?"#1e7fa844":T.bor}`}}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading&&(
+          <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+            <FinnLogo/>
+            <div style={{background:T.surfH,borderRadius:"18px 18px 18px 4px",padding:"12px 16px",border:`1px solid ${T.bor}`,display:"flex",gap:5,alignItems:"center"}}>
+              {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:T.mut,animation:`pulse 1s ${i*180}ms ease-in-out infinite`}}/>)}
+            </div>
+          </div>
+        )}
+        <div ref={endRef}/>
+      </div>
+
+      {/* Input */}
+      <div style={{padding:"10px 14px 14px",borderTop:`1px solid ${T.bor}`,display:"flex",gap:8,flexShrink:0}}>
+        <input ref={inputRef} value={input} onChange={e=>setInput(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()}
+          placeholder="Ask Finn anything…"
+          style={{flex:1,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:12,padding:"10px 14px",fontSize:13,fontFamily:"inherit",color:T.txt,outline:"none"}}
+        />
+        <button onClick={send} disabled={loading||!input.trim()}
+          style={{background:"#0f2744",border:"none",borderRadius:12,padding:"10px 14px",cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,color:"#fff",fontWeight:700,fontSize:13,fontFamily:"inherit",transition:"opacity .15s"}}>
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── WEBAUTHN / PASSKEY HELPERS ───────────────────────────────────────────────
 const WA = {
   supported: ()=>window.PublicKeyCredential!==undefined,
@@ -1768,6 +1927,9 @@ export default function App() {
   const [techPinGate,setTechPinGate]=useState(false);
   const [selectedTasks,setSelectedTasks]=useState(new Set());
   const [showFeedback,setShowFeedback]=useState(false);
+  const [showFinn,setShowFinn]=useState(false);
+  const [finnAnim,setFinnAnim]=useState(false);
+  const openFinn=()=>{setFinnAnim(true);setTimeout(()=>setShowFinn(true),420);};
   const [feedbackForm,setFeedbackForm]=useState({type:"feature",msg:""});
   const [techPinInput,setTechPinInput]=useState("");
   const [techPinErr,setTechPinErr]=useState("");
@@ -2473,7 +2635,7 @@ export default function App() {
 
             {/* Floating circle NavMenu — always visible top-left */}
             <div style={{position:"fixed",left:10,top:62,zIndex:350}}>
-              <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T}/>
+              <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T} onFinn={()=>openFinn()}/>
             </div>
 
             {/* Page content */}
@@ -3139,6 +3301,66 @@ export default function App() {
           {/* Login briefing popup */}
           {showBriefing&&<LoginBriefing user={user} tasks={tasks} anns={anns} dms={dms} emps={emps} T={T} onClose={()=>setShowBriefing(false)}/>}
 
+          {/* Finn button — bottom right above ideas */}
+          <button onClick={()=>{playSound("open");openFinn();}} title="Ask Finn"
+            className="float-action-btn" style={{position:"fixed",bottom:page==="dms"?222:148,right:14,zIndex:9998,background:"#0f2744",border:"2px solid #1e7fa8aa",borderRadius:"50%",width:40,height:40,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.28)",transition:"transform .15s,box-shadow .15s,bottom .25s",touchAction:"manipulation",padding:0}}
+            onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.14)";e.currentTarget.style.boxShadow="0 5px 18px rgba(0,0,0,.3)";}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 14px rgba(0,0,0,.28)";}}
+          >
+            <svg width="22" height="22" viewBox="0 0 22 22">
+              <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.2"/>
+              <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.6" opacity="0.5"/>
+              <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+              <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+              <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+              <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+              <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+              <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+              <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+              <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
+              <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+              <circle cx="11" cy="11" r="1" fill="#fff"/>
+            </svg>
+          </button>
+
+          {/* Finn intro animation */}
+          {finnAnim&&(
+            <div style={{position:"fixed",inset:0,zIndex:9998,pointerEvents:"none",overflow:"hidden"}}
+              onAnimationEnd={()=>setFinnAnim(false)}>
+              {/* Dark overlay flash */}
+              <div style={{position:"absolute",inset:0,background:"#0f2744",animation:"swipeFade .42s ease both"}}/>
+              {/* Ripple rings from bottom-right */}
+              {[0,1,2].map(i=>(
+                <div key={i} style={{position:"absolute",bottom:148,right:34,width:40,height:40,borderRadius:"50%",border:`2px solid ${i===0?"#C8102E":"#1e7fa8"}`,animation:`finnRipple .6s ${i*120}ms ease-out both`,pointerEvents:"none"}}/>
+              ))}
+              {/* Big hex compass burst center screen */}
+              <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",animation:"finnHexSpin .42s cubic-bezier(.34,1.56,.64,1) both",pointerEvents:"none"}}>
+                <svg width="90" height="90" viewBox="0 0 22 22">
+                  <rect width="22" height="22" rx="6" fill="#0f2744"/>
+                  <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.3"/>
+                  <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.6" opacity="0.6"/>
+                  <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+                  <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+                  <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+                  <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+                  <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+                  <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+                  <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+                  <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+                  <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+                  <circle cx="11" cy="11" r="1" fill="#fff"/>
+                </svg>
+              </div>
+              {/* "Finn" text fades in below hex */}
+              <div style={{position:"absolute",top:"calc(50% + 58px)",left:"50%",transform:"translateX(-50%)",fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:22,color:"#fff",letterSpacing:"-0.3px",animation:"finnStagger .35s .18s ease both",pointerEvents:"none",whiteSpace:"nowrap"}}>
+                Hey, I'm <span style={{color:"#1e7fa8"}}>Finn</span>
+              </div>
+            </div>
+          )}
+
+          {/* Finn chat panel */}
+          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} onClose={()=>setShowFinn(false)}/>}
+
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
 
           {/* Feedback / Ideas button — higher in DMs to clear send bar */}
@@ -3181,7 +3403,7 @@ export default function App() {
           )}
 
           {loggingOut&&<LogoutAnim T={T}/>}
-          <ClaudeTag T={T}/><VersionBadge T={T}/>
+          <ClaudeTag T={T}/><VersionBadge T={T} hide={showFinn}/>
         </div>
       )}
 
