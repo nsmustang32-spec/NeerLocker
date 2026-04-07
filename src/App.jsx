@@ -1,12 +1,34 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.2.0";
+const VERSION   = "1.4.0";
 const BUILD_TAG = "PR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.4.0": [
+    "Smart: Global search bar always visible in header — searches tasks, inventory, staff, announcements",
+    "Smart: Suggestions while typing in task title and inventory fields",
+    "Smart: Auto-categorizes task priority based on keywords",
+    "Smart: Smart reminders on home screen for overdue and unfinished tasks",
+    "Smart: Tooltips on key buttons and fields throughout the app",
+    "Smart: Confirm dialogs before destructive actions",
+    "Smart: Recently viewed section shows last page visited",
+    "Offline: App detects offline status and queues actions",
+  ],
+  "1.3.0": [
+    "Finn: Now knows your XP, level, title, and streak",
+    "Finn: Gives personalized tips on how to earn more XP",
+    "Progression: Full system with 10 levels and daily streaks",
+    "Finn: Knows current date and time",
+  ],
   "1.2.0": [
+    "Progression: Daily login streaks, XP system, and level titles for staff",
+    "Progression: 10 levels from Pioneer to Top Contributor with unique colors",
+    "Progression: Boss can see full staff leaderboard on home screen",
+    "Finn: Now knows the current date and time",
+    "Finn: AI assistant with hex compass logo",
+  ],
     "Finn: AI assistant built into the app — access from nav menu or bottom-right button",
     "Finn: Knows your tasks, inventory, announcements, and team in real time",
     "Finn: Custom hex compass logo, slides up as a chat panel",
@@ -665,7 +687,7 @@ function LogoutAnim({T}) {
       </div>
       <div style={{textAlign:"center"}}>
         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,letterSpacing:"-0.3px"}}>See you later!</div>
-        <div style={{color:T.sub,fontSize:13,marginTop:6}}>Signing out of MNU's Neer Locker…</div>
+        <div style={{color:T.sub,fontSize:13,marginTop:6}}>Signing out of MNU&apos;s Neer Locker…</div>
       </div>
     </div>
   );
@@ -716,7 +738,7 @@ function WelcomeAnim({name,role,T,onDone}) {
         <div style={{color:T.scarlet,fontSize:13,fontWeight:600,marginTop:7,fontStyle:"italic",animation:"fadeUp .35s ease both"}}>
           {quote}
         </div>
-        <div style={{color:T.sub,fontSize:12,marginTop:8}}>{rc.label} · MNU's Neer Locker</div>
+        <div style={{color:T.sub,fontSize:12,marginTop:8}}>{rc.label} &middot; MNU&apos;s Neer Locker</div>
       </div>
 
       <ClaudeTag T={T}/>
@@ -781,11 +803,11 @@ function LoginBriefing({user,tasks,anns,dms,emps,T,onClose}) {
         )}
 
         {myTasks.length===0&&myAnns.length===0&&unreadDMs===0&&(
-          <div style={{textAlign:"center",padding:"20px 0",color:T.sub,fontSize:14}}>🎉 You're all caught up! Nothing new.</div>
+          <div style={{textAlign:"center",padding:"20px 0",color:T.sub,fontSize:14}}>🎉 You&apos;re all caught up! Nothing new.</div>
         )}
 
         <div style={{marginTop:16}}>
-          <Btn T={T} full variant="ghost" onClick={close}>Got it, let's go →</Btn>
+          <Btn T={T} full variant="ghost" onClick={close}>Got it, let&apos;s go →</Btn>
         </div>
       </div>
     </div>
@@ -1011,7 +1033,7 @@ function HeroBanner({user,T,onProfileClick}) {
   );
 }
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast}) {
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
   const doneTasks=tasks.filter(t=>t.done&&t.createdBy===user.id||tasks.filter(tt=>tt.done&&(tt.assignedTo===user.id||tt.assignedTo==="all")).includes(t));
   const overdueTasks=myTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
@@ -1026,10 +1048,49 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast}) {
     {icon:"⚠️",label:"Overdue",val:overdueTasks.length,color:T.err,page:"tasks"},
   ];
 
+  const myProgress=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+  const lvInfo=getLevelInfo(myProgress.xp);
+  const isEligible=XP_ELIGIBLE_ROLES.includes(user.role);
+
   return (
     <div>
       {/* Animated Hero Banner */}
       <HeroBanner user={user} T={T} onProfileClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}/>
+
+      {/* Progression Card — only for eligible roles */}
+      {isEligible&&(
+        <div className="fu" style={{background:T.card,border:`2px solid ${lvInfo.color}44`,borderRadius:16,padding:16,marginBottom:16,animation:"fadeUp .3s ease both",position:"relative",overflow:"hidden"}}>
+          {/* Glow background */}
+          <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 10% 50%,${lvInfo.color}18 0%,transparent 70%)`,pointerEvents:"none"}}/>
+          <div style={{display:"flex",alignItems:"center",gap:14,position:"relative"}}>
+            {/* Level badge */}
+            <div style={{width:56,height:56,borderRadius:14,background:`${lvInfo.color}22`,border:`2px solid ${lvInfo.color}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 0 16px ${lvInfo.glow}`}}>
+              <div style={{fontSize:10,fontWeight:800,color:lvInfo.color,letterSpacing:"0.05em"}}>LVL</div>
+              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:lvInfo.color,lineHeight:1}}>{lvInfo.level}</div>
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:lvInfo.color}}>{lvInfo.title}</span>
+                {myProgress.streak>0&&(
+                  <div style={{display:"flex",alignItems:"center",gap:4,background:"#ff6b0022",border:"1px solid #ff6b0044",borderRadius:20,padding:"2px 8px"}}>
+                    <span style={{fontSize:12}}>🔥</span>
+                    <span style={{fontSize:11,fontWeight:800,color:"#ff6b00"}}>{myProgress.streak} day streak</span>
+                  </div>
+                )}
+              </div>
+              <div style={{fontSize:11,color:T.sub,marginTop:2}}>{myProgress.xp} XP total{lvInfo.next?` · ${lvInfo.xpToNext} XP to ${lvInfo.next.title}`:` · Max level!`}</div>
+              {/* XP progress bar */}
+              <div style={{marginTop:8,height:6,background:T.bor,borderRadius:3,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${lvInfo.pct}%`,background:`linear-gradient(90deg,${lvInfo.color}88,${lvInfo.color})`,borderRadius:3,transition:"width .6s cubic-bezier(.23,1,.32,1)"}}/>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginTop:3,fontSize:10,color:T.faint}}>
+                <span>{lvInfo.pct}% to next level</span>
+                {lvInfo.next&&<span>{lvInfo.next.title}</span>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick stats */}
       <div className="fu" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}} >
@@ -1047,6 +1108,54 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast}) {
 
 
 
+      {/* Staff Levels — visible to boss only */}
+      {can(user,"boss")&&XP_ELIGIBLE_ROLES.some(r=>emps.find(e=>e.role===r))&&(
+        <div className="fu card" style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginTop:14}}>
+          <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:12,fontFamily:"'Clash Display',sans-serif"}}>🏆 Staff Progression</div>
+          <div style={{display:"grid",gap:8}}>
+            {emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role)).sort((a,b)=>(progress[b.id]?.xp||0)-(progress[a.id]?.xp||0)).map((e,i)=>{
+              const pg=progress[e.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+              const lv=getLevelInfo(pg.xp);
+              return (
+                <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:T.bg,borderRadius:10,border:`1px solid ${lv.color}33`}}>
+                  <div style={{width:24,height:24,borderRadius:6,background:`${lv.color}22`,border:`1.5px solid ${lv.color}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <span style={{fontSize:10,fontWeight:800,color:lv.color}}>{lv.level}</span>
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{fontSize:13,fontWeight:700,color:T.txt}}>{e.name}</span>
+                      <span style={{fontSize:11,fontWeight:700,color:lv.color}}>{lv.title}</span>
+                      {pg.streak>0&&<span style={{fontSize:11}}>🔥{pg.streak}</span>}
+                    </div>
+                    <div style={{height:4,background:T.bor,borderRadius:2,marginTop:4,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${lv.pct}%`,background:lv.color,borderRadius:2}}/>
+                    </div>
+                  </div>
+                  <span style={{fontSize:11,color:T.sub,flexShrink:0}}>{pg.xp} XP</span>
+                  <span style={{fontSize:10,color:T.faint,flexShrink:0}}>#{i+1}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recently viewed */}
+      {prevPage&&prevPage!=="home"&&(
+        <div className="fu" style={{marginTop:14,animation:"fadeUp .25s ease both"}}>
+          <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:6}}>RECENTLY VIEWED</div>
+          <button onClick={()=>{setPrevPage(page);setPage(prevPage);playSound("click");}}
+            style={{display:"flex",alignItems:"center",gap:8,background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"10px 14px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",width:"100%",textAlign:"left"}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"66";e.currentTarget.style.background=T.surfH;}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.background=T.card;}}
+          >
+            <span style={{fontSize:16}}>{({"tasks":"✅","inv":"📦","anns":"🔔","dms":"💬","act":"📊","set":"⚙️"})[prevPage]||"📄"}</span>
+            <span style={{fontSize:13,fontWeight:600,color:T.txt}}>{({"tasks":"Tasks","inv":"Inventory","anns":"Announcements","dms":"Messages","act":"Activity","set":"Settings"})[prevPage]||prevPage}</span>
+            <span style={{fontSize:11,color:T.sub,marginLeft:"auto"}}>← Back</span>
+          </button>
+        </div>
+      )}
+
       {/* Online team (boss/manager only) */}
       {can(user,"online")&&onlineEmps.length>0&&(
         <div className="fu card" style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginTop:14}}>
@@ -1063,6 +1172,28 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast}) {
         </div>
       )}
 
+      {/* Smart reminders */}
+      {isEligible&&overdueTasks.length>0&&(
+        <div className="fu" style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s ease both"}}>
+          <span style={{fontSize:20,flexShrink:0}}>⚠️</span>
+          <div>
+            <div style={{fontWeight:800,fontSize:13,color:"#991b1b"}}>You have {overdueTasks.length} overdue task{overdueTasks.length>1?"s":""}!</div>
+            <div style={{fontSize:12,color:"#b91c1c",marginTop:2}}>{overdueTasks.slice(0,2).map(t=>t.title).join(", ")}{overdueTasks.length>2?` +${overdueTasks.length-2} more`:""}</div>
+          </div>
+          <button onClick={()=>setPage("tasks")} style={{marginLeft:"auto",background:"#991b1b",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>View</button>
+        </div>
+      )}
+      {isEligible&&myTasks.length>0&&overdueTasks.length===0&&(
+        <div className="fu" style={{background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s .1s ease both"}}>
+          <span style={{fontSize:20,flexShrink:0}}>💡</span>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:13,color:T.txt}}>You have {myTasks.length} open task{myTasks.length>1?"s":""}. Keep it up!</div>
+            <div style={{fontSize:12,color:T.sub,marginTop:2}}>Next: {myTasks[0]?.title}</div>
+          </div>
+          <button onClick={()=>setPage("tasks")} style={{background:T.blue,color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Go</button>
+        </div>
+      )}
+
       {/* Help section */}
       <div className="fu" style={{background:`${T.blue}12`,border:`1px solid ${T.blue}33`,borderRadius:14,padding:16,marginTop:14,display:"flex",gap:12,alignItems:"flex-start"}}>
         <span style={{fontSize:24,flexShrink:0}}>❓</span>
@@ -1070,14 +1201,14 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast}) {
           <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:4}}>Need help navigating?</div>
           <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>
             Tap the <strong>circle button</strong> (top-left) to open the menu — it stays visible while you scroll.<br/>
-            Tap <strong>🎓 MNU's Neer Locker</strong> in the header to return home anytime.<br/>
+            Tap <strong>🎓 MNU&apos;s Neer Locker</strong> in the header to return home anytime.<br/>
             Use the <strong style={{color:T.scarlet}}>?</strong> button (bottom-right) for a full guide and the <strong style={{color:"#b45309"}}>💡</strong> button to send ideas to Tech Admin.
           </div>
           <div style={{marginTop:10,padding:"10px 14px",background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:12}}>
             <div style={{fontWeight:700,fontSize:13,color:T.txt,marginBottom:6}}>📲 Add to your home screen</div>
             <div style={{fontSize:12,color:T.sub,lineHeight:1.7}}>
-              <strong>iPhone:</strong> Open in <strong>Safari</strong> → tap the Share button → <strong>"Add to Home Screen"</strong><br/>
-              <strong>Android:</strong> Open in <strong>Chrome</strong> → tap ⋮ menu → <strong>"Add to Home Screen"</strong>
+              <strong>iPhone:</strong> Open in <strong>Safari</strong> {"→"} tap the Share button {"→"} <strong>&quot;Add to Home Screen&quot;</strong><br/>
+              <strong>Android:</strong> Open in <strong>Chrome</strong> {"→"} tap ⋮ menu {"→"} <strong>&quot;Add to Home Screen&quot;</strong>
             </div>
           </div>
         </div>
@@ -1087,7 +1218,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast}) {
 }
 
 // ─── DM SECTION ───────────────────────────────────────────────────────────────
-function DMSection({user,emps,dms,setDms,T,toast}) {
+function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
   const [selected,setSelected]=useState(null);
   const [msgInput,setMsgInput]=useState("");
   const msgEndRef=useRef(null);
@@ -1121,6 +1252,7 @@ function DMSection({user,emps,dms,setDms,T,toast}) {
     setMsgInput("");
     const newMsg={id:uid(),from:user.id,to:selected.id,text:san(text),at:Date.now(),read:false};
     playSound("dm");
+    if(onXP) onXP();
     // Update local state immediately
     const updated=dms.map(d=>d.from===selected.id&&d.to===user.id?{...d,read:true}:d);
     const next=[...updated,newMsg];
@@ -1493,7 +1625,7 @@ const NOTIF = {
 };
 
 // ─── FINN AI CHAT ─────────────────────────────────────────────────────────────
-function FinnChat({T,user,tasks,inv,anns,dms,emps,onClose}) {
+function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose}) {
   const [msgs,setMsgs]=useState([{role:"assistant",content:"Hey! I'm Finn — your MNU Neer Locker guide. Ask me anything about your tasks, inventory, announcements, or how to use the app!"}]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
@@ -1536,16 +1668,27 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,onClose}) {
     const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).length;
     const myRole=ROLES[user?.role]?.label||"Staff";
 
-    const systemPrompt=`You are Finn, the friendly AI assistant for MNU Neer Locker — a campus business at MidAmerica Nazarene University (MNU Pioneers). You help staff with their tasks, inventory, and app questions.
+    const now=new Date();
+    const timeStr=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+    const dateStr=now.toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+    const myProg=progress[user?.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+    const myLvInfo=getLevelInfo(myProg.xp);
+    const isEligibleForXP=XP_ELIGIBLE_ROLES.includes(user?.role);
+
+    const systemPrompt=`You are Finn, the friendly AI assistant for MNU Neer Locker — a campus business at MidAmerica Nazarene University (MNU Pioneers). You help staff with tasks, inventory, app questions, and personal progression.
 
 Current user: ${user?.name} (${myRole})
-Open tasks assigned to them: ${openTasks.length} (${overdueTasks.length} overdue)
-Low inventory items (stock < 5): ${lowInv.map(i=>i.name+"("+i.stock+")").join(", ")||"none"}
-Unread messages: ${unreadDMs}
-Total team members: ${emps.length}
+Open tasks: ${openTasks.length} (${overdueTasks.length} overdue)
+Low inventory (stock < 5): ${lowInv.map(i=>i.name+"("+i.stock+")").join(", ")||"none"}
+Unread DMs: ${unreadDMs}
+Team size: ${emps.length}
 Recent announcements: ${anns.slice(0,3).map(a=>a.msg).join(" | ")||"none"}
+Date: ${dateStr} | Time: ${timeStr}
+${isEligibleForXP ? "Title: "+myProg.title+" | Level: "+myProg.level+"/10 | XP: "+myProg.xp+" | Streak: "+myProg.streak+" day(s) | "+myLvInfo.pct+"% to next level ("+myLvInfo.xpToNext+" XP needed for "+(myLvInfo.next?.title||"max level")+")" : "This user role does not earn XP."}
 
-Keep responses short, friendly, and direct — staff are busy. Use plain language. If asked about tasks or inventory, reference the actual data above. You're named Finn after the pioneer spirit of MNU. Occasionally be encouraging but never cheesy. Never mention you're built on Claude or any AI system — you're just Finn.`;
+XP tips: Daily login=10XP, Complete task=25XP, High priority task=50XP, Send DM=5XP. Streak resets if a day is missed.
+
+Be short, friendly, direct. Reference real data above. Encourage progression when relevant. Never mention Claude — you are just Finn.` 
 
     try {
       const res=await fetch("https://api.anthropic.com/v1/messages",{
@@ -1616,6 +1759,103 @@ Keep responses short, friendly, and direct — staff are busy. Use plain languag
           style={{background:"#0f2744",border:"none",borderRadius:12,padding:"10px 14px",cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,color:"#fff",fontWeight:700,fontSize:13,fontFamily:"inherit",transition:"opacity .15s"}}>
           Send
         </button>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── PROGRESSION SYSTEM ───────────────────────────────────────────────────────
+const LEVELS = [
+  {level:1,  title:"Pioneer",         xp:0,    color:"#94a3b8", glow:"#94a3b844"},
+  {level:2,  title:"Trailblazer",     xp:100,  color:"#cd7f32", glow:"#cd7f3244"},
+  {level:3,  title:"Pathfinder",      xp:300,  color:"#b87333", glow:"#b8733344"},
+  {level:4,  title:"Scout",           xp:600,  color:"#0f52ba", glow:"#0f52ba44"},
+  {level:5,  title:"Ranger",          xp:1000, color:"#50c878", glow:"#50c87844"},
+  {level:6,  title:"Vanguard",        xp:1500, color:"#9b59b6", glow:"#9b59b644"},
+  {level:7,  title:"Founder",         xp:2500, color:"#e0115f", glow:"#e0115f44"},
+  {level:8,  title:"Elite",           xp:4000, color:"#ffc87c", glow:"#ffc87c44"},
+  {level:9,  title:"Legend",          xp:6000, color:"#b9f2ff", glow:"#b9f2ff44"},
+  {level:10, title:"Top Contributor", xp:10000,color:"#ffd700", glow:"#ffd70044"},
+];
+
+const getLevelInfo=(xp=0)=>{
+  let info=LEVELS[0];
+  for(const l of LEVELS){ if(xp>=l.xp) info=l; }
+  const next=LEVELS.find(l=>l.xp>xp);
+  const pct=next?Math.round(((xp-info.xp)/(next.xp-info.xp))*100):100;
+  return{...info,next,pct,xpToNext:next?next.xp-xp:0};
+};
+
+const XP_ELIGIBLE_ROLES=["manager","assistant","employee"];
+
+// ─── GLOBAL SEARCH ────────────────────────────────────────────────────────────
+function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
+  const [q,setQ]=useState("");
+  const ref=useRef(null);
+  useEffect(()=>{ref.current?.focus();},[]);
+
+  const results=useMemo(()=>{
+    if(!q.trim()) return [];
+    const lq=q.toLowerCase();
+    const out=[];
+    tasks.filter(t=>t.title?.toLowerCase().includes(lq)).slice(0,3).forEach(t=>
+      out.push({type:"task",icon:"✅",label:t.title,sub:t.priority+" · "+(t.done?"Done":"Open"),page:"tasks",color:"#1e7fa8"}));
+    inv.filter(i=>i.name?.toLowerCase().includes(lq)).slice(0,3).forEach(i=>
+      out.push({type:"inv",icon:"📦",label:i.name,sub:`Stock: ${i.stock}`,page:"inv",color:"#7c3aed"}));
+    emps.filter(e=>e.name?.toLowerCase().includes(lq)&&can(user,"emp")).slice(0,3).forEach(e=>
+      out.push({type:"emp",icon:"👤",label:e.name,sub:ROLES[e.role]?.label||"",page:"set",color:ROLES[e.role]?.color||"#6b7280"}));
+    anns.filter(a=>a.msg?.toLowerCase().includes(lq)).slice(0,2).forEach(a=>
+      out.push({type:"ann",icon:"🔔",label:a.msg.slice(0,50)+(a.msg.length>50?"…":""),sub:"Announcement",page:"anns",color:"#C8102E"}));
+    return out;
+  },[q,tasks,inv,emps,anns]);
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:80,animation:"fadeUp .15s ease both"}}
+      onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+      <div style={{width:"min(560px,92vw)",background:T.surf,borderRadius:18,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.35)",animation:"slideUp .2s cubic-bezier(.23,1,.32,1) both"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",borderBottom:`1px solid ${T.bor}`}}>
+          <span style={{fontSize:18,flexShrink:0}}>🔍</span>
+          <input ref={ref} value={q} onChange={e=>setQ(e.target.value)}
+            placeholder="Search tasks, inventory, staff, announcements…"
+            style={{flex:1,background:"none",border:"none",outline:"none",fontSize:16,color:T.txt,fontFamily:"inherit"}}
+            onKeyDown={e=>e.key==="Escape"&&onClose()}/>
+          {q&&<button onClick={()=>setQ("")} style={{background:"none",border:"none",color:T.sub,cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
+        </div>
+        {q&&(
+          <div style={{maxHeight:360,overflowY:"auto"}}>
+            {results.length===0?(
+              <div style={{padding:"28px",textAlign:"center",color:T.sub,fontSize:13}}>
+                No results for &quot;{q}&quot;
+              </div>
+            ):results.map((r,i)=>(
+              <button key={i} onClick={()=>{setPage(r.page);onClose();playSound("click");}}
+                style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left",borderBottom:`1px solid ${T.bor}`,transition:"background .12s"}}
+                onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
+                onMouseLeave={e=>e.currentTarget.style.background="none"}>
+                <span style={{fontSize:20,flexShrink:0}}>{r.icon}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:700,color:T.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.label}</div>
+                  <div style={{fontSize:11,color:T.sub,marginTop:1}}>{r.sub}</div>
+                </div>
+                <Tag label={r.type} color={r.color}/>
+              </button>
+            ))}
+            {results.length>0&&<div style={{padding:"8px 16px",fontSize:11,color:T.faint,textAlign:"center"}}>Press Enter to search &middot; Esc to close</div>}
+          </div>
+        )}
+        {!q&&(
+          <div style={{padding:"16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:"💬",label:"Messages",page:"dms"}].map(s=>(
+              <button key={s.page} onClick={()=>{setPage(s.page);onClose();playSound("click");}}
+                style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit",color:T.txt,fontSize:13,fontWeight:600,transition:"all .15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.borderColor=T.scarlet+"66";}}
+                onMouseLeave={e=>{e.currentTarget.style.background=T.bg;e.currentTarget.style.borderColor=T.bor;}}>
+                <span style={{fontSize:18}}>{s.icon}</span>{s.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1902,6 +2142,7 @@ export default function App() {
   const [techExiting,setTechExiting]=useState(false);
   const [passkeyAvailable,setPasskeyAvailable]=useState(false);
   const [notifEnabled,setNotifEnabled]=useState(false);
+  const [progress,setProgress]=useState({}); // {userId: {xp,level,title,streak,last_login}}
   const notifEnabledRef=useRef(false);
   const [notifPerms,setNotifPerms]=useState(NOTIF.supported()?NOTIF.permission():"unsupported");
 
@@ -1948,6 +2189,7 @@ export default function App() {
 
   const [page,setPage]=useState("home");
   const [swipeBacking,setSwipeBacking]=useState(false);
+  const [prevPage,setPrevPage]=useState(null);
   const [modal,setModal]=useState(null);
   const [nameSaved,setNameSaved]=useState(false);
   const [pinSaved,setPinSaved]=useState(false);
@@ -1955,6 +2197,11 @@ export default function App() {
   const [form,setForm]=useState({});
   const [toasts,setToasts]=useState([]);
   const [search,setSearch]=useState("");
+  const [globalSearch,setGlobalSearch]=useState("");
+  const [showGlobalSearch,setShowGlobalSearch]=useState(false);
+  const [recentPages,setRecentPages]=useState([]);
+  const [isOffline,setIsOffline]=useState(!navigator.onLine);
+  const globalSearchRef=useRef(null);
   const [undoId,setUndoId]=useState(null);
   const [setTab2,setSettingsTab]=useState("profile");
   const [logF,setLogF]=useState("all");
@@ -2001,6 +2248,11 @@ export default function App() {
       const sOn=LS.get("nl3-sound-on"); if(sOn!==null)setSoundOn(sOn);
       const sVol=LS.get("nl3-sound-vol"); if(sVol!==null)setSoundVol(sVol);
       const dMode=LS.get("nl3-device-mode"); if(dMode)setDeviceMode(dMode);
+      // Load progression data
+      const pgRows=await SB.select("user_progress","");
+      const pgMap={};
+      for(const r of pgRows||[]) pgMap[r.user_id]={xp:r.xp||0,level:r.level||1,title:r.title||"Pioneer",streak:r.streak||0,last_login:r.last_login};
+      setProgress(pgMap);
     })();
     return()=>{alive=false;};
   },[]);
@@ -2069,6 +2321,29 @@ export default function App() {
     const interval=setInterval(refreshData, 8000);
     return()=>clearInterval(interval);
   },[screen, refreshData]);
+
+  // Offline detection
+  useEffect(()=>{
+    const goOffline=()=>setIsOffline(true);
+    const goOnline=()=>setIsOffline(false);
+    window.addEventListener("offline",goOffline);
+    window.addEventListener("online",goOnline);
+    return()=>{window.removeEventListener("offline",goOffline);window.removeEventListener("online",goOnline);};
+  },[]);
+
+  // Keyboard shortcut — Cmd+K or Ctrl+K opens global search
+  useEffect(()=>{
+    const handler=e=>{
+      if((e.metaKey||e.ctrlKey)&&e.key==="k"){
+        e.preventDefault();
+        setShowGlobalSearch(s=>!s);
+        playSound("open");
+      }
+      if(e.key==="Escape") setShowGlobalSearch(false);
+    };
+    window.addEventListener("keydown",handler);
+    return()=>window.removeEventListener("keydown",handler);
+  },[]);
 
   // Set offline when user closes tab/browser
   useEffect(()=>{
@@ -2267,6 +2542,7 @@ export default function App() {
     setEmps(prev=>prev.map(e=>e.id===emp.id?{...e,status:"online"}:e));
     fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${emp.id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({status:"online"})}).catch(()=>{});
     addAct("login",`${emp.name} signed in`,emp.id);
+    handleLoginXP(emp);
     // Switch to app after animation completes
     playSound("login");
     loginTimerRef.current=setTimeout(()=>{
@@ -2315,7 +2591,18 @@ export default function App() {
     const assign=form.tAssign||"all";
     const due=form.tDue||"";
     const rep=form.tRepeat||false;
-    const task={id:uid(),title:san(title),description:desc,priority:pri,assignedTo:assign,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:due,repeat:rep};
+    // Auto-categorize priority from keywords if not manually set
+    const urgentWords=["urgent","asap","immediately","emergency","critical","now"];
+    const highWords=["important","priority","must","deadline","today","broken","fix"];
+    const lowWords=["whenever","eventually","low","someday","optional","idea"];
+    let autoPri=pri;
+    if(pri==="Medium"){
+      const tl=title.toLowerCase();
+      if(urgentWords.some(w=>tl.includes(w))) autoPri="High";
+      else if(highWords.some(w=>tl.includes(w))) autoPri="High";
+      else if(lowWords.some(w=>tl.includes(w))) autoPri="Low";
+    }
+    const task={id:uid(),title:san(title),description:desc,priority:autoPri,assignedTo:assign,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:due,repeat:rep};
     setModal(null);setForm({});
     toast("Task created! ✅");
     setTasks(prev=>[task,...prev]);
@@ -2331,6 +2618,7 @@ export default function App() {
     await upsertTask(updated);
     if(completing){
       addAct("task_done",`"${task.title}" completed by ${user?.name}`,user?.id);
+      grantXP(task.priority==="High"?50:25,"task complete");
       playSound("task");
       clearTimeout(undoRef.current);setUndoId(id);
       undoRef.current=setTimeout(()=>setUndoId(null),7000);
@@ -2356,6 +2644,7 @@ export default function App() {
   };
 
   const deleteTask=async id=>{
+    if(!window.confirm("Remove this task? This can't be undone.")) return;
     await SB.delete("tasks",{id});
     setTasks(prev=>prev.filter(t=>t.id!==id));
     toast("Task removed","warn");
@@ -2411,6 +2700,50 @@ export default function App() {
   };
 
   // SETTINGS
+  // Load progress for all users
+  const loadProgress=async()=>{
+    const rows=await SB.select("user_progress","");
+    const map={};
+    for(const r of rows||[]) map[r.user_id]={xp:r.xp||0,level:r.level||1,title:r.title||"Pioneer",streak:r.streak||0,last_login:r.last_login};
+    setProgress(map);
+    return map;
+  };
+
+  // Grant XP to current user
+  const grantXP=async(amount,label)=>{
+    if(!user||!XP_ELIGIBLE_ROLES.includes(user.role)) return;
+    const cur=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+    const newXP=cur.xp+amount;
+    const info=getLevelInfo(newXP);
+    const leveledUp=info.level>cur.level;
+    const updated={xp:newXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login};
+    setProgress(prev=>({...prev,[user.id]:updated}));
+    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login,created_at:Date.now()});
+    if(leveledUp) toast(`🎉 Level up! You're now a ${info.title}!`,"ok");
+  };
+
+  // Handle login streak + XP
+  const handleLoginXP=async(emp)=>{
+    if(!XP_ELIGIBLE_ROLES.includes(emp.role)) return;
+    const rows=await SB.select("user_progress",`?user_id=eq.${emp.id}`);
+    const cur=rows?.[0]||{xp:0,level:1,title:"Pioneer",streak:0,last_login:null};
+    const today=new Date().toISOString().slice(0,10);
+    const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+    let streak=cur.streak||0;
+    if(cur.last_login===today){
+      // Already logged in today — no streak change
+    } else if(cur.last_login===yesterday){
+      streak+=1;
+    } else {
+      streak=1;
+    }
+    const newXP=(cur.xp||0)+(cur.last_login===today?0:10);
+    const info=getLevelInfo(newXP);
+    const updated={user_id:emp.id,xp:newXP,level:info.level,title:info.title,streak,last_login:today,created_at:Date.now()};
+    await SB.upsert("user_progress",updated);
+    setProgress(prev=>({...prev,[emp.id]:{xp:newXP,level:info.level,title:info.title,streak,last_login:today}}));
+  };
+
   const saveName=async()=>{
     const nick=String(form.pName||"").trim();
     // Nickname is device-only — never saved to Supabase
@@ -2587,7 +2920,7 @@ export default function App() {
               <Inp T={T} label="PIN" type="password" placeholder="••••" value={tPin} maxLength={8} onChange={e=>{setTPin(e.target.value);setTErr("");}} onKeyDown={e=>e.key==="Enter"&&doTechLogin()}/>
               {tErr&&<div style={{color:T.err,fontSize:13,fontWeight:700}}>{tErr}</div>}
               <Btn T={T} full onClick={()=>{playSound("click");doTechLogin();}} sound="open">Access Dashboard →</Btn>
-              <Btn T={T} full variant="ghost" onClick={()=>setScreen("login")}>← Back</Btn>
+              <Btn T={T} full variant="ghost" onClick={()=>setScreen("login")}>Back</Btn>
             </div>
           </div>
           <VersionBadge T={T}/>
@@ -2606,14 +2939,23 @@ export default function App() {
               <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.scarlet},${T.blue})`}}/>
               <div style={{display:"flex",alignItems:"center",gap:12,minHeight:56,padding:"0 4px"}}>
                 {/* Brand — tappable, goes home */}
-                <button onClick={()=>{setSearch("");setPage("home");playSound("click");}} style={{background:"none",border:"none",fontFamily:"'Clash Display',sans-serif",fontSize:15,fontWeight:800,color:T.txt,cursor:"pointer",display:"flex",alignItems:"center",gap:5,padding:0,transition:"opacity .15s",flexShrink:0,whiteSpace:"nowrap"}}
+                <button onClick={()=>{setSearch("");setPrevPage(page);setPage("home");playSound("click");}} style={{background:"none",border:"none",fontFamily:"'Clash Display',sans-serif",fontSize:15,fontWeight:800,color:T.txt,cursor:"pointer",display:"flex",alignItems:"center",gap:5,padding:0,transition:"opacity .15s",flexShrink:0,whiteSpace:"nowrap"}}
                   onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
                   onMouseLeave={e=>e.currentTarget.style.opacity="1"}
                 >
                   <span style={{fontSize:17}}>🎓</span>
-                  <span style={{display:"flex",gap:4}}>MNU's <span style={{color:T.scarlet}}>Neer Locker</span></span>
+                  <span style={{display:"flex",gap:4}}>{"MNU's"} <span style={{color:T.scarlet}}>Neer Locker</span></span>
                 </button>
-                <div style={{flex:1,minWidth:0}}/>
+                {/* Global search button */}
+                <button onClick={()=>{setShowGlobalSearch(true);playSound("open");}}
+                  title="Search (⌘K)"
+                  style={{flex:1,maxWidth:160,margin:"0 6px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:T.sub,fontSize:11,fontFamily:"inherit",transition:"all .15s",minWidth:80}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"66";e.currentTarget.style.color=T.txt;}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
+                >
+                  <span>🔍</span>
+                  <span style={{flex:1,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Search…</span>
+                </button>
                 <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,paddingRight:8,overflow:"hidden",maxWidth:"calc(100vw - 160px)"}}>
                   {/* Clickable profile area → Settings/Profile */}
                   <button onClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}
@@ -2635,7 +2977,7 @@ export default function App() {
 
             {/* Floating circle NavMenu — always visible top-left */}
             <div style={{position:"fixed",left:10,top:62,zIndex:350}}>
-              <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T} onFinn={()=>openFinn()}/>
+              <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T} onFinn={()=>openFinn()}/>
             </div>
 
             {/* Page content */}
@@ -2692,7 +3034,7 @@ export default function App() {
               )}
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPage(p);}} toast={toast}/>}
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress}/>}
 
               {/* TASKS */}
               {page==="tasks"&&(
@@ -2761,7 +3103,7 @@ export default function App() {
                         return (
                           <div key={a.id} style={{background:T.card,border:`1px solid ${lc}33`,borderLeft:`3px solid ${lc}`,borderRadius:14,padding:"14px 16px",animation:`fadeUp .25s ${i*35}ms ease both`}}>
                             <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                              <span style={{fontSize:18}}>{{info:"ℹ️",warn:"⚠️",danger:"🚨"}[a.level]||"ℹ️"}</span>
+                              <span style={{fontSize:18}}>{({"info":"ℹ️","warn":"⚠️","danger":"🚨"})[a.level]||"ℹ️"}</span>
                               <div style={{flex:1}}>
                                 <div style={{fontWeight:700,fontSize:13,color:T.txt,lineHeight:1.5,wordBreak:"break-word",overflowWrap:"anywhere"}}>{a.msg}</div>
                                 <div style={{fontSize:T.fs.xs+1,color:T.sub,marginTop:4}}>By {a.by} · {fmtDT(a.at)}</div>
@@ -2795,7 +3137,7 @@ export default function App() {
               )}
 
               {/* DMs */}
-              {page==="dms"&&<DMSection user={user} emps={emps} dms={dms} setDms={saveDms} T={T} toast={toast}/>}
+              {page==="dms"&&<DMSection user={user} emps={emps} dms={dms} setDms={saveDms} T={T} toast={toast} onXP={()=>grantXP(5,"dm sent")}/>}
 
               {/* ACTIVITY */}
               {page==="act"&&can(user,"act")&&(
@@ -2811,7 +3153,7 @@ export default function App() {
                     <div style={{display:"grid",gap:T.compact?5:8}}>
                       {filtAct.slice(0,80).map((entry,i)=>(
                         <div key={entry.id} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"11px 14px",display:"flex",gap:10,alignItems:"center",animation:`fadeUp .2s ${i*12}ms ease both`}}>
-                          <span style={{fontSize:15}}>{{login:"🟢",logout:"🔴",task_done:"✅",task_created:"📝","employee added":"👤","employee removed":"🗑️"}[entry.type]||"📋"}</span>
+                          <span style={{fontSize:15}}>{({"login":"🟢","logout":"🔴","task_done":"✅","task_created":"📝","employee added":"👤","employee removed":"🗑️"})[entry.type]||"📋"}</span>
                           <div style={{flex:1}}>
                             <div style={{fontSize:T.fs.md,color:T.txt,fontWeight:600}}>{entry.msg}</div>
                             <div style={{fontSize:T.fs.xs+1,color:T.sub,marginTop:2}}>{fmtDT(entry.at)}</div>
@@ -3061,7 +3403,7 @@ export default function App() {
                             Get notified for new tasks, announcements, and messages — even when the app is in the background.
                           </div>
                           {notifPerms==="unsupported"?(
-                            <div style={{fontSize:12,color:T.sub,fontStyle:"italic"}}>Your browser doesn't support notifications.</div>
+                            <div style={{fontSize:12,color:T.sub,fontStyle:"italic"}}>Your browser doesn&apos;t support notifications.</div>
                           ):notifPerms==="denied"?(
                             <div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#991b1b",fontWeight:600}}>
                               ⚠️ Notifications are blocked. Go to your browser settings and allow notifications for this site, then come back here.
@@ -3104,7 +3446,7 @@ export default function App() {
                                 </button>
                               </div>
                               {notifEnabled&&(
-                                <div style={{fontSize:11,color:T.ok,fontWeight:600}}>✓ Notifications active — you'll be alerted when the app is in the background</div>
+                                <div style={{fontSize:11,color:T.ok,fontWeight:600}}>✓ Notifications active — you&apos;ll be alerted when the app is in the background</div>
                               )}
                               <div style={{fontSize:11,color:T.sub,lineHeight:1.6,background:T.bg,borderRadius:8,padding:"8px 12px"}}>
                                 {!NOTIF.isPWA()&&<div style={{color:T.warn,fontWeight:700,marginBottom:4}}>⚠️ You must open this app from your home screen for notifications to work.</div>}
@@ -3199,7 +3541,7 @@ export default function App() {
                             <Btn T={T} sm onClick={sendNotice}>Send Notice</Btn>
                             {notice&&<Btn T={T} sm variant="ghost" onClick={clearNotice}>Clear</Btn>}
                           </div>
-                          {notice&&<div style={{fontSize:12,color:T.warn}}>Active: "{notice}"</div>}
+                          {notice&&<div style={{fontSize:12,color:T.warn}}>Active: &quot;{notice}&quot;</div>}
                         </div>
                         {bkps.length>0&&(
                           <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
@@ -3226,7 +3568,18 @@ export default function App() {
           {modal==="task"&&(
             <Modal T={T} title="Create Task" onClose={()=>{setModal(null);setForm({});}} wide>
               <div style={{display:"grid",gap:14}}>
-                <Inp T={T} label="TASK TITLE *" placeholder="e.g. Restock drinks" value={form.tTitle||""} onChange={e=>setForm(p=>({...p,tTitle:e.target.value}))}/>
+                <div style={{position:"relative"}}>
+                  <Inp T={T} label="TASK TITLE *" placeholder="e.g. Restock drinks" value={form.tTitle||""} onChange={e=>setForm(p=>({...p,tTitle:e.target.value}))}/>
+                  {/* Auto-priority hint */}
+                  {(()=>{
+                    const tl=(form.tTitle||"").toLowerCase();
+                    const isUrgent=["urgent","asap","immediately","emergency","critical","now","important","priority","must","deadline","today","broken","fix"].some(w=>tl.includes(w));
+                    const isLow=["whenever","eventually","someday","optional"].some(w=>tl.includes(w));
+                    return tl&&isUrgent?<div style={{fontSize:11,color:"#C8102E",fontWeight:600,marginTop:3}}>{"💡 Will be auto-set to High priority"}</div>
+                      :tl&&isLow?<div style={{fontSize:11,color:T.sub,fontWeight:600,marginTop:3}}>{"💡 Will be auto-set to Low priority"}</div>
+                      :null;
+                  })()}
+                </div>
                 <Textarea T={T} label="DESCRIPTION (optional)" placeholder="More details…" rows={3} value={form.tDesc||""} onChange={e=>setForm(p=>({...p,tDesc:e.target.value}))}/>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="two-col">
                   <Sel T={T} label="PRIORITY" value={form.tPri||"Medium"} onChange={e=>setForm(p=>({...p,tPri:e.target.value}))}>
@@ -3323,6 +3676,21 @@ export default function App() {
             </svg>
           </button>
 
+          {/* Offline banner */}
+          {isOffline&&(
+            <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9996,background:"#92400e",padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontSize:12,fontWeight:700,color:"#fff",animation:"fadeUp .2s ease"}}>
+              <span>📡</span>
+              <span>You&apos;re offline — changes will sync when you reconnect</span>
+            </div>
+          )}
+
+          {/* Global search modal */}
+          {showGlobalSearch&&(
+            <GlobalSearch T={T} tasks={tasks} inv={inv} emps={emps} anns={anns} user={user}
+              setPage={p=>{setPrevPage(page);setPage(p);setSearch("");}}
+              onClose={()=>setShowGlobalSearch(false)}/>
+          )}
+
           {/* Finn intro animation */}
           {finnAnim&&(
             <div style={{position:"fixed",inset:0,zIndex:9998,pointerEvents:"none",overflow:"hidden"}}
@@ -3359,7 +3727,7 @@ export default function App() {
           )}
 
           {/* Finn chat panel */}
-          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} onClose={()=>setShowFinn(false)}/>}
+          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} onClose={()=>setShowFinn(false)}/>}
 
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
 
@@ -3485,7 +3853,7 @@ export default function App() {
                 <Btn T={T} sm onClick={sendNotice}>Send</Btn>
                 {notice&&<Btn T={T} sm variant="ghost" onClick={clearNotice}>Clear Active</Btn>}
               </div>
-              {notice&&<div style={{marginTop:8,fontSize:12,color:T.warn,fontWeight:600}}>🟡 Active: "{notice}"</div>}
+              {notice&&<div style={{marginTop:8,fontSize:12,color:T.warn,fontWeight:600}}>🟡 Active: &quot;{notice}&quot;</div>}
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}} className="two-col">
@@ -3505,7 +3873,7 @@ export default function App() {
                     ?<div style={{color:T.sub,fontSize:12}}>No entries</div>
                     :errs.filter(e=>logF==="all"||e.level===logF).map(e=>(
                       <div key={e.id} style={{background:T.bg,borderRadius:8,padding:"7px 10px",display:"flex",gap:7,alignItems:"flex-start"}}>
-                        <span style={{fontSize:12}}>{{info:"ℹ️",warn:"⚠️",error:"🔴"}[e.level]||"📋"}</span>
+                        <span style={{fontSize:12}}>{({"info":"ℹ️","warn":"⚠️","error":"🔴"})[e.level]||"📋"}</span>
                         <div>
                           <div style={{fontSize:12,color:T.txt}}>{e.msg}</div>
                           <div style={{fontSize:10,color:T.sub}}>{fmtDT(e.at)}</div>
@@ -3542,7 +3910,7 @@ export default function App() {
               <div style={{maxHeight:220,overflowY:"auto",display:"grid",gap:5}}>
                 {act.length===0?<div style={{color:T.sub,fontSize:12}}>No activity</div>:act.slice(0,80).map(entry=>(
                   <div key={entry.id} style={{background:T.bg,borderRadius:8,padding:"7px 10px",display:"flex",gap:8,alignItems:"center"}}>
-                    <span style={{fontSize:13}}>{{login:"🟢",logout:"🔴",task_done:"✅",task_created:"📝","employee added":"👤","employee removed":"🗑️"}[entry.type]||"📋"}</span>
+                    <span style={{fontSize:13}}>{({"login":"🟢","logout":"🔴","task_done":"✅","task_created":"📝","employee added":"👤","employee removed":"🗑️"})[entry.type]||"📋"}</span>
                     <div style={{flex:1}}><div style={{fontSize:12,color:T.txt}}>{entry.msg}</div><div style={{fontSize:10,color:T.sub}}>{fmtDT(entry.at)}</div></div>
                   </div>
                 ))}
@@ -3696,7 +4064,7 @@ export default function App() {
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:12,color:T.txt,fontWeight:700,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                             <span>{sender?.name||"Unknown"}</span>
-                            <span style={{color:T.mut,fontWeight:400}}>→</span>
+                            <span style={{color:T.mut,fontWeight:400}}>{"→"}</span>
                             <span>{recipient?.name||"Unknown"}</span>
                             {!msg.read&&<span style={{background:T.scarlet,color:"#fff",borderRadius:4,padding:"0 5px",fontSize:10}}>unread</span>}
                             {msg.system&&<span style={{background:T.warn+"33",color:T.warn,borderRadius:4,padding:"0 5px",fontSize:10}}>system</span>}
@@ -3875,7 +4243,7 @@ function HelpModal({T,bottom}) {
             {/* Scrollable content */}
             <div style={{overflowY:"auto",padding:"16px 22px 22px"}}>
               <div style={{fontSize:13,color:T.sub,marginBottom:16,lineHeight:1.6}}>
-                Welcome to <strong style={{color:T.scarlet}}>MNU's Neer Locker</strong> — your campus business staff portal. Here's where to find everything:
+                Welcome to <strong style={{color:T.scarlet}}>MNU&apos;s Neer Locker</strong> — your campus business staff portal. Here's where to find everything:
               </div>
               <div style={{display:"grid",gap:10}}>
                 {items.map((item,i)=>(
