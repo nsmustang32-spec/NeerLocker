@@ -1068,10 +1068,46 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <span style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:lvInfo.color}}>{lvInfo.title}</span>
+                <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span>
                 {myProgress.streak>0&&(
                   <div style={{display:"flex",alignItems:"center",gap:4,background:"#ff6b0022",border:"1px solid #ff6b0044",borderRadius:20,padding:"2px 8px"}}>
                     <span style={{fontSize:12}}>🔥</span>
                     <span style={{fontSize:11,fontWeight:800,color:"#ff6b00"}}>{myProgress.streak} day streak</span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span>
                   </div>
                 )}
               </div>
@@ -1108,7 +1144,24 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
       {/* Staff Levels — visible to boss only */}
       {can(user,"boss")&&XP_ELIGIBLE_ROLES.some(r=>emps.find(e=>e.role===r))&&(
         <div className="fu card" style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginTop:14}}>
-          <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:12,fontFamily:"'Clash Display',sans-serif"}}>🏆 Staff Progression</div>
+          <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:12,fontFamily:"'Clash Display',sans-serif",display:"flex",alignItems:"center",gap:8}}>🏆 Staff Progression <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span></div>
           <div style={{display:"grid",gap:8}}>
             {emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role)).sort((a,b)=>(progress[b.id]?.xp||0)-(progress[a.id]?.xp||0)).map((e,i)=>{
               const pg=progress[e.id]||{xp:0,level:1,title:"Pioneer",streak:0};
@@ -1140,8 +1193,25 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
       {/* Recently viewed */}
       {prevPage&&prevPage!=="home"&&(
         <div className="fu" style={{marginTop:14,animation:"fadeUp .25s ease both"}}>
-          <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:6}}>RECENTLY VIEWED</div>
-          <button onClick={()=>{setPrevPage(page);setPage(prevPage);playSound("click");}}
+          <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:6,display:"flex",alignItems:"center",gap:6}}>RECENTLY VIEWED <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span></div>
+          <button onClick={()=>{setPrevPage(null);setPage(prevPage);playSound("click");}}
             style={{display:"flex",alignItems:"center",gap:8,background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"10px 14px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",width:"100%",textAlign:"left"}}
             onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"66";e.currentTarget.style.background=T.surfH;}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.background=T.card;}}
@@ -1184,8 +1254,42 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
         <div className="fu" style={{background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s .1s ease both"}}>
           <span style={{fontSize:20,flexShrink:0}}>💡</span>
           <div style={{flex:1}}>
-            <div style={{fontWeight:700,fontSize:13,color:T.txt}}>You have {myTasks.length} open task{myTasks.length>1?"s":""}. Keep it up!</div>
-            <div style={{fontSize:12,color:T.sub,marginTop:2}}>Next: {myTasks[0]?.title}</div>
+            <div style={{fontWeight:700,fontSize:13,color:T.txt,display:"flex",alignItems:"center",gap:6}}>You have {myTasks.length} open task{myTasks.length>1?"s":""}. Keep it up! <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span></div>
+            <div style={{fontSize:12,color:T.sub,marginTop:2,display:"flex",alignItems:"center",gap:6}}>Next: {myTasks[0]?.title} <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span></div>
           </div>
           <button onClick={()=>setPage("tasks")} style={{background:T.blue,color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Go</button>
         </div>
@@ -1441,7 +1545,24 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
         <div style={{borderTop:`1px solid ${T.bor}`,padding:"12px 16px",background:T.bg,display:"grid",gap:10,animation:"fadeUp .2s ease both"}}>
           {task.description?(
             <div>
-              <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>DESCRIPTION</div>
+              <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4,display:"flex",alignItems:"center",gap:6}}>DESCRIPTION <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span></div>
               <div style={{fontSize:T.fs.md,color:T.txt,lineHeight:1.6,background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>{task.description}</div>
             </div>
           ):(
@@ -1623,7 +1744,7 @@ const NOTIF = {
 
 // ─── FINN AI CHAT ─────────────────────────────────────────────────────────────
 function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose}) {
-  const [msgs,setMsgs]=useState([{role:"assistant",content:"Hey! I'm Finn — your MNU Neer Locker guide. Ask me anything about your tasks, inventory, announcements, or how to use the app!"}]);
+  const [msgs,setMsgs]=useState([{role:"assistant",content:"Hey! I'm Finn — your MNU's Neer Locker assistant. Ask me anything about your tasks, inventory, announcements, or how to use the app!"}]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
   const endRef=useRef(null);
@@ -1714,7 +1835,7 @@ Be short, friendly, direct. Reference real data above. Encourage progression whe
         <FinnLogo/>
         <div style={{flex:1}}>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-0.3px"}}>Finn</div>
-          <div style={{fontSize:11,color:"#ffffff88",fontWeight:500}}>MNU Neer Locker Guide</div>
+          <div style={{fontSize:11,color:"#ffffff88",fontWeight:500}}>MNU&apos;s Neer Locker Assistant</div>
         </div>
         <button onClick={onClose} style={{background:"none",border:"none",color:"#ffffff88",fontSize:20,cursor:"pointer",padding:"4px 8px",borderRadius:8,fontFamily:"inherit",lineHeight:1}}>✕</button>
       </div>
@@ -1838,11 +1959,47 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
                 <Tag label={r.type} color={r.color}/>
               </button>
             ))}
-            {results.length>0&&<div style={{padding:"8px 16px",fontSize:11,color:T.faint,textAlign:"center"}}>Press Enter to search &middot; Esc to close</div>}
+            {results.length>0&&<div style={{padding:"8px 16px",fontSize:11,color:T.faint,textAlign:"center"}}>Press Enter to search &middot; Esc to close &nbsp;·&nbsp; <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span></div>}
           </div>
         )}
         {!q&&(
-          <div style={{padding:"16px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <div style={{padding:"16px"}}>
+            <div style={{fontSize:10,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
+              <svg width="14" height="14" viewBox="0 0 22 22" style={{flexShrink:0}}>
+                <rect width="22" height="22" rx="6" fill="#0f2744"/>
+                <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+                <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+                <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+                <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+                <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+                <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+                <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+                <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+                <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+                <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+                <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+                <circle cx="11" cy="11" r="1" fill="#fff"/>
+              </svg>
+              FINN &mdash; QUICK NAVIGATE
+            </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
             {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:"💬",label:"Messages",page:"dms"}].map(s=>(
               <button key={s.page} onClick={()=>{setPage(s.page);onClose();playSound("click");}}
                 style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit",color:T.txt,fontSize:13,fontWeight:600,transition:"all .15s"}}
@@ -1851,6 +2008,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
                 <span style={{fontSize:18}}>{s.icon}</span>{s.label}
               </button>
             ))}
+          </div>
           </div>
         )}
       </div>
@@ -3031,7 +3189,7 @@ export default function App() {
               )}
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress}/>}
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline}/>}
 
               {/* TASKS */}
               {page==="tasks"&&(
@@ -3572,8 +3730,26 @@ export default function App() {
                     const tl=(form.tTitle||"").toLowerCase();
                     const isUrgent=["urgent","asap","immediately","emergency","critical","now","important","priority","must","deadline","today","broken","fix"].some(w=>tl.includes(w));
                     const isLow=["whenever","eventually","someday","optional"].some(w=>tl.includes(w));
-                    return tl&&isUrgent?<div style={{fontSize:11,color:"#C8102E",fontWeight:600,marginTop:3}}>{"💡 Will be auto-set to High priority"}</div>
-                      :tl&&isLow?<div style={{fontSize:11,color:T.sub,fontWeight:600,marginTop:3}}>{"💡 Will be auto-set to Low priority"}</div>
+                    const finnBadge=<span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
+    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <circle cx="11" cy="11" r="1" fill="#fff"/>
+  </svg>
+  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
+</span>;
+                    return tl&&isUrgent?<div style={{fontSize:11,color:"#C8102E",fontWeight:600,marginTop:3,display:"flex",alignItems:"center"}}>{"💡 Auto-setting to High priority"}{finnBadge}</div>
+                      :tl&&isLow?<div style={{fontSize:11,color:T.sub,fontWeight:600,marginTop:3,display:"flex",alignItems:"center"}}>{"💡 Auto-setting to Low priority"}{finnBadge}</div>
                       :null;
                   })()}
                 </div>
@@ -3675,9 +3851,9 @@ export default function App() {
 
           {/* Offline banner */}
           {isOffline&&(
-            <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9996,background:"#92400e",padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"center",gap:8,fontSize:12,fontWeight:700,color:"#fff",animation:"fadeUp .2s ease"}}>
+            <div style={{position:"fixed",bottom:44,left:"50%",transform:"translateX(-50%)",zIndex:9996,background:"#92400e",borderRadius:20,padding:"8px 20px",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:700,color:"#fff",animation:"fadeUp .2s ease",boxShadow:"0 4px 16px rgba(0,0,0,.3)",whiteSpace:"nowrap"}}>
               <span>📡</span>
-              <span>You&apos;re offline — changes will sync when you reconnect</span>
+              <span>You&apos;re offline — syncing when reconnected</span>
             </div>
           )}
 
