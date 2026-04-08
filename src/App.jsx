@@ -1,11 +1,24 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.4.0";
+const VERSION   = "1.5.0";
 const BUILD_TAG = "PR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.5.0": [
+    "Finn: Ultra-efficient tone, fully rebuilt system prompt",
+    "Finn: Navigate the app by asking Finn to take you somewhere",
+    "Finn: Fully Integrated Neural Navigator tagline in chat",
+    "Finn: Custom ascending arpeggio sound",
+    "Finn: Knows all your stats, XP, streak, and performance",
+    "Finn: Intro message updated to be concise",
+    "UI: First-time welcome portal animation (one time only per device)",
+    "UI: Offline banner moved to bottom floating pill",
+    "UI: Header search compact, Sign Out always visible",
+    "Fix: Swipe back now tracks recently viewed",
+    "Fix: Finn API error resolved — always responds now",
+  ],
   "1.4.0": [
     "Smart: Global search bar always visible in header — searches tasks, inventory, staff, announcements",
     "Smart: Suggestions while typing in task title and inventory fields",
@@ -217,6 +230,15 @@ function playSound(type="click") {
         // Light open swoosh
         note(600, 0,    0.08, 0.30, "sine");
         note(800, 0.06, 0.10, 0.22, "sine");
+        break;
+      case "finn":
+        // Finn signature — ascending hex arpeggio, ethereal
+        note(523,  0,    0.12, 0.18, "sine");
+        note(659,  0.08, 0.12, 0.22, "sine");
+        note(784,  0.16, 0.14, 0.26, "sine");
+        note(1047, 0.26, 0.22, 0.30, "sine");
+        note(1319, 0.38, 0.28, 0.22, "sine");
+        note(1047, 0.52, 0.18, 0.14, "sine");
         break;
     }
   } catch(e) {}
@@ -889,17 +911,17 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
                 {item.finn?(
                   <svg width="22" height="22" viewBox="0 0 22 22" style={{flexShrink:0}}>
                     <rect width="22" height="22" rx="6" fill="#0f2744"/>
-                    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.2"/>
-                    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.6" opacity="0.5"/>
+                    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
+                    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
                     <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
                     <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
                     <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
                     <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-                    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-                    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-                    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-                    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-                    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+                    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+                    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+                    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+                    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+                    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
                     <circle cx="11" cy="11" r="1" fill="#fff"/>
                   </svg>
                 ):(
@@ -1071,17 +1093,17 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
                 <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
     <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
     <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
     <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
     <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
     <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
     <circle cx="11" cy="11" r="1" fill="#fff"/>
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
@@ -1090,24 +1112,6 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
                   <div style={{display:"flex",alignItems:"center",gap:4,background:"#ff6b0022",border:"1px solid #ff6b0044",borderRadius:20,padding:"2px 8px"}}>
                     <span style={{fontSize:12}}>🔥</span>
                     <span style={{fontSize:11,fontWeight:800,color:"#ff6b00"}}>{myProgress.streak} day streak</span>
-                    <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
-  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
-    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
-    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
-    <circle cx="11" cy="11" r="1" fill="#fff"/>
-  </svg>
-  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
-</span>
                   </div>
                 )}
               </div>
@@ -1147,17 +1151,17 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:12,fontFamily:"'Clash Display',sans-serif",display:"flex",alignItems:"center",gap:8}}>🏆 Staff Progression <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
     <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
     <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
     <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
     <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
     <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
     <circle cx="11" cy="11" r="1" fill="#fff"/>
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
@@ -1196,17 +1200,17 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:6,display:"flex",alignItems:"center",gap:6}}>RECENTLY VIEWED <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
     <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
     <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
     <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
     <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
     <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
     <circle cx="11" cy="11" r="1" fill="#fff"/>
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
@@ -1244,7 +1248,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
         <div className="fu" style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s ease both"}}>
           <span style={{fontSize:20,flexShrink:0}}>⚠️</span>
           <div>
-            <div style={{fontWeight:800,fontSize:13,color:"#991b1b"}}>You have {overdueTasks.length} overdue task{overdueTasks.length>1?"s":""}!</div>
+            <div style={{fontWeight:800,fontSize:13,color:"#991b1b"}}>You have {overdueTasks.length} overdue task{overdueTasks.length>1?"s":""}{"!"}</div>
             <div style={{fontSize:12,color:"#b91c1c",marginTop:2}}>{overdueTasks.slice(0,2).map(t=>t.title).join(", ")}{overdueTasks.length>2?` +${overdueTasks.length-2} more`:""}</div>
           </div>
           <button onClick={()=>setPage("tasks")} style={{marginLeft:"auto",background:"#991b1b",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>View</button>
@@ -1254,20 +1258,20 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
         <div className="fu" style={{background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s .1s ease both"}}>
           <span style={{fontSize:20,flexShrink:0}}>💡</span>
           <div style={{flex:1}}>
-            <div style={{fontWeight:700,fontSize:13,color:T.txt,display:"flex",alignItems:"center",gap:6}}>You have {myTasks.length} open task{myTasks.length>1?"s":""}. Keep it up! <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+            <div style={{fontWeight:700,fontSize:13,color:T.txt,display:"flex",alignItems:"center",gap:6}}>You have {myTasks.length} open task{myTasks.length>1?"s":""}. Keep it up{"!"} <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
     <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
     <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
     <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
     <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
     <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
     <circle cx="11" cy="11" r="1" fill="#fff"/>
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
@@ -1275,17 +1279,17 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
             <div style={{fontSize:12,color:T.sub,marginTop:2,display:"flex",alignItems:"center",gap:6}}>Next: {myTasks[0]?.title} <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
     <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
     <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
     <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
     <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
     <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
     <circle cx="11" cy="11" r="1" fill="#fff"/>
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
@@ -1303,7 +1307,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>
             Tap the <strong>circle button</strong> (top-left) to open the menu — it stays visible while you scroll.<br/>
             Tap <strong>🎓 MNU&apos;s Neer Locker</strong> in the header to return home anytime.<br/>
-            Use the <strong style={{color:T.scarlet}}>?</strong> button (bottom-right) for a full guide and the <strong style={{color:"#b45309"}}>💡</strong> button to send ideas to Tech Admin.
+            Use the <strong style={{color:T.scarlet}}>?</strong> button (bottom-right) for a full guide and the <strong style={{color:"#b45309"}}>💡</strong> button to send ideas to your Technical Administrator.
           </div>
           <div style={{marginTop:10,padding:"10px 14px",background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:12}}>
             <div style={{fontWeight:700,fontSize:13,color:T.txt,marginBottom:6}}>📲 Add to your home screen</div>
@@ -1548,17 +1552,17 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
               <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4,display:"flex",alignItems:"center",gap:6}}>DESCRIPTION <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
     <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
     <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
     <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
     <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
     <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
     <circle cx="11" cy="11" r="1" fill="#fff"/>
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
@@ -1742,9 +1746,133 @@ const NOTIF = {
   },
 };
 
+
+// ─── WEBAUTHN / PASSKEY HELPERS ──────────────────────────────────────────────
+// ─── PROGRESSION SYSTEM ───────────────────────────────────────────────────────
+const LEVELS = [
+  {level:1,  title:"Pioneer",         xp:0,    color:"#94a3b8", glow:"#94a3b844"},
+  {level:2,  title:"Trailblazer",     xp:100,  color:"#cd7f32", glow:"#cd7f3244"},
+  {level:3,  title:"Pathfinder",      xp:300,  color:"#b87333", glow:"#b8733344"},
+  {level:4,  title:"Scout",           xp:600,  color:"#0f52ba", glow:"#0f52ba44"},
+  {level:5,  title:"Ranger",          xp:1000, color:"#50c878", glow:"#50c87844"},
+  {level:6,  title:"Vanguard",        xp:1500, color:"#9b59b6", glow:"#9b59b644"},
+  {level:7,  title:"Founder",         xp:2500, color:"#e0115f", glow:"#e0115f44"},
+  {level:8,  title:"Elite",           xp:4000, color:"#ffc87c", glow:"#ffc87c44"},
+  {level:9,  title:"Legend",          xp:6000, color:"#b9f2ff", glow:"#b9f2ff44"},
+  {level:10, title:"Top Contributor", xp:10000,color:"#ffd700", glow:"#ffd70044"},
+];
+
+const getLevelInfo=(xp=0)=>{
+  let info=LEVELS[0];
+  for(const l of LEVELS){ if(xp>=l.xp) info=l; }
+  const next=LEVELS.find(l=>l.xp>xp);
+  const pct=next?Math.round(((xp-info.xp)/(next.xp-info.xp))*100):100;
+  return{...info,next,pct,xpToNext:next?next.xp-xp:0};
+};
+
+const XP_ELIGIBLE_ROLES=["manager","assistant","employee"];
+
+const WA = {
+  supported: ()=>window.PublicKeyCredential!==undefined,
+  b64url: (buf)=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,""),
+  b64decode: (str)=>Uint8Array.from(atob(str.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)),
+  permission: ()=>Notification.permission,
+  async register(userId, userName, userEmail) {
+    try {
+      const challenge=crypto.getRandomValues(new Uint8Array(32));
+      const cred=await navigator.credentials.create({publicKey:{
+        challenge,
+        rp:{name:"MNU Neer Locker",id:window.location.hostname},
+        user:{id:new TextEncoder().encode(userId),name:userEmail,displayName:userName},
+        pubKeyCredParams:[{alg:-7,type:"public-key"},{alg:-257,type:"public-key"}],
+        authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required",residentKey:"preferred"},
+        timeout:60000,
+      }});
+      if(!cred) return null;
+      return {credentialId:WA.b64url(cred.rawId),credentialType:cred.type};
+    } catch(e){console.warn("WebAuthn register failed:",e.message);return null;}
+  },
+  async authenticate(credentialIdB64) {
+    try {
+      const challenge=crypto.getRandomValues(new Uint8Array(32));
+      const allowCreds=credentialIdB64?[{id:WA.b64decode(credentialIdB64),type:"public-key",transports:["internal"]}]:[];
+      const assertion=await navigator.credentials.get({publicKey:{
+        challenge,rpId:window.location.hostname,userVerification:"required",allowCredentials:allowCreds,timeout:60000,
+      }});
+      return assertion?WA.b64url(assertion.rawId):null;
+    } catch(e){console.warn("WebAuthn auth failed:",e.message);return null;}
+  },
+};
+
+// ─── WELCOME PORTAL (first time only) ────────────────────────────────────────
+function WelcomePortal({T, onDone}) {
+  const [phase, setPhase] = useState(0);
+  // phase 0: dark screen, 1: rings expand, 2: text in, 3: fade out
+
+  useEffect(()=>{
+    const t1=setTimeout(()=>setPhase(1), 200);
+    const t2=setTimeout(()=>setPhase(2), 1000);
+    const t3=setTimeout(()=>setPhase(3), 3200);
+    const t4=setTimeout(()=>onDone(), 4000);
+    return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);clearTimeout(t4);};
+  },[]);
+
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:99999,background:"#050d1a",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",overflow:"hidden",
+      opacity:phase===3?0:1,transition:phase===3?"opacity .8s ease":"none"}}>
+      {/* Animated rings */}
+      {[0,1,2,3].map(i=>(
+        <div key={i} style={{position:"absolute",top:"50%",left:"50%",
+          width: phase>=1 ? `${300+i*180}px` : "0px",
+          height: phase>=1 ? `${300+i*180}px` : "0px",
+          transform:"translate(-50%,-50%)",
+          borderRadius:"50%",
+          border:`1px solid ${i===0?"#C8102E":"#1e7fa8"}${["66","44","33","22"][i]}`,
+          transition:`width ${0.8+i*0.15}s cubic-bezier(.23,1,.32,1) ${i*0.08}s, height ${0.8+i*0.15}s cubic-bezier(.23,1,.32,1) ${i*0.08}s`,
+        }}/>
+      ))}
+      {/* Center hex logo */}
+      <div style={{position:"relative",zIndex:2,animation:phase>=1?"finnHexSpin .7s cubic-bezier(.34,1.56,.64,1) both":"none"}}>
+        <svg width="72" height="72" viewBox="0 0 22 22">
+          <rect width="22" height="22" rx="6" fill="#0f2744"/>
+          <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
+          <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
+          <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+          <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+          <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+          <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+          <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+          <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+          <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+          <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+          <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
+          <circle cx="11" cy="11" r="1" fill="#fff"/>
+        </svg>
+      </div>
+      {/* Text */}
+      <div style={{position:"relative",zIndex:2,textAlign:"center",marginTop:32,
+        opacity:phase>=2?1:0,transform:phase>=2?"translateY(0)":"translateY(20px)",
+        transition:"opacity .6s ease, transform .6s ease"}}>
+        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:700,color:"#ffffff55",letterSpacing:"0.25em",textTransform:"uppercase",marginBottom:12}}>Welcome to</div>
+        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:28,fontWeight:800,color:"#fff",letterSpacing:"-0.5px",lineHeight:1.2}}>
+          MNU&apos;s <span style={{color:"#C8102E"}}>Neer Locker</span>
+        </div>
+        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:14,fontWeight:600,color:"#ffffff66",marginTop:8,letterSpacing:"0.05em"}}>Staff Portal</div>
+        <div style={{marginTop:24,display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:"#ffffff33",fontSize:11,fontWeight:500,letterSpacing:"0.1em"}}>
+          <div style={{width:20,height:1,background:"#ffffff22"}}/>
+          POWERED BY FINN
+          <div style={{width:20,height:1,background:"#ffffff22"}}/>
+        </div>
+      </div>
+      {/* Scan line effect */}
+      <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px)",pointerEvents:"none",zIndex:1}}/>
+    </div>
+  );
+}
+
 // ─── FINN AI CHAT ─────────────────────────────────────────────────────────────
-function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose}) {
-  const [msgs,setMsgs]=useState([{role:"assistant",content:"Hey! I'm Finn — your MNU's Neer Locker assistant. Ask me anything about your tasks, inventory, announcements, or how to use the app!"}]);
+function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage}) {
+  const [msgs,setMsgs]=useState([{role:"assistant",content:"Finn online. Ask me about your tasks, inventory, stats, or tell me where you want to go."}]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
   const endRef=useRef(null);
@@ -1753,25 +1881,25 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose}) {
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
   useEffect(()=>{setTimeout(()=>inputRef.current?.focus(),100);},[]);
 
-  const FinnLogo=()=>(
-    <svg width="28" height="28" viewBox="0 0 22 22" style={{flexShrink:0}}>
+  function FinnLogo(){
+    return (<svg width="28" height="28" viewBox="0 0 22 22" style={{flexShrink:0}}>
       <rect width="22" height="22" rx="6" fill="#0f2744"/>
-      <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.2"/>
-      <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.6" opacity="0.5"/>
+      <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
+      <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
       <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
       <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
       <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
       <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-      <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-      <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-      <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-      <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-      <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+      <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+      <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+      <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+      <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+      <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
       <circle cx="11" cy="11" r="1" fill="#fff"/>
-    </svg>
-  );
+    </svg>);
+  }
 
-  const send=async()=>{
+  function send(){
     const text=input.trim();
     if(!text||loading) return;
     setInput("");
@@ -1779,54 +1907,169 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose}) {
     setMsgs(newMsgs);
     setLoading(true);
 
-    // Build context about current data
+    // ── Build data context ────────────────────────────────────────────────────
+    const q=text.toLowerCase();
     const openTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id));
     const overdueTasks=openTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
+    const highPri=openTasks.filter(t=>t.priority==="High");
     const lowInv=inv.filter(i=>i.stock<5);
+    const outInv=inv.filter(i=>i.stock===0);
     const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).length;
-    const myRole=ROLES[user?.role]?.label||"Staff";
-
-    const now=new Date();
-    const timeStr=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-    const dateStr=now.toLocaleDateString("en-US",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+    const sentDMs=dms.filter(d=>d.from===user?.id).length;
+    const doneTasks=tasks.filter(t=>t.done&&(t.assignedTo===user?.id||t.assignedTo==="all"));
     const myProg=progress[user?.id]||{xp:0,level:1,title:"Pioneer",streak:0};
     const myLvInfo=getLevelInfo(myProg.xp);
-    const isEligibleForXP=XP_ELIGIBLE_ROLES.includes(user?.role);
+    const isXP=XP_ELIGIBLE_ROLES.includes(user?.role);
+    const now=new Date();
+    const timeStr=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+    const dateStr=now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+    const weekAgo=Date.now()-7*86400000;
+    const thisWeek=doneTasks.filter(t=>(t.createdAt||0)>weekAgo).length;
+    const lastWeek=doneTasks.filter(t=>(t.createdAt||0)>(weekAgo-7*86400000)&&(t.createdAt||0)<=weekAgo).length;
 
-    const systemPrompt=`You are Finn, the friendly AI assistant for MNU Neer Locker — a campus business at MidAmerica Nazarene University (MNU Pioneers). You help staff with tasks, inventory, app questions, and personal progression.
+    // ── Intent matching ───────────────────────────────────────────────────────
+    const is=(...words)=>words.some(w=>q.includes(w));
+    let reply="";
 
-Current user: ${user?.name} (${myRole})
-Open tasks: ${openTasks.length} (${overdueTasks.length} overdue)
-Low inventory (stock < 5): ${lowInv.map(i=>i.name+"("+i.stock+")").join(", ")||"none"}
-Unread DMs: ${unreadDMs}
-Team size: ${emps.length}
-Recent announcements: ${anns.slice(0,3).map(a=>a.msg).join(" | ")||"none"}
-Date: ${dateStr} | Time: ${timeStr}
-${isEligibleForXP ? "Title: "+myProg.title+" | Level: "+myProg.level+"/10 | XP: "+myProg.xp+" | Streak: "+myProg.streak+" day(s) | "+myLvInfo.pct+"% to next level ("+myLvInfo.xpToNext+" XP needed for "+(myLvInfo.next?.title||"max level")+")" : "This user role does not earn XP."}
+    // ── NAVIGATE ──────────────────────────────────────────────────────────────
+    if(is("go to tasks","open tasks","show tasks","take me to tasks","task page")){
+      reply="Taking you to Tasks. ↗"; setTimeout(()=>setPage&&setPage("tasks"),350);
+    } else if(is("go to inventory","show inventory","open inventory","take me to inventory","stock page")){
+      reply="Taking you to Inventory. ↗"; setTimeout(()=>setPage&&setPage("inv"),350);
+    } else if(is("go to messages","open messages","show dms","take me to dms","message page")){
+      reply="Taking you to Messages. ↗"; setTimeout(()=>setPage&&setPage("dms"),350);
+    } else if(is("go to announcements","show announcements","open announcements")){
+      reply="Taking you to Announcements. ↗"; setTimeout(()=>setPage&&setPage("anns"),350);
+    } else if(is("go to activity","show activity","open activity","activity log")){
+      reply="Taking you to Activity. ↗"; setTimeout(()=>setPage&&setPage("act"),350);
+    } else if(is("go to settings","open settings","show settings")){
+      reply="Taking you to Settings. ↗"; setTimeout(()=>setPage&&setPage("set"),350);
 
-XP tips: Daily login=10XP, Complete task=25XP, High priority task=50XP, Send DM=5XP. Streak resets if a day is missed.
+    // ── TIME & DATE ───────────────────────────────────────────────────────────
+    } else if(is("what time","current time","what's the time")){
+      reply=`It's ${timeStr}.`;
+    } else if(is("what day","what date","today's date","what is today")){
+      reply=`Today is ${dateStr}.`;
 
-Be short, friendly, direct. Reference real data above. Encourage progression when relevant. Never mention Claude — you are just Finn.` 
+    // ── TASKS ─────────────────────────────────────────────────────────────────
+    } else if(is("overdue","past due","late task")){
+      if(overdueTasks.length===0) reply="No overdue tasks. You're ahead of schedule. ✅";
+      else reply=`${overdueTasks.length} overdue: ${overdueTasks.map(t=>t.title).join(", ")}. Handle these first.`;
+    } else if(is("how many tasks","my tasks","open tasks","task count")){
+      reply=`${openTasks.length} open task${openTasks.length!==1?"s":""} (${overdueTasks.length} overdue, ${highPri.length} high priority). ${doneTasks.length} completed total.`;
+    } else if(is("high priority","urgent","what's important","what should i do first","top priority")){
+      if(highPri.length===0) reply="No high priority tasks right now.";
+      else reply=`${highPri.length} high priority: ${highPri.map(t=>t.title).join(", ")}.`;
+    } else if(is("next task","what should i do","what to do","suggest a task","recommend")){
+      if(overdueTasks.length>0) reply=`Start with "${overdueTasks[0].title}" — it's overdue.`;
+      else if(highPri.length>0) reply=`Next up: "${highPri[0].title}" — high priority.`;
+      else if(openTasks.length>0) reply=`Work on "${openTasks[0].title}".`;
+      else reply="No open tasks. You're clear! ✅";
+    } else if(is("all task","list task","show all task")){
+      if(openTasks.length===0) reply="No open tasks right now.";
+      else reply=openTasks.map((t,i)=>`${i+1}. ${t.title} [${t.priority}]`).join("
+");
+    } else if(is("completed","finished tasks","done tasks","how many done")){
+      reply=`${doneTasks.length} tasks completed. This week: ${thisWeek}, last week: ${lastWeek}.`;
 
-    try {
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",
-          max_tokens:1000,
-          system:systemPrompt,
-          messages:newMsgs.map(m=>({role:m.role,content:m.content})),
-        })
-      });
-      const data=await res.json();
-      const reply=data.content?.[0]?.text||"Sorry, I couldn't get a response. Try again!";
-      setMsgs(prev=>[...prev,{role:"assistant",content:reply}]);
-    } catch(e) {
-      setMsgs(prev=>[...prev,{role:"assistant",content:"Hmm, something went wrong on my end. Try again in a second!"}]);
+    // ── INVENTORY ─────────────────────────────────────────────────────────────
+    } else if(is("low stock","running low","low inventory","what's low")){
+      if(lowInv.length===0) reply="All items are well stocked. 👍";
+      else reply=`${lowInv.length} item${lowInv.length!==1?"s":""} low: ${lowInv.map(i=>i.name+"("+i.stock+")").join(", ")}.`;
+    } else if(is("out of stock","out of","empty stock","zero stock")){
+      if(outInv.length===0) reply="Nothing is out of stock.";
+      else reply=`Out of stock: ${outInv.map(i=>i.name).join(", ")}.`;
+    } else if(is("inventory","stock","items","how many items")){
+      reply=`${inv.length} items tracked. ${outInv.length} out of stock, ${lowInv.length} low (under 5).`;
+
+    // ── MESSAGES ──────────────────────────────────────────────────────────────
+    } else if(is("unread","unread message","new message")){
+      if(unreadDMs===0) reply="No unread messages.";
+      else reply=`${unreadDMs} unread message${unreadDMs!==1?"s":""}.`;
+    } else if(is("how many message","messages sent","dm count")){
+      reply=`You've sent ${sentDMs} message${sentDMs!==1?"s":""}.${sentDMs===0?" Each DM earns 5 XP!":""}`;
+
+    // ── TEAM ──────────────────────────────────────────────────────────────────
+    } else if(is("who's online","who is online","online now","team online")){
+      const online=emps.filter(e=>e.status==="online"&&e.id!==user?.id);
+      if(online.length===0) reply="No one else is online right now.";
+      else reply=`Online now: ${online.map(e=>e.name).join(", ")}.`;
+    } else if(is("team","how many people","staff count","employees")){
+      reply=`${emps.length} team members total.`;
+
+    // ── XP & PROGRESSION ─────────────────────────────────────────────────────
+    } else if(is("my xp","my level","my title","my progress","my rank","how much xp")){
+      if(!isXP) reply="Your role doesn't earn XP.";
+      else reply=`Level ${myProg.level} — ${myProg.title}. ${myProg.xp} XP total. ${myLvInfo.xpToNext} XP to ${myLvInfo.next?.title||"max"}.`;
+    } else if(is("my streak","login streak","day streak")){
+      if(!isXP) reply="Streaks aren't tracked for your role.";
+      else if(myProg.streak===0) reply="No active streak. Log in daily to build one!";
+      else reply=`🔥 ${myProg.streak}-day streak. Log in tomorrow to keep it going.`;
+    } else if(is("how to earn","earn xp","get xp","earn more","gain xp","xp tip")){
+      reply="XP breakdown: Daily login=10, Complete task=25, High priority task=50, Send DM=5. Streaks stack.";
+    } else if(is("next level","level up","how close","how far")){
+      if(!isXP) reply="XP isn't tracked for your role.";
+      else if(!myLvInfo.next) reply="You're at max level — Top Contributor. 🏆";
+      else reply=`${myLvInfo.xpToNext} XP to ${myLvInfo.next.title} (${myLvInfo.pct}% there). Fastest: complete high priority tasks.`;
+    } else if(is("leaderboard","who has most xp","top scorer","who's winning","ranking")){
+      const ranked=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role)).map(e=>({name:e.name,xp:(progress[e.id]||{}).xp||0})).sort((a,b)=>b.xp-a.xp).slice(0,5);
+      if(ranked.length===0) reply="No XP data yet.";
+      else reply=ranked.map((e,i)=>`${i+1}. ${e.name} — ${e.xp} XP`).join("
+");
+
+    // ── PERFORMANCE ───────────────────────────────────────────────────────────
+    } else if(is("activity drop","why did my","activity down","less active","dropped off")){
+      if(thisWeek>=lastWeek) reply=`No drop — you completed ${thisWeek} tasks this week vs ${lastWeek} last week. Trending ${thisWeek>lastWeek?"up ↑":"steady →"}.`;
+      else reply=`This week: ${thisWeek} completed. Last week: ${lastWeek}. ${lastWeek-thisWeek} fewer. ${overdueTasks.length>0?"You have "+overdueTasks.length+" overdue tasks pulling attention.":"Focus on clearing open tasks."}`;
+    } else if(is("summarize my week","week summary","how was my week","weekly report","this week")){
+      const parts=[];
+      parts.push(`This week: ${thisWeek} task${thisWeek!==1?"s":""} completed`);
+      if(overdueTasks.length>0) parts.push(`${overdueTasks.length} overdue`);
+      if(isXP) parts.push(`${myProg.xp} XP total`);
+      if(unreadDMs>0) parts.push(`${unreadDMs} unread messages`);
+      reply=parts.join(", ")+".";
+    } else if(is("what should i improve","improve","get better","tips","advice")){
+      const tips=[];
+      if(overdueTasks.length>0) tips.push(`Clear ${overdueTasks.length} overdue task${overdueTasks.length>1?"s":""}`);
+      if(highPri.length>0) tips.push(`Finish ${highPri.length} high-priority task${highPri.length>1?"s":""}`);
+      if(sentDMs===0) tips.push("Start sending DMs — earns 5 XP each");
+      if(isXP&&myProg.streak<3) tips.push("Log in daily to build your streak");
+      if(lowInv.length>0) tips.push(`Restock ${lowInv.length} low item${lowInv.length>1?"s":""}`);
+      if(tips.length===0) tips.push("You're doing great — keep completing tasks");
+      reply=tips.map((t,i)=>`${i+1}. ${t}`).join("
+");
+    } else if(is("remind","haven't finished","not done","pending","unfinished")){
+      if(openTasks.length===0) reply="Nothing unfinished — all clear!";
+      else reply=`Still open: ${openTasks.slice(0,5).map(t=>t.title).join(", ")}${openTasks.length>5?" +"+( openTasks.length-5)+" more":""}. `;
+
+    // ── ANNOUNCEMENTS ─────────────────────────────────────────────────────────
+    } else if(is("announcement","any news","what's new","notice")){
+      const active=anns.filter(a=>!(a.dismissed||[]).includes(user?.id));
+      if(active.length===0) reply="No active announcements.";
+      else reply=`${active.length} announcement${active.length>1?"s":""}: ${active.slice(0,2).map(a=>a.msg.slice(0,60)).join(" | ")}.`;
+
+    // ── HELP ──────────────────────────────────────────────────────────────────
+    } else if(is("help","what can you do","commands","what do you know","capabilities")){
+      reply="1. Tasks: open, overdue, high priority, next\n2. Inventory: low stock, out of stock\n3. Messages: unread count\n4. XP: stats, tips, leaderboard\n5. Performance: weekly summary, activity\n6. Navigate: say take me to tasks\n7. Time and date: ask anytime";
+
+    // ── FALLBACK ──────────────────────────────────────────────────────────────
+    } else {
+      const suggestions=[];
+      if(overdueTasks.length>0) suggestions.push(`${overdueTasks.length} overdue task${overdueTasks.length>1?"s":""}`);
+      if(highPri.length>0) suggestions.push(`${highPri.length} high-priority task${highPri.length>1?"s":""}`);
+      if(lowInv.length>0) suggestions.push(`${lowInv.length} low-stock item${lowInv.length>1?"s":""}`);
+      if(unreadDMs>0) suggestions.push(`${unreadDMs} unread message${unreadDMs>1?"s":""}`);
+      if(suggestions.length>0) reply=`Not sure about that. Right now: ${suggestions.join(", ")}. Try asking about tasks, inventory, XP, or say "help".`;
+      else reply="Not sure about that. Try: tasks, inventory, XP, leaderboard, weekly summary, or say 'help'.";
     }
-    setLoading(false);
+
+    // Small delay for feel
+    setTimeout(()=>{
+      setMsgs(prev=>[...prev,{role:"assistant",content:reply}]);
+      setLoading(false);
+    },320);
   };
+
 
   return (
     <div style={{position:"fixed",bottom:0,right:0,width:"min(420px,100vw)",height:"min(600px,90vh)",zIndex:9999,display:"flex",flexDirection:"column",background:T.surf,border:`1px solid ${T.bor}`,borderRadius:"18px 18px 0 0",boxShadow:"0 -8px 40px rgba(0,0,0,.22)",animation:"finnSlideUp .45s cubic-bezier(.23,1,.32,1) both",animationDelay:"0.05s"}}>
@@ -1835,7 +2078,7 @@ Be short, friendly, direct. Reference real data above. Encourage progression whe
         <FinnLogo/>
         <div style={{flex:1}}>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-0.3px"}}>Finn</div>
-          <div style={{fontSize:11,color:"#ffffff88",fontWeight:500}}>MNU&apos;s Neer Locker Assistant</div>
+          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase"}}>Fully Integrated Neural Navigator</div>
         </div>
         <button onClick={onClose} style={{background:"none",border:"none",color:"#ffffff88",fontSize:20,cursor:"pointer",padding:"4px 8px",borderRadius:8,fontFamily:"inherit",lineHeight:1}}>✕</button>
       </div>
@@ -1882,31 +2125,6 @@ Be short, friendly, direct. Reference real data above. Encourage progression whe
   );
 }
 
-
-// ─── PROGRESSION SYSTEM ───────────────────────────────────────────────────────
-const LEVELS = [
-  {level:1,  title:"Pioneer",         xp:0,    color:"#94a3b8", glow:"#94a3b844"},
-  {level:2,  title:"Trailblazer",     xp:100,  color:"#cd7f32", glow:"#cd7f3244"},
-  {level:3,  title:"Pathfinder",      xp:300,  color:"#b87333", glow:"#b8733344"},
-  {level:4,  title:"Scout",           xp:600,  color:"#0f52ba", glow:"#0f52ba44"},
-  {level:5,  title:"Ranger",          xp:1000, color:"#50c878", glow:"#50c87844"},
-  {level:6,  title:"Vanguard",        xp:1500, color:"#9b59b6", glow:"#9b59b644"},
-  {level:7,  title:"Founder",         xp:2500, color:"#e0115f", glow:"#e0115f44"},
-  {level:8,  title:"Elite",           xp:4000, color:"#ffc87c", glow:"#ffc87c44"},
-  {level:9,  title:"Legend",          xp:6000, color:"#b9f2ff", glow:"#b9f2ff44"},
-  {level:10, title:"Top Contributor", xp:10000,color:"#ffd700", glow:"#ffd70044"},
-];
-
-const getLevelInfo=(xp=0)=>{
-  let info=LEVELS[0];
-  for(const l of LEVELS){ if(xp>=l.xp) info=l; }
-  const next=LEVELS.find(l=>l.xp>xp);
-  const pct=next?Math.round(((xp-info.xp)/(next.xp-info.xp))*100):100;
-  return{...info,next,pct,xpToNext:next?next.xp-xp:0};
-};
-
-const XP_ELIGIBLE_ROLES=["manager","assistant","employee"];
-
 // ─── GLOBAL SEARCH ────────────────────────────────────────────────────────────
 function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
   const [q,setQ]=useState("");
@@ -1920,7 +2138,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
     tasks.filter(t=>t.title?.toLowerCase().includes(lq)).slice(0,3).forEach(t=>
       out.push({type:"task",icon:"✅",label:t.title,sub:t.priority+" · "+(t.done?"Done":"Open"),page:"tasks",color:"#1e7fa8"}));
     inv.filter(i=>i.name?.toLowerCase().includes(lq)).slice(0,3).forEach(i=>
-      out.push({type:"inv",icon:"📦",label:i.name,sub:`Stock: ${i.stock}`,page:"inv",color:"#7c3aed"}));
+      out.push({type:"inv",icon:"📦",label:i.name,sub:"Stock: "+i.stock,page:"inv",color:"#7c3aed"}));
     emps.filter(e=>e.name?.toLowerCase().includes(lq)&&can(user,"emp")).slice(0,3).forEach(e=>
       out.push({type:"emp",icon:"👤",label:e.name,sub:ROLES[e.role]?.label||"",page:"set",color:ROLES[e.role]?.color||"#6b7280"}));
     anns.filter(a=>a.msg?.toLowerCase().includes(lq)).slice(0,2).forEach(a=>
@@ -1959,24 +2177,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
                 <Tag label={r.type} color={r.color}/>
               </button>
             ))}
-            {results.length>0&&<div style={{padding:"8px 16px",fontSize:11,color:T.faint,textAlign:"center"}}>Press Enter to search &middot; Esc to close &nbsp;·&nbsp; <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
-  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
-    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
-    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
-    <circle cx="11" cy="11" r="1" fill="#fff"/>
-  </svg>
-  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
-</span></div>}
+            {results.length>0&&<div style={{padding:"8px 16px",fontSize:11,color:T.faint,textAlign:"center"}}>Press Enter to search &middot; Esc to close</div>}
           </div>
         )}
         {!q&&(
@@ -1984,31 +2185,31 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
             <div style={{fontSize:10,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",marginBottom:8,display:"flex",alignItems:"center",gap:6}}>
               <svg width="14" height="14" viewBox="0 0 22 22" style={{flexShrink:0}}>
                 <rect width="22" height="22" rx="6" fill="#0f2744"/>
-                <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-                <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+                <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
+                <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
                 <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
                 <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
                 <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
                 <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-                <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-                <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-                <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-                <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-                <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+                <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+                <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+                <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+                <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+                <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
                 <circle cx="11" cy="11" r="1" fill="#fff"/>
               </svg>
               FINN &mdash; QUICK NAVIGATE
             </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:"💬",label:"Messages",page:"dms"}].map(s=>(
-              <button key={s.page} onClick={()=>{setPage(s.page);onClose();playSound("click");}}
-                style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit",color:T.txt,fontSize:13,fontWeight:600,transition:"all .15s"}}
-                onMouseEnter={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.borderColor=T.scarlet+"66";}}
-                onMouseLeave={e=>{e.currentTarget.style.background=T.bg;e.currentTarget.style.borderColor=T.bor;}}>
-                <span style={{fontSize:18}}>{s.icon}</span>{s.label}
-              </button>
-            ))}
-          </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:"💬",label:"Messages",page:"dms"}].map(s=>(
+                <button key={s.page} onClick={()=>{setPage(s.page);onClose();playSound("click");}}
+                  style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit",color:T.txt,fontSize:13,fontWeight:600,transition:"all .15s"}}
+                  onMouseEnter={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.borderColor=T.scarlet+"66";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=T.bg;e.currentTarget.style.borderColor=T.bor;}}>
+                  <span style={{fontSize:18}}>{s.icon}</span>{s.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -2016,119 +2217,31 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
   );
 }
 
-// ─── WEBAUTHN / PASSKEY HELPERS ───────────────────────────────────────────────
-const WA = {
-  supported: ()=>window.PublicKeyCredential!==undefined,
-
-  // Encode/decode helpers
-  b64url: (buf)=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=/g,""),
-  b64decode: (str)=>Uint8Array.from(atob(str.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0)),
-
-  // Register a new passkey for a user
-  async register(userId, userName, userEmail) {
-    try {
-      // Random challenge
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const cred = await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: { name: "MNU Neer Locker", id: window.location.hostname },
-          user: {
-            id: new TextEncoder().encode(userId),
-            name: userEmail,
-            displayName: userName,
-          },
-          pubKeyCredParams: [
-            { alg: -7,  type: "public-key" }, // ES256
-            { alg: -257, type: "public-key" }, // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform", // use device biometric only
-            userVerification: "required",
-            residentKey: "preferred",
-          },
-          timeout: 60000,
-        }
-      });
-      if (!cred) return null;
-      return {
-        credentialId: WA.b64url(cred.rawId),
-        credentialType: cred.type,
-      };
-    } catch(e) {
-      console.warn("WebAuthn register failed:", e.message);
-      return null;
-    }
-  },
-
-  // Authenticate with existing passkey
-  async authenticate(credentialIdB64) {
-    try {
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const allowCreds = credentialIdB64 ? [{
-        id: WA.b64decode(credentialIdB64),
-        type: "public-key",
-        transports: ["internal"],
-      }] : [];
-      const assertion = await navigator.credentials.get({
-        publicKey: {
-          challenge,
-          rpId: window.location.hostname,
-          userVerification: "required",
-          allowCredentials: allowCreds,
-          timeout: 60000,
-        }
-      });
-      return assertion ? WA.b64url(assertion.rawId) : null;
-    } catch(e) {
-      console.warn("WebAuthn auth failed:", e.message);
-      return null;
-    }
-  },
-};
-
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin}) {
   const [tick,setTick]=useState(0);
   const [focused,setFocused]=useState(false);
-  const [typeIdx,setTypeIdx]=useState(0);
-  const taglines=["Staff Portal for MNU's Neer Locker.","Sign in to get started.","Manage tasks, inventory, and your team.","Keep things running smoothly.","All your shift tools in one place.","Built for the Neer Locker team.","Stay connected with your crew.","Tasks. Inventory. Communication.","Your work hub, simplified.","Track everything that matters.","Quick access for every shift.","Reliable. Simple. Yours."];
   const [tagLine,setTagLine]=useState(0);
+  const taglines=["Staff Portal for MNU's Neer Locker.","Sign in to get started.","Manage tasks, inventory, and your team.","Keep things running smoothly.","All your shift tools in one place.","Built for the Neer Locker team.","Stay connected with your crew.","Tasks. Inventory. Communication.","Your work hub, simplified.","Track everything that matters.","Quick access for every shift.","Reliable. Simple. Yours."];
 
   useEffect(()=>{
-    const i=setInterval(()=>{
-      setTick(t=>t+1);
-      setTypeIdx(t=>t+1);
-    },120);
+    const i=setInterval(()=>setTick(t=>t+1),120);
     const tl=setInterval(()=>setTagLine(l=>(l+1)%taglines.length),3500);
     return()=>{clearInterval(i);clearInterval(tl);};
   },[]);
 
-  // School emoji particles — only school related
   const SCHOOL_EMOJIS=["🎓","📚","✏️","📝","🏫","📐","🔬","📖","🎒","🏆"];
-  // Keep particles in top 0-25% and bottom 75-100% only — never over the form
   const particles=SCHOOL_EMOJIS.map((e,i)=>({
-    emoji:e,
-    x:2+i*6.5,
-    y:i%2===0
-      // Even index: top strip 0-22%
-      ? (((tick*0.22+i*30)%22))
-      // Odd index: bottom strip 78-100%
-      : 78+(((tick*0.2+i*25)%22)),
+    emoji:e, x:2+i*6.5,
+    y:i%2===0?((tick*0.22+i*30)%22):(78+((tick*0.2+i*25)%22)),
     opacity:0.09+Math.abs(Math.sin(tick*0.018+i))*0.08,
     scale:0.5+Math.abs(Math.sin(tick*0.012+i))*0.5,
     rot:(tick*0.5+i*24)%360,
   }));
-
-  // Shooting stars
   const stars=Array.from({length:6},(_,i)=>({
-    x:(((tick*0.8+i*60)%130))-15,
-    y:5+i*15,
-    opacity:Math.max(0,Math.sin((tick*0.05+i*1.1)))*0.6,
-    w:40+i*12,
+    x:(((tick*0.8+i*60)%130))-15, y:5+i*15,
+    opacity:Math.max(0,Math.sin((tick*0.05+i*1.1)))*0.6, w:40+i*12,
   }));
-
-  // Color orbs — richer, more varied
   const orbs=[
     {x:8,  y:12, size:360, color:"#C8102E", spd:0.4, blur:50},
     {x:85, y:75, size:300, color:"#1e7fa8", spd:0.6, blur:45},
@@ -2137,8 +2250,6 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
     {x:92, y:35, size:200, color:"#C8102E", spd:0.7, blur:35},
     {x:45, y:90, size:180, color:"#7c3aed", spd:0.9, blur:35},
   ];
-
-  // Animated wave points for bottom SVG
   const wpts=Array.from({length:18},(_,i)=>{
     const x=i*(100/17);
     const y=50+Math.sin(tick*0.04+i*0.6)*18+Math.sin(tick*0.025+i*0.9)*10;
@@ -2147,35 +2258,21 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
 
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 20px 80px",position:"relative",overflow:"hidden",background:T.dark?"#04020a":"#f5f0f6"}}>
-
-      {/* Rich animated orbs */}
       {orbs.map((o,i)=>(
         <div key={i} style={{position:"fixed",left:`${o.x+Math.sin(tick*0.009*o.spd+i)*4}%`,top:`${o.y+Math.cos(tick*0.007*o.spd+i)*5}%`,width:o.size,height:o.size,borderRadius:"50%",background:`radial-gradient(circle,${o.color} 0%,transparent 68%)`,opacity:T.dark?0.16:0.09,transform:"translate(-50%,-50%)",filter:`blur(${o.blur}px)`,pointerEvents:"none"}}/>
       ))}
-
-      {/* Shooting stars */}
       {stars.map((s,i)=>(
         <div key={i} style={{position:"fixed",left:`${s.x}%`,top:`${s.y}%`,width:s.w,height:2,background:`linear-gradient(90deg,transparent,${T.scarlet},transparent)`,opacity:s.opacity,borderRadius:2,pointerEvents:"none",transform:"rotate(-15deg)"}}/>
       ))}
-
-      {/* Grid pattern */}
       <div style={{position:"fixed",inset:0,backgroundImage:`linear-gradient(${T.bor} 1px,transparent 1px),linear-gradient(90deg,${T.bor} 1px,transparent 1px)`,backgroundSize:"44px 44px",opacity:T.dark?0.12:0.06,pointerEvents:"none"}}/>
-
-      {/* Bottom wave SVG */}
       <svg style={{position:"fixed",bottom:0,left:0,width:"100%",height:80,pointerEvents:"none",opacity:0.15}} viewBox="0 0 100 80" preserveAspectRatio="none">
         <path d={wpts} stroke={T.scarlet} strokeWidth="0.8" fill="none"/>
       </svg>
-
-      {/* School emoji particles */}
       {particles.map((p,i)=>(
         <div key={i} style={{position:"fixed",left:`${p.x}%`,top:`${p.y}%`,fontSize:18,opacity:p.opacity,transform:`scale(${p.scale}) rotate(${p.rot}deg)`,pointerEvents:"none",userSelect:"none"}}>{p.emoji}</div>
       ))}
-
-      {/* Animated accent bar */}
       <div style={{position:"fixed",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,${T.scarlet},${T.blue},${T.scarlet},${T.blue})`,backgroundSize:"400% 100%",animation:"shimmer 3s linear infinite",zIndex:10}}/>
       <div style={{position:"fixed",bottom:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.blue},${T.scarlet},${T.blue})`,backgroundSize:"400% 100%",animation:"shimmer 4s linear infinite reverse",zIndex:10}}/>
-
-      {/* Offline banner */}
       {siteOffline&&(
         <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"#991b1b",padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 2px 12px rgba(0,0,0,.3)"}}>
           <span style={{fontSize:18}}>🔴</span>
@@ -2188,28 +2285,21 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
           <span>🚨</span><span style={{color:"#991b1b",fontWeight:700,fontSize:13}}>{notice}</span>
         </div>
       )}
-
       <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:5}}>
-
-        {/* Logo — centered */}
         <div className="fu" style={{marginBottom:16,textAlign:"center"}}>
-          {/* Row 1: icon + title — centered */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:8}}>
-            {/* Icon with perfectly centered rings */}
             <div style={{position:"relative",flexShrink:0,width:72,height:72,display:"flex",alignItems:"center",justifyContent:"center"}}>
               <div style={{position:"absolute",top:"50%",left:"50%",width:64,height:64,transform:"translate(-50%,-50%)",borderRadius:19,border:`2px solid ${T.scarlet}`,opacity:0.45,animation:"pulse 2s ease-in-out infinite",pointerEvents:"none"}}/>
               <div style={{position:"absolute",top:"50%",left:"50%",width:76,height:76,transform:"translate(-50%,-50%)",borderRadius:23,border:`1.5px solid ${T.scarlet}`,opacity:0.18,animation:"pulse 2.4s ease-in-out infinite",animationDelay:"0.4s",pointerEvents:"none"}}/>
               <div style={{width:52,height:52,borderRadius:15,background:`linear-gradient(135deg,${T.scarlet} 0%,${T.sD} 60%,#7c0020 100%)`,boxShadow:`0 6px 20px ${T.scarlet}55,0 0 0 2px ${T.scarlet}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:25,animation:"popIn .6s cubic-bezier(.34,1.56,.64,1)",position:"relative",zIndex:1}}>🎓</div>
             </div>
-            {/* Title */}
             <div style={{textAlign:"left"}}>
               <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:24,fontWeight:800,color:T.txt,letterSpacing:"-0.3px",lineHeight:1.1}}>
-                MNU's <span style={{color:T.scarlet,textShadow:`0 0 18px ${T.scarlet}44`}}>Neer Locker</span>
+                {"MNU's"} <span style={{color:T.scarlet,textShadow:`0 0 18px ${T.scarlet}44`}}>Neer Locker</span>
               </div>
-              <div style={{color:T.sub,fontSize:11,fontWeight:400,marginTop:2}}>Staff Portal · MidAmerica Nazarene University</div>
+              <div style={{color:T.sub,fontSize:11,fontWeight:400,marginTop:2}}>Staff Portal &middot; MidAmerica Nazarene University</div>
             </div>
           </div>
-          {/* Row 2: tagline + ONLINE — centered */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <div key={tagLine} style={{animation:"fadeUp .4s ease both"}}>
               <span style={{fontSize:12,color:T.scarlet,fontWeight:700,fontStyle:"italic"}}>{taglines[tagLine]}</span>
@@ -2221,8 +2311,6 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
             </div>
           </div>
         </div>
-
-        {/* Form card */}
         <div className="fu" style={{animationDelay:".08s",background:T.dark?"rgba(18,8,12,0.88)":T.surf,backdropFilter:"blur(24px)",border:`1px solid ${focused?T.scarlet+"88":T.bor}`,borderRadius:20,padding:26,display:"grid",gap:16,boxShadow:T.dark?`0 12px 48px rgba(0,0,0,.6),0 0 0 1px ${T.scarlet}11 inset`:`0 12px 40px rgba(0,0,0,.1),0 1px 0 rgba(255,255,255,0.8) inset`,transition:"border-color .25s,box-shadow .25s"}}>
           <Inp T={T} label="MNU EMAIL" type="email" placeholder="you@mnu.edu" value={emailIn} error={emailErr}
             onChange={e=>{setEmailIn(e.target.value);setEmailErr("");}}
@@ -2255,13 +2343,12 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
             >Technical Administrator Access</button>
           </div>
         </div>
-
       </div>
-
       <ClaudeTag T={T}/><VersionBadge T={T}/>
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
@@ -2324,6 +2411,7 @@ export default function App() {
   const [selectedTasks,setSelectedTasks]=useState(new Set());
   const [showFeedback,setShowFeedback]=useState(false);
   const [showFinn,setShowFinn]=useState(false);
+  const [showWelcomePortal,setShowWelcomePortal]=useState(false);
   const [finnAnim,setFinnAnim]=useState(false);
   const openFinn=()=>{setFinnAnim(true);setTimeout(()=>setShowFinn(true),420);};
   const [feedbackForm,setFeedbackForm]=useState({type:"feature",msg:""});
@@ -2698,6 +2786,7 @@ export default function App() {
     fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${emp.id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({status:"online"})}).catch(()=>{});
     addAct("login",`${emp.name} signed in`,emp.id);
     handleLoginXP(emp);
+    setTimeout(()=>finnProactivePush(emp, progress),5000);
     // Switch to app after animation completes
     playSound("login");
     loginTimerRef.current=setTimeout(()=>{
@@ -2705,6 +2794,7 @@ export default function App() {
       setPage("home");
       setScreen("app");
       setShowBriefing(true);
+      if(!LS.get("nl3-portal-seen")){LS.set("nl3-portal-seen",true);setTimeout(()=>setShowWelcomePortal(true),600);}
     },2000);
   };
 
@@ -2897,6 +2987,40 @@ export default function App() {
     const updated={user_id:emp.id,xp:newXP,level:info.level,title:info.title,streak,last_login:today,created_at:Date.now()};
     await SB.upsert("user_progress",updated);
     setProgress(prev=>({...prev,[emp.id]:{xp:newXP,level:info.level,title:info.title,streak,last_login:today}}));
+  };
+
+  // Finn proactive push — runs once after login, checks for smart insights
+  const finnProactivePush=async(emp, progData)=>{
+    if(!XP_ELIGIBLE_ROLES.includes(emp.role)) return;
+    if(!LS.get("nl3-notif-enabled")) return;
+    const pg=progData[emp.id]||{xp:0,streak:0,level:1,title:"Pioneer"};
+    const myOpenTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===emp.id));
+    const overdue=myOpenTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
+    const highPri=myOpenTasks.filter(t=>t.priority==="High");
+    const lastPushKey="nl3-finn-last-push";
+    const lastPush=LS.get(lastPushKey)||0;
+    const now=Date.now();
+    const hoursSincePush=(now-lastPush)/3600000;
+    // Only push once per 4 hours max
+    if(hoursSincePush<4) return;
+    let title=null; let body=null;
+    if(overdue.length>0){
+      title="Finn: Overdue Alert ⚠️";
+      body=`${overdue.length} task${overdue.length>1?"s are":" is"} overdue. Top: ${overdue[0].title}`;
+    } else if(highPri.length>0 && highPri.length>=2){
+      title="Finn: High Priority Queue 🔴";
+      body=`${highPri.length} high-priority tasks open. Next: ${highPri[0].title}`;
+    } else if(pg.streak>0 && pg.streak%7===0){
+      title="Finn: Streak Milestone 🔥";
+      body=`${pg.streak}-day login streak! You're a ${pg.title}. Keep it going.`;
+    } else if(myOpenTasks.length===0){
+      title="Finn: All Clear ✅";
+      body="No open tasks. Great work — check in with your team.";
+    }
+    if(title&&body){
+      LS.set(lastPushKey, now);
+      await NOTIF.send(emp.id, title, body, "finn-insight");
+    }
   };
 
   const saveName=async()=>{
@@ -3101,17 +3225,17 @@ export default function App() {
                   <span style={{fontSize:17}}>🎓</span>
                   <span style={{display:"flex",gap:4}}>{"MNU's"} <span style={{color:T.scarlet}}>Neer Locker</span></span>
                 </button>
-                {/* Global search button */}
+                {/* Global search button — icon only on mobile */}
                 <button onClick={()=>{setShowGlobalSearch(true);playSound("open");}}
                   title="Search (⌘K)"
-                  style={{flex:1,maxWidth:160,margin:"0 6px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"5px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:T.sub,fontSize:11,fontFamily:"inherit",transition:"all .15s",minWidth:80}}
+                  style={{flexShrink:0,margin:"0 4px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"6px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:T.sub,fontSize:11,fontFamily:"inherit",transition:"all .15s"}}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"66";e.currentTarget.style.color=T.txt;}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
                 >
-                  <span>🔍</span>
-                  <span style={{flex:1,textAlign:"left",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Search…</span>
+                  <span style={{fontSize:14}}>🔍</span>
+                  <span className="search-label" style={{display:"none"}}>Search</span>
                 </button>
-                <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,paddingRight:8,overflow:"hidden",maxWidth:"calc(100vw - 160px)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,paddingRight:8}}>
                   {/* Clickable profile area → Settings/Profile */}
                   <button onClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}
                     style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:10,transition:"background .15s",fontFamily:"inherit",minWidth:0,overflow:"hidden"}}
@@ -3166,6 +3290,7 @@ export default function App() {
                 if(window._swipeStartX<40&&dx>80&&dy<120&&page!=="home"){
                   setSwipeBacking(true);
                   playSound("click");
+                  setPrevPage(page);
                   setTimeout(()=>{setSearch("");setPage("home");setSwipeBacking(false);},320);
                 }
                 window._swipeStartX=0;window._swipeStartY=0;window._swipePct=0;
@@ -3733,17 +3858,17 @@ export default function App() {
                     const finnBadge=<span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
     <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.7" opacity="0.6"/>
+    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
+    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
     <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
     <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
     <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
     <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
     <circle cx="11" cy="11" r="1" fill="#fff"/>
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
@@ -3828,23 +3953,23 @@ export default function App() {
           {showBriefing&&<LoginBriefing user={user} tasks={tasks} anns={anns} dms={dms} emps={emps} T={T} onClose={()=>setShowBriefing(false)}/>}
 
           {/* Finn button — bottom right above ideas */}
-          <button onClick={()=>{playSound("open");openFinn();}} title="Ask Finn"
+          <button onClick={()=>{playSound("finn");openFinn();}} title="Ask Finn"
             className="float-action-btn" style={{position:"fixed",bottom:page==="dms"?222:148,right:14,zIndex:9998,background:"#0f2744",border:"2px solid #1e7fa8aa",borderRadius:"50%",width:40,height:40,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.28)",transition:"transform .15s,box-shadow .15s,bottom .25s",touchAction:"manipulation",padding:0}}
             onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.14)";e.currentTarget.style.boxShadow="0 5px 18px rgba(0,0,0,.3)";}}
             onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 14px rgba(0,0,0,.28)";}}
           >
             <svg width="22" height="22" viewBox="0 0 22 22">
-              <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.2"/>
-              <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.6" opacity="0.5"/>
+              <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
+              <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
               <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
               <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
               <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
               <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-              <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-              <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-              <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-              <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.85"/>
-              <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+              <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+              <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+              <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+              <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+              <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
               <circle cx="11" cy="11" r="1" fill="#fff"/>
             </svg>
           </button>
@@ -3864,6 +3989,12 @@ export default function App() {
               onClose={()=>setShowGlobalSearch(false)}/>
           )}
 
+          {/* First-time welcome portal */}
+          {showWelcomePortal&&<WelcomePortal T={T} onDone={()=>setShowWelcomePortal(false)}/>}
+
+          {/* First-time welcome portal */}
+          {showWelcomePortal&&<WelcomePortal T={T} onDone={()=>setShowWelcomePortal(false)}/>}
+
           {/* Finn intro animation */}
           {finnAnim&&(
             <div style={{position:"fixed",inset:0,zIndex:9998,pointerEvents:"none",overflow:"hidden"}}
@@ -3878,17 +4009,17 @@ export default function App() {
               <div style={{position:"absolute",top:"50%",left:"50%",transform:"translate(-50%,-50%)",animation:"finnHexSpin .42s cubic-bezier(.34,1.56,.64,1) both",pointerEvents:"none"}}>
                 <svg width="90" height="90" viewBox="0 0 22 22">
                   <rect width="22" height="22" rx="6" fill="#0f2744"/>
-                  <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" stroke-width="0.6" opacity="0.3"/>
-                  <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" stroke-width="0.6" opacity="0.6"/>
+                  <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.3"/>
+                  <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.6"/>
                   <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
                   <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
                   <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
                   <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-                  <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-                  <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-                  <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-                  <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" stroke-width="0.8" stroke-linecap="round" opacity="0.9"/>
-                  <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" stroke-width="0.8"/>
+                  <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+                  <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+                  <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+                  <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+                  <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
                   <circle cx="11" cy="11" r="1" fill="#fff"/>
                 </svg>
               </div>
@@ -3900,7 +4031,7 @@ export default function App() {
           )}
 
           {/* Finn chat panel */}
-          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} onClose={()=>setShowFinn(false)}/>}
+          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} onClose={()=>setShowFinn(false)} setPage={p=>{setShowFinn(false);setPage(p);}}/>}
 
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
 
@@ -3956,7 +4087,7 @@ export default function App() {
             {/* Top row: icon + compact title + exit */}
             <div style={{display:"flex",alignItems:"center",gap:8}}>
               <span style={{fontSize:16}}>🔧</span>
-              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:800,color:T.txt,flex:1}}>Tech Admin Dashboard</div>
+              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:800,color:T.txt,flex:1}}>Technical Administrator Dashboard</div>
               <button onClick={()=>{if(techExiting)return;setTechExiting(true);playSound("logout");setTimeout(()=>{setTechExiting(false);setTEmail("");setTPin("");setTErr("");setScreen("login");},2500);}}
                 style={{background:"#fee2e2",border:"1px solid #fca5a5",color:"#991b1b",borderRadius:10,padding:"7px 18px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap"}}
                 onMouseEnter={e=>{e.currentTarget.style.background="#fca5a5";}}
