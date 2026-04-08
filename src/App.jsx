@@ -1967,8 +1967,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage}) {
       else reply="No open tasks. You're clear! ✅";
     } else if(is("all task","list task","show all task")){
       if(openTasks.length===0) reply="No open tasks right now.";
-      else reply=openTasks.map((t,i)=>`${i+1}. ${t.title} [${t.priority}]`).join("
-");
+      else reply=openTasks.map((t,i)=>((i+1)+". "+t.title+" ["+t.priority+"]")).join("\n");
     } else if(is("completed","finished tasks","done tasks","how many done")){
       reply=`${doneTasks.length} tasks completed. This week: ${thisWeek}, last week: ${lastWeek}.`;
 
@@ -2014,8 +2013,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage}) {
     } else if(is("leaderboard","who has most xp","top scorer","who's winning","ranking")){
       const ranked=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role)).map(e=>({name:e.name,xp:(progress[e.id]||{}).xp||0})).sort((a,b)=>b.xp-a.xp).slice(0,5);
       if(ranked.length===0) reply="No XP data yet.";
-      else reply=ranked.map((e,i)=>`${i+1}. ${e.name} — ${e.xp} XP`).join("
-");
+      else reply=ranked.map((e,i)=>`${i+1}. ${e.name} — ${e.xp} XP`).join("\n");
 
     // ── PERFORMANCE ───────────────────────────────────────────────────────────
     } else if(is("activity drop","why did my","activity down","less active","dropped off")){
@@ -2036,8 +2034,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage}) {
       if(isXP&&myProg.streak<3) tips.push("Log in daily to build your streak");
       if(lowInv.length>0) tips.push(`Restock ${lowInv.length} low item${lowInv.length>1?"s":""}`);
       if(tips.length===0) tips.push("You're doing great — keep completing tasks");
-      reply=tips.map((t,i)=>`${i+1}. ${t}`).join("
-");
+      reply=tips.map((t,i)=>`${i+1}. ${t}`).join("\n");
     } else if(is("remind","haven't finished","not done","pending","unfinished")){
       if(openTasks.length===0) reply="Nothing unfinished — all clear!";
       else reply=`Still open: ${openTasks.slice(0,5).map(t=>t.title).join(", ")}${openTasks.length>5?" +"+( openTasks.length-5)+" more":""}. `;
