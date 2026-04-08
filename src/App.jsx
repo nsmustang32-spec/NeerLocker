@@ -1,12 +1,29 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.5.1";
+const VERSION   = "1.6.0";
 const FINN_VERSION = "1.0.0";
 const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.6.0": [
+    "Leaderboard: Full staff XP leaderboard page accessible from nav",
+    "Boss: Can now earn XP and participate in progression",
+    "Tasks: Repeat on specific days of week option",
+    "Boss: Can view all direct messages in Settings",
+    "Employees: New accounts now save directly to Supabase",
+    "Auth: Remember me option on login screen",
+    "Group Chat: Whole-team group chat channel added to Messages",
+    "Inventory: Employees can now adjust stock levels",
+    "XP: Green pop-up toast shows XP gained after each action",
+    "Status: Users go offline automatically when leaving the app",
+    "Employee of the Month: Shown on Home page based on XP",
+    "Tech Admin: Can reset all XP for the month",
+    "Levels: Custom level logo shown on profile card",
+    "Employee of the Month: Star badge on leaderboard",
+    "New Staff: Saves to Supabase when added by managers",
+  ],
   "1.5.1": [
     "Finn: Fusion Integrated Neural Navigator — new name, v1.0.0",
     "Finn: Version badge shown in chat panel header",
@@ -355,10 +372,10 @@ const SEED = [
   {id:"e11",email:"wrlaymon@mnu.edu",      name:"Werke Laymon",        role:"employee",  pin:"",status:"offline",createdAt:1700000000010},
 ];
 const ROLES = {
-  boss:      {label:"Boss",        color:"#C8102E", p:["home","tasks","inv","ann","act","emp","assign","settings","boss","dms","online"]},
-  manager:   {label:"Manager",     color:"#1e7fa8", p:["home","tasks","inv","ann","act","emp","assign","settings","dms","online"]},
-  assistant: {label:"Asst. Mgr",  color:"#7c3aed", p:["home","tasks","inv","ann","assign","settings","emp","dms"]},
-  employee:  {label:"Employee",   color:"#6b7280", p:["home","tasks","ann","dms"]},
+  boss:      {label:"Boss",        color:"#C8102E", p:["home","tasks","inv","ann","act","emp","assign","settings","boss","dms","online","leaderboard"]},
+  manager:   {label:"Manager",     color:"#1e7fa8", p:["home","tasks","inv","ann","act","emp","assign","settings","dms","online","leaderboard"]},
+  assistant: {label:"Asst. Mgr",  color:"#7c3aed", p:["home","tasks","inv","ann","assign","settings","emp","dms","leaderboard"]},
+  employee:  {label:"Employee",   color:"#6b7280", p:["home","tasks","inv","ann","dms","leaderboard"]},
   superadmin:{label:"Technical Administrator", color:"#f59e0b", p:["*"]},
 };
 const can = (u,p) => { if(!u) return false; const ps=ROLES[u.role]?.p||[]; return ps.includes("*")||ps.includes(p); };
@@ -413,8 +430,9 @@ const buildCSS = T => `
     .main-pad{padding:12px 12px 80px!important;}
     .nav-circle-btn{width:52px!important;height:52px!important;}
     .float-action-btn{width:46px!important;height:46px!important;font-size:18px!important;}
-    .search-full{display:none!important;}
+    .search-full{min-width:80px;max-width:110px;}
     .header-name{display:none!important;}
+    .search-label{display:none!important;}
   }
   @media(min-width:769px) and (max-width:1024px){
     .search-full{min-width:140px;}
@@ -881,14 +899,15 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
   const totalBadge=myTasks+myAnns+unreadDMs;
 
   const items=[
-    {key:"home",   icon:"🏠", label:"Home"},
-    {key:"tasks",  icon:"✅", label:"Tasks",         badge:myTasks,   perm:"tasks"},
-    {key:"inv",    icon:"📦", label:"Inventory",      perm:"inv"},
-    {key:"anns",   icon:"🔔", label:"Announcements",  badge:myAnns,    perm:"ann"},
-    {key:"dms",    icon:"💬", label:"Messages",       badge:unreadDMs, perm:"dms"},
-    {key:"act",    icon:"📊", label:"Activity",       perm:"act"},
-    {key:"set",    icon:"⚙️", label:"Settings"},
-    {key:"finn",   icon:"finn",label:"Ask Finn",  finn:true},
+    {key:"home",        icon:"🏠", label:"Home"},
+    {key:"tasks",       icon:"✅", label:"Tasks",         badge:myTasks,   perm:"tasks"},
+    {key:"inv",         icon:"📦", label:"Inventory",      perm:"inv"},
+    {key:"anns",        icon:"🔔", label:"Announcements",  badge:myAnns,    perm:"ann"},
+    {key:"dms",         icon:"💬", label:"Messages",       badge:unreadDMs, perm:"dms"},
+    {key:"leaderboard", icon:"🏆", label:"Leaderboard",    perm:"leaderboard"},
+    {key:"act",         icon:"📊", label:"Activity",       perm:"act"},
+    {key:"set",         icon:"⚙️", label:"Settings"},
+    {key:"finn",        icon:"finn",label:"Ask Finn",      finn:true},
   ].filter(i=>!i.perm||can(user,i.perm));
 
   // Close on outside click
@@ -1120,11 +1139,8 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           {/* Glow background */}
           <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 10% 50%,${lvInfo.color}18 0%,transparent 70%)`,pointerEvents:"none"}}/>
           <div style={{display:"flex",alignItems:"center",gap:14,position:"relative"}}>
-            {/* Level badge */}
-            <div style={{width:56,height:56,borderRadius:14,background:`${lvInfo.color}22`,border:`2px solid ${lvInfo.color}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0,boxShadow:`0 0 16px ${lvInfo.glow}`}}>
-              <div style={{fontSize:10,fontWeight:800,color:lvInfo.color,letterSpacing:"0.05em"}}>LVL</div>
-              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:lvInfo.color,lineHeight:1}}>{lvInfo.level}</div>
-            </div>
+            {/* Level badge with custom logo */}
+            <LevelLogo level={lvInfo.level} color={lvInfo.color} size={56}/>
             <div style={{flex:1,minWidth:0}}>
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <span style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:lvInfo.color}}>{lvInfo.title}</span>
@@ -1265,6 +1281,25 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
         </div>
       )}
 
+      {/* Employee of the Month */}
+      {can(user,"boss")&&(()=>{
+        const eligible=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role));
+        const eotm=eligible.map(e=>({...e,xp:(progress[e.id]||{}).xp||0})).sort((a,b)=>b.xp-a.xp)[0];
+        if(!eotm) return null;
+        const lv=getLevelInfo(eotm.xp);
+        return (
+          <div className="fu" style={{background:`linear-gradient(135deg,${lv.color}18,${lv.color}08)`,border:`1px solid ${lv.color}44`,borderRadius:14,padding:14,marginBottom:14,display:"flex",alignItems:"center",gap:12}}>
+            <span style={{fontSize:24}}>⭐</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:10,fontWeight:800,color:T.sub,letterSpacing:"0.1em",textTransform:"uppercase"}}>Employee of the Month</div>
+              <div style={{fontWeight:800,fontSize:15,color:T.txt,marginTop:2}}>{eotm.name} <span style={{color:lv.color,fontSize:13}}>· {lv.title}</span></div>
+              <div style={{fontSize:12,color:T.sub,marginTop:1}}>{eotm.xp} XP · Level {lv.level}</div>
+            </div>
+            <LevelLogo level={lv.level} color={lv.color} size={44}/>
+          </div>
+        );
+      })()}
+
       {/* Online team (boss/manager only) */}
       {can(user,"online")&&onlineEmps.length>0&&(
         <div className="fu card" style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginTop:14}}>
@@ -1369,13 +1404,18 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
 
   // saveDMs — now handled by saveDms useCallback below
   const otherEmps=emps.filter(e=>e.id!==user.id);
-  const getThread=(otherId)=>dms.filter(d=>{
-    // Regular messages between the two users
-    const regular=(d.from===user.id&&d.to===otherId)||(d.from===otherId&&d.to===user.id);
-    // System/warning messages targeted at this specific thread
-    const systemInThread=d.system&&d.to===user.id&&d.threadWith===otherId;
-    return regular||systemInThread;
-  }).sort((a,b)=>a.at-b.at);
+  const GROUP_ID="__group__";
+  const GROUP_NAME="Team Chat";
+  const getGroupThread=()=>dms.filter(d=>d.to===GROUP_ID||d.from===GROUP_ID||(d.group===true)).sort((a,b)=>a.at-b.at);
+  const unreadGroup=dms.filter(d=>d.to===GROUP_ID&&!d.read&&d.from!==user.id).length;
+  const getThread=(otherId)=>{
+    if(otherId===GROUP_ID) return getGroupThread();
+    return dms.filter(d=>{
+      const regular=(d.from===user.id&&d.to===otherId)||(d.from===otherId&&d.to===user.id);
+      const systemInThread=d.system&&d.to===user.id&&d.threadWith===otherId;
+      return regular||systemInThread;
+    }).sort((a,b)=>a.at-b.at);
+  };
   const markRead=async(otherId)=>{
     const next=dms.map(d=>{
       if(d.to===user.id&&d.from===otherId) return{...d,read:true};
@@ -1393,14 +1433,13 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
     const text=msgInput.trim();
     if(!text||!selected) return;
     setMsgInput("");
-    const newMsg={id:uid(),from:user.id,to:selected.id,text:san(text),at:Date.now(),read:false};
+    const isGroup=selected.id===GROUP_ID;
+    const newMsg={id:uid(),from:user.id,to:isGroup?GROUP_ID:selected.id,text:san(text),at:Date.now(),read:false,group:isGroup};
     playSound("dm");
     if(onXP) onXP();
-    // Update local state immediately
     const updated=dms.map(d=>d.from===selected.id&&d.to===user.id?{...d,read:true}:d);
     const next=[...updated,newMsg];
     setDms(next);
-    // Save new message to Supabase directly
     await SB.upsert("direct_messages",{
       id:newMsg.id,
       from_id:newMsg.from,
@@ -1409,8 +1448,9 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
       at:newMsg.at,
       read:false,
       system:false,
-      thread_with:selected.id,
-      feedback:false
+      thread_with:isGroup?GROUP_ID:selected.id,
+      feedback:false,
+      group:isGroup
     });
     setTimeout(()=>msgEndRef.current?.scrollIntoView({behavior:"smooth"}),50);
     inputRef.current?.focus();
@@ -1429,6 +1469,23 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
           <span style={{fontSize:12,color:T.warn,fontWeight:700,lineHeight:1.5}}>Messages may be reviewed by management &amp; technical administrators.</span>
         </div>
         <div style={{flex:1,overflowY:"auto"}}>
+          {/* Group Chat */}
+          <div onClick={()=>{setSelected({id:GROUP_ID,name:GROUP_NAME,email:"team",role:"group"});}}
+            style={{padding:"12px 14px",cursor:"pointer",background:selected?.id===GROUP_ID?T.scarlet+"18":"transparent",borderBottom:`1px solid ${T.bor}`,borderLeft:selected?.id===GROUP_ID?`3px solid ${T.scarlet}`:"3px solid transparent",transition:"background .18s"}}
+            onMouseEnter={ev=>{if(selected?.id!==GROUP_ID)ev.currentTarget.style.background=T.surfH;}}
+            onMouseLeave={ev=>{if(selected?.id!==GROUP_ID)ev.currentTarget.style.background="transparent";}}
+          >
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:"50%",background:`${T.scarlet}22`,border:`2px solid ${T.scarlet}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>💬</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:14,fontWeight:700,color:T.txt}}>{GROUP_NAME}</span>
+                  {unreadGroup>0&&<span style={{background:T.scarlet,color:"#fff",borderRadius:10,padding:"1px 6px",fontSize:10,fontWeight:800}}>{unreadGroup}</span>}
+                </div>
+                <div style={{fontSize:12,color:T.sub,marginTop:2}}>All {emps.length} members</div>
+              </div>
+            </div>
+          </div>
           {otherEmps.map(e=>{
             const unread=unreadFrom(e.id);
             const thread=getThread(e.id);
@@ -1808,7 +1865,7 @@ const getLevelInfo=(xp=0)=>{
   return{...info,next,pct,xpToNext:next?next.xp-xp:0};
 };
 
-const XP_ELIGIBLE_ROLES=["manager","assistant","employee"];
+const XP_ELIGIBLE_ROLES=["boss","manager","assistant","employee"];
 
 const WA = {
   supported: ()=>window.PublicKeyCredential!==undefined,
@@ -2543,8 +2600,105 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
   );
 }
 
+// ─── LEVEL LOGO ───────────────────────────────────────────────────────────────
+function LevelLogo({level,color,size=40}) {
+  const shapes=["⭐","🔰","🔷","🔵","💚","💜","❤️","🧡","💙","🏆"];
+  const emoji=shapes[Math.min((level||1)-1,9)];
+  return (
+    <div style={{width:size,height:size,borderRadius:size*0.28,background:color+"22",border:`2px solid ${color}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.5,boxShadow:`0 0 ${size*0.4}px ${color}44`,flexShrink:0}}>
+      {emoji}
+    </div>
+  );
+}
+
+// ─── XP TOAST LIST ────────────────────────────────────────────────────────────
+function XPToastList({items}) {
+  return (
+    <div style={{position:"fixed",bottom:80,right:16,zIndex:9999,display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end",pointerEvents:"none"}}>
+      {items.map(t=>(
+        <div key={t.id} style={{background:"linear-gradient(135deg,#16a34a,#15803d)",border:"1px solid #86efac",color:"#fff",borderRadius:10,padding:"7px 14px",fontWeight:800,fontSize:13,display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 16px rgba(0,0,0,.2)",animation:"finnSlideUp .3s cubic-bezier(.23,1,.32,1) both"}}>
+          <span style={{fontSize:16}}>⚡</span>
+          <span>+{t.amount} XP</span>
+          {t.label&&<span style={{fontSize:11,opacity:0.85,fontWeight:600}}>· {t.label}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── LEADERBOARD PAGE ─────────────────────────────────────────────────────────
+function LeaderboardPage({emps,progress,user,T}) {
+  const eligible=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role));
+  const ranked=eligible.map(e=>{
+    const pg=progress[e.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+    const lv=getLevelInfo(pg.xp);
+    return {...e,pg,lv};
+  }).sort((a,b)=>b.pg.xp-a.pg.xp);
+
+  // Employee of the month = highest XP
+  const eotm=ranked[0];
+
+  const medals=["🥇","🥈","🥉"];
+
+  return (
+    <div className="fu" style={{marginTop:8}}>
+      {/* Employee of the Month */}
+      {eotm&&(
+        <div style={{background:`linear-gradient(135deg,${eotm.lv.color}22,${eotm.lv.color}11)`,border:`2px solid ${eotm.lv.color}55`,borderRadius:18,padding:20,marginBottom:20,textAlign:"center",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${eotm.lv.color},${T.scarlet})`}}/>
+          <div style={{fontSize:28,marginBottom:6}}>⭐</div>
+          <div style={{fontSize:11,fontWeight:800,color:T.sub,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>Employee of the Month</div>
+          <LevelLogo level={eotm.lv.level} color={eotm.lv.color} size={56}/>
+          <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,marginTop:10}}>{eotm.name}</div>
+          <div style={{fontSize:13,color:eotm.lv.color,fontWeight:700,marginTop:2}}>{eotm.lv.title}</div>
+          <div style={{fontSize:13,color:T.sub,marginTop:4}}>{eotm.pg.xp} XP · Level {eotm.lv.level} · 🔥{eotm.pg.streak} day streak</div>
+        </div>
+      )}
+
+      {/* Full leaderboard */}
+      <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:T.txt,marginBottom:12}}>🏆 Staff Leaderboard</div>
+      <div style={{display:"grid",gap:8}}>
+        {ranked.map((e,i)=>{
+          const isMe=e.id===user?.id;
+          const isEotm=i===0;
+          return (
+            <div key={e.id} style={{background:isMe?`${T.scarlet}12`:T.card,border:`1px solid ${isEotm?e.lv.color+"66":isMe?T.scarlet+"44":T.bor}`,borderRadius:14,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,transition:"all .18s"}}>
+              {/* Rank */}
+              <div style={{width:32,textAlign:"center",flexShrink:0}}>
+                {i<3?<span style={{fontSize:20}}>{medals[i]}</span>:<span style={{fontFamily:"'Clash Display',sans-serif",fontSize:16,fontWeight:800,color:T.mut}}>#{i+1}</span>}
+              </div>
+              {/* Level logo */}
+              <LevelLogo level={e.lv.level} color={e.lv.color} size={38}/>
+              {/* Info */}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                  <span style={{fontWeight:800,fontSize:14,color:T.txt}}>{e.name}</span>
+                  {isEotm&&<span style={{fontSize:14}}>⭐</span>}
+                  {isMe&&<span style={{background:T.scarlet,color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:800}}>YOU</span>}
+                </div>
+                <div style={{fontSize:11,color:e.lv.color,fontWeight:700,marginTop:1}}>{e.lv.title} · Level {e.lv.level}</div>
+                {/* XP bar */}
+                <div style={{height:4,background:T.bor,borderRadius:2,marginTop:5,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${e.lv.pct}%`,background:e.lv.color,borderRadius:2,transition:"width .6s"}}/>
+                </div>
+              </div>
+              {/* Stats */}
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:e.lv.color}}>{e.pg.xp}</div>
+                <div style={{fontSize:10,color:T.sub,fontWeight:600}}>XP</div>
+                {e.pg.streak>0&&<div style={{fontSize:11,color:"#ff6b00",fontWeight:700,marginTop:2}}>🔥{e.pg.streak}</div>}
+              </div>
+            </div>
+          );
+        })}
+        {ranked.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:T.sub,fontSize:14}}>No XP data yet. Complete tasks to earn XP!</div>}
+      </div>
+    </div>
+  );
+}
+
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin}) {
+function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin,rememberMe,setRememberMe}) {
   const [tick,setTick]=useState(0);
   const [focused,setFocused]=useState(false);
   const [tagLine,setTagLine]=useState(0);
@@ -2649,6 +2803,14 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
                 onChange={e=>setPinIn(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doPin()}/>
             </div>
           )}
+          {!showPin&&(
+            <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>{playSound("click");setRememberMe&&setRememberMe(r=>!r);}}>
+              <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${T.bor}`,background:rememberMe?T.scarlet:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s"}}>
+                {rememberMe&&<span style={{color:"#fff",fontSize:11,fontWeight:900,lineHeight:1}}>✓</span>}
+              </div>
+              <span style={{fontSize:13,color:T.sub,fontWeight:600,userSelect:"none"}}>Remember me</span>
+            </div>
+          )}
           <Btn T={T} full onClick={()=>{playSound("click");showPin?doPin():doLogin();}} style={{padding:"14px 20px",fontSize:16,letterSpacing:"0.02em",boxShadow:`0 6px 24px ${T.scarlet}40,0 2px 0 ${T.scarlet}22 inset`}}>
             {showPin?"Confirm PIN →":"Sign In →"}
           </Btn>
@@ -2696,7 +2858,8 @@ export default function App() {
   const [loggingOut,setLoggingOut]=useState(false);
   const [techAction,setTechAction]=useState("");
 
-  const [emailIn,setEmailIn]=useState("");
+  const [emailIn,setEmailIn]=useState(LS.get("nl3-remember-email")||"");
+  const [rememberMe,setRememberMe]=useState(!!LS.get("nl3-remember-email"));
   const [emailErr,setEmailErr]=useState("");
   const [pinIn,setPinIn]=useState("");
   const [showPin,setShowPin]=useState(false);
@@ -2737,6 +2900,7 @@ export default function App() {
   const [selectedTasks,setSelectedTasks]=useState(new Set());
   const [showFeedback,setShowFeedback]=useState(false);
   const [showFinn,setShowFinn]=useState(false);
+  const [xpToasts,setXpToasts]=useState([]);
   const [showWelcomePortal,setShowWelcomePortal]=useState(false);
   const [finnAnim,setFinnAnim]=useState(false);
   const openFinn=()=>{setFinnAnim(true);setTimeout(()=>setShowFinn(true),420);};
@@ -2802,7 +2966,7 @@ export default function App() {
       // Seed initial employees if none exist
       if(!empRows?.length){for(const s of SEED)await SB.upsert("employees",{id:s.id,email:s.email,name:s.name,role:s.role,pin:s.pin||"",status:"offline",created_at:s.createdAt||Date.now()});}
 
-      setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at})));
+      setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:t.repeat_days||[],createdAt:t.created_at})));
       setInv((invRows||[]).map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
       setAnns((annRows||[]).map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build})));
       setAct((actRows||[]).map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
@@ -2914,7 +3078,7 @@ export default function App() {
     return()=>window.removeEventListener("keydown",handler);
   },[]);
 
-  // Set offline when user closes tab/browser
+  // Set offline when user closes tab/browser or hides app
   useEffect(()=>{
     const handleUnload=()=>{
       if(user?.id){
@@ -2923,8 +3087,21 @@ export default function App() {
         );
       }
     };
+    const handleVisibility=()=>{
+      if(document.visibilityState==="hidden"&&user?.id){
+        fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${user.id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({status:"offline"})}).catch(()=>{});
+        setEmps(prev=>prev.map(e=>e.id===user.id?{...e,status:"offline"}:e));
+      } else if(document.visibilityState==="visible"&&user?.id){
+        fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${user.id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({status:"online"})}).catch(()=>{});
+        setEmps(prev=>prev.map(e=>e.id===user.id?{...e,status:"online"}:e));
+      }
+    };
     window.addEventListener("beforeunload",handleUnload);
-    return()=>window.removeEventListener("beforeunload",handleUnload);
+    document.addEventListener("visibilitychange",handleVisibility);
+    return()=>{
+      window.removeEventListener("beforeunload",handleUnload);
+      document.removeEventListener("visibilitychange",handleVisibility);
+    };
   },[user?.id]);
 
   // Auto logout on inactivity
@@ -2962,6 +3139,7 @@ export default function App() {
       due_date:t.dueDate||"",
       done:t.done||false,
       repeat:t.repeat||false,
+      repeat_days:t.repeatDays||[],
       created_at:t.createdAt||Date.now()
     };
     const r=await SB.upsert("tasks",row);
@@ -3112,6 +3290,7 @@ export default function App() {
     fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${emp.id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({status:"online"})}).catch(()=>{});
     addAct("login",`${emp.name} signed in`,emp.id);
     handleLoginXP(emp);
+    if(rememberMe) LS.set("nl3-remember-email",emp.email); else LS.set("nl3-remember-email",null);
     setTimeout(()=>finnProactivePush(emp, progress),5000);
     // Switch to app after animation completes
     playSound("login");
@@ -3173,7 +3352,8 @@ export default function App() {
       else if(highWords.some(w=>tl.includes(w))) autoPri="High";
       else if(lowWords.some(w=>tl.includes(w))) autoPri="Low";
     }
-    const task={id:uid(),title:san(title),description:desc,priority:autoPri,assignedTo:assign,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:due,repeat:rep};
+    const repDays=form.tRepeatDays||[];
+    const task={id:uid(),title:san(title),description:desc,priority:autoPri,assignedTo:assign,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:due,repeat:rep,repeatDays:repDays};
     setModal(null);setForm({});
     toast("Task created! ✅");
     setTasks(prev=>[task,...prev]);
@@ -3184,7 +3364,7 @@ export default function App() {
   const toggleTask=async id=>{
     const task=tasks.find(t=>t.id===id);if(!task) return;
     const completing=!task.done;
-    const updated={...tasks.find(t=>t.id===id),done:completing};
+    const updated={...task,done:completing};
     setTasks(prev=>prev.map(t=>t.id===id?{...t,done:completing}:t));
     await upsertTask(updated);
     if(completing){
@@ -3193,13 +3373,24 @@ export default function App() {
       playSound("task");
       clearTimeout(undoRef.current);setUndoId(id);
       undoRef.current=setTimeout(()=>setUndoId(null),7000);
-      // If repeat, create new instance
-      if(task.repeat){
+      // If repeat, recreate. If repeatDays, schedule for next matching day
+      if(task.repeat||task.repeatDays?.length>0){
         setTimeout(async()=>{
-          const newTask={...task,id:uid(),done:false,createdAt:Date.now()};
+          let nextDue="";
+          if(task.repeatDays?.length>0){
+            const dayNums={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+            const todayNum=new Date().getDay();
+            const nums=task.repeatDays.map(d=>dayNums[d]).sort((a,b)=>a-b);
+            let daysAhead=nums.find(n=>n>todayNum);
+            if(daysAhead===undefined) daysAhead=nums[0]+7-todayNum;
+            else daysAhead=daysAhead-todayNum;
+            const next=new Date(); next.setDate(next.getDate()+daysAhead);
+            nextDue=next.toISOString().slice(0,10);
+          }
+          const newTask={...task,id:uid(),done:false,createdAt:Date.now(),dueDate:nextDue||task.dueDate};
           setTasks(prev=>[newTask,...prev]);
           await upsertTask(newTask);
-          toast("Repeating task recreated 🔁");
+          toast(task.repeatDays?.length>0?"Task scheduled for next "+task.repeatDays.join("/")+" 🔁":"Repeating task recreated 🔁");
         },500);
       }
     } else setUndoId(null);
@@ -3257,10 +3448,13 @@ export default function App() {
     if(!name||!email){toast("Name and email required","err");return;}
     if(!okEmail(email)){toast("Invalid email","err");return;}
     if(emps.find(e=>e.email===email)){toast("Email already exists","err");return;}
-    const emp={id:uid(),name:san(name),email,role:form.eRole||"employee",pin:"",status:"offline",createdAt:Date.now()};
-    await saveEmps([...emps,emp]);
+    const empId=uid();
+    const emp={id:empId,name:san(name),email,role:form.eRole||"employee",pin:"",status:"offline",createdAt:Date.now()};
+    // Save directly to Supabase first
+    await SB.upsert("employees",{id:emp.id,email:emp.email,name:emp.name,role:emp.role,pin:"",status:"offline",created_at:emp.createdAt});
+    setEmps(prev=>[...prev,emp]);
     addAct("employee added",`${user?.name} added: ${emp.name}`,user?.id);
-    toast(`${emp.name} added!`);setModal(null);setForm({});
+    toast(`${emp.name} added! ✅`);setModal(null);setForm({});
   };
   const removeEmp=async id=>{
     if(id===user?.id){toast("Can't remove yourself","err");return;}
@@ -3290,7 +3484,11 @@ export default function App() {
     const updated={xp:newXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login};
     setProgress(prev=>({...prev,[user.id]:updated}));
     await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login,created_at:Date.now()});
-    if(leveledUp) toast(`🎉 Level up! You're now a ${info.title}!`,"ok");
+    // XP pop-up toast
+    const xpId=uid();
+    setXpToasts(p=>[...p,{id:xpId,amount,label}]);
+    setTimeout(()=>setXpToasts(p=>p.filter(t=>t.id!==xpId)),2200);
+    if(leveledUp){ toast("🎉 Level up! You are now a "+info.title+"!","ok"); playSound("success"); }
   };
 
   // Handle login streak + XP
@@ -3488,6 +3686,7 @@ export default function App() {
     {key:"security",label:"Security"},
     {key:"team",label:"Team",perm:"emp"},
     {key:"display",label:"Display & Sound"},
+    {key:"boss_dms",label:"All Messages",perm:"boss"},
   ].filter(s=>!s.perm||can(user,s.perm));
 
   const selSx={width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:T.sp.r,color:T.txt,padding:`${T.sp.md-2}px 14px`,fontSize:T.fs.md,fontFamily:"inherit",outline:"none"};
@@ -3497,6 +3696,7 @@ export default function App() {
     <div style={{fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:T.bg,color:T.txt}}>
       <style>{buildCSS(T)}</style>
       <ToastList items={toasts}/>
+      <XPToastList items={xpToasts}/>
 
       {/* Undo banner */}
       {undoId&&(
@@ -3512,7 +3712,8 @@ export default function App() {
         <LoginScreen T={T} emailIn={emailIn} setEmailIn={setEmailIn} emailErr={emailErr} setEmailErr={setEmailErr}
           showPin={showPin} setShowPin={setShowPin} pinIn={pinIn} setPinIn={setPinIn}
           doLogin={doLogin} doPin={doPin} notice={notice} setScreen={setScreen} siteOffline={siteOffline}
-          passkeyAvailable={passkeyAvailable} passkeyEmail={passkeyEmail} doPasskeyLogin={doPasskeyLogin}/>
+          passkeyAvailable={passkeyAvailable} passkeyEmail={passkeyEmail} doPasskeyLogin={doPasskeyLogin}
+          rememberMe={rememberMe} setRememberMe={setRememberMe}/>
       )}
 
       {/* ═══ TECH LOGIN ════════════════════════════════════════════════════════ */}
@@ -3564,15 +3765,15 @@ export default function App() {
               <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,marginLeft:"auto"}}>
                 {/* Tablet/Desktop: full search bar */}
                 <button onClick={()=>{setShowGlobalSearch(true);playSound("open");}}
-                  title="Search (Cmd+K)"
+                  title="Search (⌘K)"
                   className="search-full"
-                  style={{display:"flex",alignItems:"center",gap:6,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"5px 12px",cursor:"pointer",color:T.sub,fontSize:12,fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap"}}
+                  style={{display:"flex",alignItems:"center",gap:5,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"5px 10px",cursor:"pointer",color:T.sub,fontSize:12,fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap"}}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"66";e.currentTarget.style.color=T.txt;}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
                 >
-                  <span style={{fontSize:13}}>🔍</span>
-                  <span>Search</span>
-                  <span style={{fontSize:10,opacity:0.5,marginLeft:4}}>⌘K</span>
+                  <span style={{fontSize:14}}>🔍</span>
+                  <span className="search-label">Search</span>
+                  <span className="search-label" style={{fontSize:10,opacity:0.5}}>⌘K</span>
                 </button>
                 {/* Profile button */}
                 <button onClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}
@@ -3756,6 +3957,9 @@ export default function App() {
 
               {/* DMs */}
               {page==="dms"&&<DMSection user={user} emps={emps} dms={dms} setDms={saveDms} T={T} toast={toast} onXP={()=>grantXP(5,"dm sent")}/>}
+
+              {/* LEADERBOARD */}
+              {page==="leaderboard"&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T}/>}
 
               {/* ACTIVITY */}
               {page==="act"&&can(user,"act")&&(
@@ -4145,6 +4349,33 @@ export default function App() {
                       </div>
                     )}
 
+                    {setTab2==="boss_dms"&&can(user,"boss")&&(
+                      <div style={{display:"grid",gap:14}}>
+                        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>All Messages</div>
+                        <div style={{fontSize:12,color:T.warn,fontWeight:600,background:`${T.warn}12`,border:`1px solid ${T.warn}33`,borderRadius:8,padding:"8px 12px"}}>⚠️ Viewing as supervisor — staff are notified messages may be reviewed.</div>
+                        <div style={{display:"grid",gap:6,maxHeight:400,overflowY:"auto"}}>
+                          {[...dms].filter(d=>!d.feedback&&!d.system).sort((a,b)=>b.at-a.at).map(msg=>{
+                            const sender=emps.find(e=>e.id===msg.from);
+                            const recipient=emps.find(e=>e.id===msg.to);
+                            return (
+                              <div key={msg.id} style={{background:T.surfH,borderRadius:10,padding:"10px 14px",display:"flex",gap:10,alignItems:"flex-start",border:`1px solid ${T.bor}`}}>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:12,fontWeight:700,color:T.txt,display:"flex",gap:6,flexWrap:"wrap"}}>
+                                    <span>{sender?.name||"Unknown"}</span>
+                                    <span style={{color:T.mut}}>→</span>
+                                    <span>{msg.to==="__group__"?"Team Chat":recipient?.name||"Unknown"}</span>
+                                  </div>
+                                  <div style={{fontSize:13,color:T.sub,marginTop:3,lineHeight:1.5}}>{msg.text}</div>
+                                  <div style={{fontSize:10,color:T.faint,marginTop:3}}>{fmtDT(msg.at)}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {dms.filter(d=>!d.feedback&&!d.system).length===0&&<div style={{color:T.sub,fontSize:13,textAlign:"center",padding:"20px 0"}}>No messages yet.</div>}
+                        </div>
+                      </div>
+                    )}
+
                     {setTab2==="tech"&&can(user,"boss")&&(
                       <div style={{display:"grid",gap:16}}>
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>Technical Testing & Management</div>
@@ -4227,9 +4458,26 @@ export default function App() {
                   </Sel>
                 </div>
                 <Inp T={T} label="DUE DATE (optional)" type="date" value={form.tDue||""} onChange={e=>setForm(p=>({...p,tDue:e.target.value}))}/>
-                <div style={{display:"flex",alignItems:"center",gap:10,background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:10,padding:"10px 14px"}}>
-                  <input type="checkbox" id="repeat-chk" checked={form.tRepeat||false} onChange={e=>setForm(p=>({...p,tRepeat:e.target.checked}))} style={{width:16,height:16,cursor:"pointer"}}/>
-                  <label htmlFor="repeat-chk" style={{fontSize:T.fs.md,color:T.txt,fontWeight:600,cursor:"pointer"}}>🔁 Repeat this task after completion</label>
+                <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:10,padding:"10px 14px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:form.tRepeat||form.tRepeatDays?.length>0?10:0}}>
+                    <input type="checkbox" id="repeat-chk" checked={form.tRepeat||false} onChange={e=>setForm(p=>({...p,tRepeat:e.target.checked}))} style={{width:16,height:16,cursor:"pointer"}}/>
+                    <label htmlFor="repeat-chk" style={{fontSize:T.fs.md,color:T.txt,fontWeight:600,cursor:"pointer"}}>🔁 Repeat after completion</label>
+                  </div>
+                  {/* Repeat on specific days */}
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(day=>{
+                      const active=(form.tRepeatDays||[]).includes(day);
+                      return (
+                        <button key={day} type="button" onClick={()=>{
+                          const curr=form.tRepeatDays||[];
+                          setForm(p=>({...p,tRepeatDays:active?curr.filter(d=>d!==day):[...curr,day],tRepeat:false}));
+                        }} style={{background:active?T.scarlet:T.bg,color:active?"#fff":T.sub,border:`1px solid ${active?T.scarlet:T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                          {day}
+                        </button>
+                      );
+                    })}
+                    {(form.tRepeatDays?.length>0)&&<span style={{fontSize:11,color:T.sub,alignSelf:"center"}}>Repeats every {form.tRepeatDays.join(", ")}</span>}
+                  </div>
                 </div>
               </div>
               <div style={{display:"flex",gap:10,marginTop:18}}>
@@ -4479,6 +4727,15 @@ export default function App() {
               <Btn T={T} variant="ghost" onClick={()=>{playSound("click");if(bkps.length>0)restoreBkp(bkps[0]);else toast("No backups yet","warn");}}>↩ Restore Latest</Btn>
               <Btn T={T} variant="danger" onClick={()=>{playSound("click");clearDemo();}}>🗑️ Clear Demo</Btn>
               <Btn T={T} variant="ghost" onClick={async()=>{await fetch(`${SUPABASE_URL}/rest/v1/activity?id=neq.none`,{method:"DELETE",headers:SB.headers});setAct([]);setTechAction("✅ Activity log cleared.");setTimeout(()=>setTechAction(""),2500);playSound("notify");}}>🧹 Clear Activity</Btn>
+              <Btn T={T} variant="danger" onClick={async()=>{
+                if(!window.confirm("Reset ALL staff XP to zero? This cannot be undone.")) return;
+                await fetch(`${SUPABASE_URL}/rest/v1/user_progress?user_id=neq.none`,{method:"DELETE",headers:SB.headers});
+                setProgress({});
+                setTechAction("✅ All XP reset to zero for the month.");
+                setTimeout(()=>setTechAction(""),4000);
+                playSound("delete");
+                toast("All XP reset","warn");
+              }}>🔄 Reset All XP</Btn>
             </div>
             {techAction&&(
               <div style={{display:"flex",alignItems:"center",gap:8,background:"#dcfce7",border:"1px solid #86efac",borderRadius:10,padding:"9px 14px",marginBottom:14,animation:"fadeUp .2s ease",fontSize:13,fontWeight:700,color:"#15803d"}}>
