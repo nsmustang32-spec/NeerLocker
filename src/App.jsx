@@ -351,7 +351,8 @@ const SEED = [
   {id:"e7", email:"bdgould@mnu.edu",     name:"Bethany Gould",      role:"employee",  pin:"",status:"offline",createdAt:1700000000006},
   {id:"e8", email:"mrmanthe@mnu.edu",    name:"Mackenzie Manthe",   role:"employee",  pin:"",status:"offline",createdAt:1700000000007},
   {id:"e9", email:"llvarney@mnu.edu",    name:"Lauren Varney",      role:"employee",  pin:"",status:"offline",createdAt:1700000000008},
-  {id:"e10",email:"blittle@mnu.edu",     name:"Brylee Little",      role:"employee",  pin:"",status:"offline",createdAt:1700000000009},
+  {id:"e10",email:"bllittle@mnu.edu",     name:"Brylee Little",      role:"employee",  pin:"",status:"offline",createdAt:1700000000009},
+  {id:"e11",email:"wrlaymon@mnu.edu",      name:"Werke Laymon",        role:"employee",  pin:"",status:"offline",createdAt:1700000000010},
 ];
 const ROLES = {
   boss:      {label:"Boss",        color:"#C8102E", p:["home","tasks","inv","ann","act","emp","assign","settings","boss","dms","online"]},
