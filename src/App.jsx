@@ -1,11 +1,30 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.5.0";
-const BUILD_TAG = "PR";
+const VERSION   = "1.5.1";
+const FINN_VERSION = "1.0.0";
+const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.5.1": [
+    "Finn: Fusion Integrated Neural Navigator — new name, v1.0.0",
+    "Finn: Version badge shown in chat panel header",
+    "Finn: Smart personalized intro based on your data",
+    "Finn: Can create tasks, announcements, inventory, DMs",
+    "Finn: Can change your settings (status, display, PIN)",
+    "Finn: Normal conversation mode with subtle work reminders",
+    "Finn: Processing indicator while thinking",
+    "Finn: Glow effects in chat panel",
+    "Finn: Much smarter fallback — guesses intent",
+    "Finn: Knows nicknames and real names",
+    "UI: Welcome portal stays until user taps Let's Go",
+    "UI: Header scales to device (mobile/tablet/desktop)",
+    "UI: ClaudeTag now says Powered by Finn",
+    "UI: Help modal includes Finn guidance",
+    "Notifications: Finn icon, smart context, action buttons",
+    "Sounds: AudioContext resumed on interaction for background",
+  ],
   "1.5.0": [
     "Finn: Ultra-efficient tone, fully rebuilt system prompt",
     "Finn: Navigate the app by asking Finn to take you somewhere",
@@ -132,6 +151,12 @@ function getCtx() {
     if (_audioCtx.state === "suspended") _audioCtx.resume();
     return _audioCtx;
   } catch(e) { return null; }
+}
+// Resume audio on any user gesture — fixes sounds dying after backgrounding
+if (typeof document !== "undefined") {
+  ["touchstart","touchend","mousedown","keydown"].forEach(evt=>{
+    document.addEventListener(evt, ()=>{ try{ if(_audioCtx&&_audioCtx.state==="suspended")_audioCtx.resume(); }catch(e){} }, {passive:true,once:false});
+  });
 }
 
 function playSound(type="click") {
@@ -385,9 +410,16 @@ const buildCSS = T => `
     .dm-grid{grid-template-columns:1fr!important;}
     .hide-mobile{display:none!important;}
     .main-pad{padding:12px 12px 80px!important;}
-    /* Bigger tap targets on mobile */
     .nav-circle-btn{width:52px!important;height:52px!important;}
     .float-action-btn{width:46px!important;height:46px!important;font-size:18px!important;}
+    .search-full{display:none!important;}
+    .header-name{display:none!important;}
+  }
+  @media(min-width:769px) and (max-width:1024px){
+    .search-full{min-width:140px;}
+  }
+  @media(min-width:1025px){
+    .search-full{min-width:200px;}
   }
   @media(max-width:480px){
     .brand-text{font-size:13px!important;}
@@ -518,7 +550,12 @@ function VersionBadge({T,hide}) {
 }
 
 function ClaudeTag({T}) {
-  return <div style={{position:"fixed",bottom:32,left:12,fontSize:11,color:T.faint,fontWeight:500,letterSpacing:"0.01em",userSelect:"none",zIndex:9997,opacity:0.75,lineHeight:1.65}}>Built using Claude<br/>Created by Nate Smith</div>;
+  return (
+    <div style={{position:"fixed",bottom:32,left:12,fontSize:11,color:T.faint,fontWeight:500,letterSpacing:"0.01em",userSelect:"none",zIndex:9997,opacity:0.75,lineHeight:1.65}}>
+      Built using Claude<br/>Created by Nate Smith<br/>
+      <span style={{color:"#1e7fa8",fontWeight:700}}>Powered by Finn v{FINN_VERSION}</span>
+    </div>
+  );
 }
 
 // ─── CLOCK ────────────────────────────────────────────────────────────────────
@@ -1807,33 +1844,44 @@ const WA = {
 // ─── WELCOME PORTAL (first time only) ────────────────────────────────────────
 function WelcomePortal({T, onDone}) {
   const [phase, setPhase] = useState(0);
-  // phase 0: dark screen, 1: rings expand, 2: text in, 3: fade out
+  // Pure CSS animations — no JS tick loop so no fps drop
 
   useEffect(()=>{
     const t1=setTimeout(()=>setPhase(1), 200);
     const t2=setTimeout(()=>setPhase(2), 1000);
-    const t3=setTimeout(()=>setPhase(3), 3200);
-    const t4=setTimeout(()=>onDone(), 4000);
-    return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);clearTimeout(t4);};
+    const t3=setTimeout(()=>setPhase(3), 2000);
+    return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
   },[]);
 
   return (
-    <div style={{position:"fixed",inset:0,zIndex:99999,background:"#050d1a",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",overflow:"hidden",
-      opacity:phase===3?0:1,transition:phase===3?"opacity .8s ease":"none"}}>
-      {/* Animated rings */}
+    <div style={{position:"fixed",inset:0,zIndex:99999,background:"#050d1a",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",overflow:"hidden"}}>
+      {/* CSS animated background orbs — no JS */}
+      <div style={{position:"absolute",top:"10%",left:"8%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,#C8102E 0%,transparent 70%)",opacity:0.07,filter:"blur(50px)",animation:"pulse 4s ease-in-out infinite",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:"15%",right:"10%",width:320,height:320,borderRadius:"50%",background:"radial-gradient(circle,#1e7fa8 0%,transparent 70%)",opacity:0.07,filter:"blur(45px)",animation:"pulse 5s ease-in-out infinite",animationDelay:"1.5s",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",top:"50%",left:"50%",width:250,height:250,borderRadius:"50%",background:"radial-gradient(circle,#7c3aed 0%,transparent 70%)",opacity:0.05,filter:"blur(40px)",transform:"translate(-50%,-50%)",animation:"pulse 6s ease-in-out infinite",animationDelay:"3s",pointerEvents:"none"}}/>
+
+      {/* Expanding rings — CSS transition only */}
       {[0,1,2,3].map(i=>(
-        <div key={i} style={{position:"absolute",top:"50%",left:"50%",
-          width: phase>=1 ? `${300+i*180}px` : "0px",
-          height: phase>=1 ? `${300+i*180}px` : "0px",
+        <div key={i} style={{
+          position:"absolute",top:"50%",left:"50%",
+          width:phase>=1?`${300+i*160}px`:"0px",
+          height:phase>=1?`${300+i*160}px`:"0px",
           transform:"translate(-50%,-50%)",
           borderRadius:"50%",
-          border:`1px solid ${i===0?"#C8102E":"#1e7fa8"}${["66","44","33","22"][i]}`,
-          transition:`width ${0.8+i*0.15}s cubic-bezier(.23,1,.32,1) ${i*0.08}s, height ${0.8+i*0.15}s cubic-bezier(.23,1,.32,1) ${i*0.08}s`,
+          border:`${i===0?1.5:1}px solid ${i%2===0?"#C8102E":"#1e7fa8"}${["55","44","33","22"][i]}`,
+          animation:phase>=1?`pulse ${3+i*0.5}s ease-in-out infinite`:"none",
+          animationDelay:`${i*0.4}s`,
+          transition:`width ${0.9+i*0.12}s cubic-bezier(.23,1,.32,1) ${i*0.07}s, height ${0.9+i*0.12}s cubic-bezier(.23,1,.32,1) ${i*0.07}s`,
         }}/>
       ))}
-      {/* Center hex logo */}
-      <div style={{position:"relative",zIndex:2,animation:phase>=1?"finnHexSpin .7s cubic-bezier(.34,1.56,.64,1) both":"none"}}>
-        <svg width="72" height="72" viewBox="0 0 22 22">
+
+      {/* Spinning hex logo — CSS animation */}
+      <div style={{
+        position:"relative",zIndex:2,
+        animation:phase>=1?"finnHexSpin .7s cubic-bezier(.34,1.56,.64,1) both":"none",
+        filter:phase>=1?"drop-shadow(0 0 12px #1e7fa866) drop-shadow(0 0 24px #C8102E33)":"none",
+      }}>
+        <svg width="76" height="76" viewBox="0 0 22 22">
           <rect width="22" height="22" rx="6" fill="#0f2744"/>
           <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
           <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
@@ -1849,37 +1897,63 @@ function WelcomePortal({T, onDone}) {
           <circle cx="11" cy="11" r="1" fill="#fff"/>
         </svg>
       </div>
-      {/* Text */}
-      <div style={{position:"relative",zIndex:2,textAlign:"center",marginTop:32,
-        opacity:phase>=2?1:0,transform:phase>=2?"translateY(0)":"translateY(20px)",
-        transition:"opacity .6s ease, transform .6s ease"}}>
-        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:700,color:"#ffffff55",letterSpacing:"0.25em",textTransform:"uppercase",marginBottom:12}}>Welcome to</div>
-        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:28,fontWeight:800,color:"#fff",letterSpacing:"-0.5px",lineHeight:1.2}}>
-          MNU&apos;s <span style={{color:"#C8102E"}}>Neer Locker</span>
+
+      {/* Text block */}
+      <div style={{position:"relative",zIndex:2,textAlign:"center",marginTop:32,opacity:phase>=2?1:0,transform:phase>=2?"translateY(0)":"translateY(20px)",transition:"opacity .6s ease, transform .6s ease"}}>
+        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:700,color:"#ffffff44",letterSpacing:"0.25em",textTransform:"uppercase",marginBottom:10}}>Welcome to</div>
+        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:30,fontWeight:800,color:"#fff",letterSpacing:"-0.5px",lineHeight:1.2}}>
+          {"MNU's"} <span style={{color:"#C8102E",textShadow:"0 0 20px #C8102E66"}}>Neer Locker</span>
         </div>
-        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:14,fontWeight:600,color:"#ffffff66",marginTop:8,letterSpacing:"0.05em"}}>Staff Portal</div>
-        <div style={{marginTop:24,display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:"#ffffff33",fontSize:11,fontWeight:500,letterSpacing:"0.1em"}}>
-          <div style={{width:20,height:1,background:"#ffffff22"}}/>
-          POWERED BY FINN
-          <div style={{width:20,height:1,background:"#ffffff22"}}/>
+        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:600,color:"#ffffff55",marginTop:8,letterSpacing:"0.08em"}}>Staff Portal</div>
+        <div style={{marginTop:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:"#1e7fa8",fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>
+          <div style={{width:24,height:1,background:"#1e7fa855"}}/>
+          Fusion Integrated Neural Navigator
+          <div style={{width:24,height:1,background:"#1e7fa855"}}/>
         </div>
       </div>
-      {/* Scan line effect */}
-      <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px)",pointerEvents:"none",zIndex:1}}/>
+
+      {/* Let's Go button */}
+      <div style={{position:"relative",zIndex:2,marginTop:44,opacity:phase>=3?1:0,transform:phase>=3?"translateY(0)":"translateY(16px)",transition:"opacity .5s ease .1s, transform .5s ease .1s"}}>
+        <button onClick={()=>{playSound("success");onDone();}}
+          style={{background:"linear-gradient(135deg,#C8102E,#9e0b23)",color:"#fff",border:"none",borderRadius:14,padding:"15px 44px",fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:17,cursor:"pointer",letterSpacing:"0.03em",boxShadow:"0 6px 28px #C8102E55",transition:"transform .18s,box-shadow .18s"}}
+          onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.06)";e.currentTarget.style.boxShadow="0 8px 36px #C8102E66";}}
+          onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 6px 28px #C8102E55";}}
+        >{"Let's Go →"}</button>
+        <div style={{textAlign:"center",marginTop:10,fontSize:11,color:"#ffffff33",fontWeight:500,letterSpacing:"0.06em"}}>Tap to enter</div>
+      </div>
+
+      {/* Scan line — CSS only */}
+      <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px)",pointerEvents:"none",zIndex:1}}/>
     </div>
   );
 }
 
 // ─── FINN AI CHAT ─────────────────────────────────────────────────────────────
-function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage}) {
-  const [msgs,setMsgs]=useState([{role:"assistant",content:"Finn online. Ask me about your tasks, inventory, stats, or tell me where you want to go."}]);
+function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact}) {
+  const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
+  const getIntro=()=>{
+    const pg=progress[user?.id]||{xp:0,streak:0,title:"Pioneer"};
+    const openT=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id));
+    const overdue=openT.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
+    if(overdue.length>0) return `${nick}, you have ${overdue.length} overdue task${overdue.length>1?"s":""}. Want me to pull them up?`;
+    if(pg.streak>0&&pg.streak%7===0) return `${nick}! ${pg.streak}-day streak — impressive. What can I help with today?`;
+    if(openT.length===0) return `All clear, ${nick}. No open tasks. How can I help?`;
+    if(openT.length>3) return `${nick}, you've got ${openT.length} open tasks. Want me to prioritize them?`;
+    return `Finn online, ${nick}. Ask about tasks, inventory, XP — or say "help".`;
+  };
+  const [msgs,setMsgs]=useState([{role:"assistant",content:getIntro()}]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
+  const [pendingAction,setPendingAction]=useState(null); // {type, data}
   const endRef=useRef(null);
   const inputRef=useRef(null);
 
   useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
   useEffect(()=>{setTimeout(()=>inputRef.current?.focus(),100);},[]);
+
+  const now=new Date();
+  const timeStr=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+  const dateStr=now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
 
   function FinnLogo(){
     return (<svg width="28" height="28" viewBox="0 0 22 22" style={{flexShrink:0}}>
@@ -1890,237 +1964,491 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage}) {
       <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
       <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
       <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-      <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-      <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-      <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-      <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+      <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+      <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+      <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
+      <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
       <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
       <circle cx="11" cy="11" r="1" fill="#fff"/>
     </svg>);
   }
 
+  const addMsg=(role,content)=>setMsgs(prev=>[...prev,{role,content}]);
+
   function send(){
     const text=input.trim();
     if(!text||loading) return;
     setInput("");
-    const newMsgs=[...msgs,{role:"user",content:text}];
-    setMsgs(newMsgs);
+    addMsg("user",text);
     setLoading(true);
 
-    // ── Build data context ────────────────────────────────────────────────────
-    const q=text.toLowerCase();
-    const openTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id));
-    const overdueTasks=openTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
-    const highPri=openTasks.filter(t=>t.priority==="High");
-    const lowInv=inv.filter(i=>i.stock<5);
-    const outInv=inv.filter(i=>i.stock===0);
-    const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).length;
-    const sentDMs=dms.filter(d=>d.from===user?.id).length;
-    const doneTasks=tasks.filter(t=>t.done&&(t.assignedTo===user?.id||t.assignedTo==="all"));
-    const myProg=progress[user?.id]||{xp:0,level:1,title:"Pioneer",streak:0};
-    const myLvInfo=getLevelInfo(myProg.xp);
-    const isXP=XP_ELIGIBLE_ROLES.includes(user?.role);
-    const now=new Date();
-    const timeStr=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-    const dateStr=now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
-    const weekAgo=Date.now()-7*86400000;
-    const thisWeek=doneTasks.filter(t=>(t.createdAt||0)>weekAgo).length;
-    const lastWeek=doneTasks.filter(t=>(t.createdAt||0)>(weekAgo-7*86400000)&&(t.createdAt||0)<=weekAgo).length;
-
-    // ── Intent matching ───────────────────────────────────────────────────────
-    const is=(...words)=>words.some(w=>q.includes(w));
     let reply="";
+    try {
+      // ── Data snapshot ───────────────────────────────────────────────────────
+      const q=text.toLowerCase().trim().replace(/[\u2018\u2019\u201A\u201B']/g,"'");
+      const words=q.split(/\s+/);
+      const openTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id));
+      const overdueTasks=openTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
+      const highPri=openTasks.filter(t=>t.priority==="High");
+      const lowInv=inv.filter(i=>i.stock<5);
+      const outInv=inv.filter(i=>i.stock===0);
+      const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).length;
+      const sentDMs=dms.filter(d=>d.from===user?.id).length;
+      const doneTasks=tasks.filter(t=>t.done&&(t.assignedTo===user?.id||t.assignedTo==="all"));
+      const myProg=progress[user?.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+      const myLvInfo=getLevelInfo(myProg.xp);
+      const isXP=XP_ELIGIBLE_ROLES.includes(user?.role);
+      const now=new Date();
+      const timeStr=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+      const dateStr=now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+      const weekAgo=Date.now()-7*86400000;
+      const thisWeek=doneTasks.filter(t=>(t.createdAt||0)>weekAgo).length;
+      const lastWeek=doneTasks.filter(t=>(t.createdAt||0)>(weekAgo-7*86400000)&&(t.createdAt||0)<=weekAgo).length;
 
-    // ── NAVIGATE ──────────────────────────────────────────────────────────────
-    if(is("go to tasks","open tasks","show tasks","take me to tasks","task page")){
-      reply="Taking you to Tasks. ↗"; setTimeout(()=>setPage&&setPage("tasks"),350);
-    } else if(is("go to inventory","show inventory","open inventory","take me to inventory","stock page")){
-      reply="Taking you to Inventory. ↗"; setTimeout(()=>setPage&&setPage("inv"),350);
-    } else if(is("go to messages","open messages","show dms","take me to dms","message page")){
-      reply="Taking you to Messages. ↗"; setTimeout(()=>setPage&&setPage("dms"),350);
-    } else if(is("go to announcements","show announcements","open announcements")){
-      reply="Taking you to Announcements. ↗"; setTimeout(()=>setPage&&setPage("anns"),350);
-    } else if(is("go to activity","show activity","open activity","activity log")){
-      reply="Taking you to Activity. ↗"; setTimeout(()=>setPage&&setPage("act"),350);
-    } else if(is("go to settings","open settings","show settings")){
-      reply="Taking you to Settings. ↗"; setTimeout(()=>setPage&&setPage("set"),350);
+      // ── Simple but reliable matcher ─────────────────────────────────────────
+      // Uses includes() — fast, no regex errors, no false negatives
+      const has=(...phrases)=>phrases.some(p=>q.includes(p));
+      const hasAll=(...phrases)=>phrases.every(p=>q.includes(p));
 
-    // ── TIME & DATE ───────────────────────────────────────────────────────────
-    } else if(is("what time","current time","what's the time")){
-      reply=`It's ${timeStr}.`;
-    } else if(is("what day","what date","today's date","what is today")){
-      reply=`Today is ${dateStr}.`;
+      // ── Conversation context ────────────────────────────────────────────────
+      const history=msgs.slice(-6);
+      const lastBot=(history.filter(m=>m.role==="assistant").slice(-1)[0]?.content||"").toLowerCase();
+      const ctx={
+        xp: lastBot.includes("xp")||lastBot.includes("level")||lastBot.includes("streak")||lastBot.includes("pioneer")||lastBot.includes("trailblazer"),
+        tasks: lastBot.includes("task")||lastBot.includes("overdue")||lastBot.includes("priority"),
+        inv: lastBot.includes("stock")||lastBot.includes("item")||lastBot.includes("inventory"),
+        dms: lastBot.includes("message")||lastBot.includes("unread"),
+        asked: lastBot.endsWith("?"),
+      };
 
-    // ── TASKS ─────────────────────────────────────────────────────────────────
-    } else if(is("overdue","past due","late task")){
-      if(overdueTasks.length===0) reply="No overdue tasks. You're ahead of schedule. ✅";
-      else reply=`${overdueTasks.length} overdue: ${overdueTasks.map(t=>t.title).join(", ")}. Handle these first.`;
-    } else if(is("how many tasks","my tasks","open tasks","task count")){
-      reply=`${openTasks.length} open task${openTasks.length!==1?"s":""} (${overdueTasks.length} overdue, ${highPri.length} high priority). ${doneTasks.length} completed total.`;
-    } else if(is("high priority","urgent","what's important","what should i do first","top priority")){
-      if(highPri.length===0) reply="No high priority tasks right now.";
-      else reply=`${highPri.length} high priority: ${highPri.map(t=>t.title).join(", ")}.`;
-    } else if(is("next task","what should i do","what to do","suggest a task","recommend")){
-      if(overdueTasks.length>0) reply=`Start with "${overdueTasks[0].title}" — it's overdue.`;
-      else if(highPri.length>0) reply=`Next up: "${highPri[0].title}" — high priority.`;
-      else if(openTasks.length>0) reply=`Work on "${openTasks[0].title}".`;
-      else reply="No open tasks. You're clear! ✅";
-    } else if(is("all task","list task","show all task")){
-      if(openTasks.length===0) reply="No open tasks right now.";
-      else reply=openTasks.map((t,i)=>((i+1)+". "+t.title+" ["+t.priority+"]")).join("\n");
-    } else if(is("completed","finished tasks","done tasks","how many done")){
-      reply=`${doneTasks.length} tasks completed. This week: ${thisWeek}, last week: ${lastWeek}.`;
 
-    // ── INVENTORY ─────────────────────────────────────────────────────────────
-    } else if(is("low stock","running low","low inventory","what's low")){
-      if(lowInv.length===0) reply="All items are well stocked. 👍";
-      else reply=`${lowInv.length} item${lowInv.length!==1?"s":""} low: ${lowInv.map(i=>i.name+"("+i.stock+")").join(", ")}.`;
-    } else if(is("out of stock","out of","empty stock","zero stock")){
-      if(outInv.length===0) reply="Nothing is out of stock.";
-      else reply=`Out of stock: ${outInv.map(i=>i.name).join(", ")}.`;
-    } else if(is("inventory","stock","items","how many items")){
-      reply=`${inv.length} items tracked. ${outInv.length} out of stock, ${lowInv.length} low (under 5).`;
+      // ── PENDING MULTI-TURN ─────────────────────────────────────────────────
+      if(pendingAction){
+        const pa=pendingAction;
+        if(pa.type==="create_task"){
+          if(!pa.data.title){
+            setPendingAction({...pa,data:{...pa.data,title:text}});
+            reply="Got it. What priority — Low, Medium, or High?";
+          } else if(!pa.data.priority){
+            const pri=q.includes("high")?"High":q.includes("low")?"Low":"Medium";
+            setPendingAction({...pa,data:{...pa.data,priority:pri}});
+            reply="Priority: "+pri+". Assign to everyone or someone specific?";
+          } else {
+            let assignTo="all";
+            const empMatch=emps.find(e=>e.id!==user?.id&&words.some(w=>w.length>2&&e.name.toLowerCase().includes(w)));
+            if(empMatch) assignTo=empMatch.id;
+            const newTask={id:Math.random().toString(36).slice(2,9),title:pa.data.title,description:"",priority:pa.data.priority,assignedTo:assignTo,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:"",repeat:false};
+            if(saveTask) saveTask(newTask);
+            if(addAct) addAct("task_created","Finn created task for "+user?.name,user?.id);
+            if(grantXP) grantXP(25,"finn task");
+            setPendingAction(null);
+            reply="Done! Task created: "+newTask.title+" ["+newTask.priority+"] → "+(assignTo==="all"?"Everyone":emps.find(e=>e.id===assignTo)?.name||"them")+". ✅";
+          }
+        } else if(pa.type==="create_inv"){
+          if(!pa.data.name){
+            setPendingAction({...pa,data:{...pa.data,name:text}});
+            reply="How many in stock to start?";
+          } else {
+            const stock=parseInt(text)||0;
+            const newItem={id:Math.random().toString(36).slice(2,9),name:pa.data.name,stock,createdAt:Date.now()};
+            if(saveInv) saveInv([newItem,...inv]);
+            setPendingAction(null);
+            reply=newItem.name+" added — "+stock+" in stock. ✅";
+          }
+        } else if(pa.type==="create_ann"){
+          if(!pa.data.msg){
+            setPendingAction({...pa,data:{...pa.data,msg:text}});
+            reply="Level — info, warning, or urgent?";
+          } else {
+            const lvl=q.includes("urgent")?"danger":q.includes("warn")?"warn":"info";
+            const newAnn={id:Math.random().toString(36).slice(2,9),msg:pa.data.msg,level:lvl,by:user?.name||"",at:Date.now(),dismissed:[]};
+            if(saveAnns) saveAnns([newAnn,...anns]);
+            setPendingAction(null);
+            reply="Announcement posted. ✅";
+          }
+        } else if(pa.type==="send_dm"){
+          if(!pa.data.to){
+            const empMatch=emps.find(e=>e.id!==user?.id&&words.some(w=>w.length>2&&e.name.toLowerCase().includes(w)));
+            if(!empMatch) reply="Could not find that person. Try their name.";
+            else { setPendingAction({...pa,data:{...pa.data,to:empMatch.id,toName:empMatch.name}}); reply="Got it. What do you want to say to "+empMatch.name+"?"; }
+          } else {
+            const newDm={id:Math.random().toString(36).slice(2,9),from:user?.id||"",to:pa.data.to,text,at:Date.now(),read:false,system:false,feedback:false};
+            if(saveDms) saveDms([...dms,newDm]);
+            if(grantXP) grantXP(5,"finn dm");
+            setPendingAction(null);
+            reply="Sent to "+pa.data.toName+". ✅";
+          }
+        } else {
+          setPendingAction(null);
+          reply="Got it! What else can I help with?";
+        }
 
-    // ── MESSAGES ──────────────────────────────────────────────────────────────
-    } else if(is("unread","unread message","new message")){
-      if(unreadDMs===0) reply="No unread messages.";
-      else reply=`${unreadDMs} unread message${unreadDMs!==1?"s":""}.`;
-    } else if(is("how many message","messages sent","dm count")){
-      reply=`You've sent ${sentDMs} message${sentDMs!==1?"s":""}.${sentDMs===0?" Each DM earns 5 XP!":""}`;
+      // ── CANCEL ────────────────────────────────────────────────────────────
+      } else if(has("never mind","nevermind","cancel","forget it","stop that","nope","nah") && ctx.asked){
+        reply="No problem! What else can I help with?";
 
-    // ── TEAM ──────────────────────────────────────────────────────────────────
-    } else if(is("who's online","who is online","online now","team online")){
-      const online=emps.filter(e=>e.status==="online"&&e.id!==user?.id);
-      if(online.length===0) reply="No one else is online right now.";
-      else reply=`Online now: ${online.map(e=>e.name).join(", ")}.`;
-    } else if(is("team","how many people","staff count","employees")){
-      reply=`${emps.length} team members total.`;
+      // ── GREETINGS ─────────────────────────────────────────────────────────
+      } else if(has("good morning","good afternoon","good evening","good night","gm ","gn ")||q==="gm"||q==="gn"){
+        const h=now.getHours();
+        const nudge=overdueTasks.length>0?" Heads up — "+overdueTasks.length+" overdue task"+(overdueTasks.length>1?"s":"")+" waiting.":(openTasks.length>0?" You have "+openTasks.length+" open task"+(openTasks.length>1?"s":"")+".":" ");
+        if(has("night","gn")) reply="Night, "+nick+"! Log in tomorrow to keep your streak going. 🔥";
+        else if(h<12) reply="Morning, "+nick+"!"+nudge;
+        else if(h<17) reply="Afternoon, "+nick+"!"+nudge;
+        else reply="Evening, "+nick+"!"+nudge;
 
-    // ── XP & PROGRESSION ─────────────────────────────────────────────────────
-    } else if(is("my xp","my level","my title","my progress","my rank","how much xp")){
-      if(!isXP) reply="Your role doesn't earn XP.";
-      else reply=`Level ${myProg.level} — ${myProg.title}. ${myProg.xp} XP total. ${myLvInfo.xpToNext} XP to ${myLvInfo.next?.title||"max"}.`;
-    } else if(is("my streak","login streak","day streak")){
-      if(!isXP) reply="Streaks aren't tracked for your role.";
-      else if(myProg.streak===0) reply="No active streak. Log in daily to build one!";
-      else reply=`🔥 ${myProg.streak}-day streak. Log in tomorrow to keep it going.`;
-    } else if(is("how to earn","earn xp","get xp","earn more","gain xp","xp tip")){
-      reply="XP breakdown: Daily login=10, Complete task=25, High priority task=50, Send DM=5. Streaks stack.";
-    } else if(is("next level","level up","how close","how far")){
-      if(!isXP) reply="XP isn't tracked for your role.";
-      else if(!myLvInfo.next) reply="You're at max level — Top Contributor. 🏆";
-      else reply=`${myLvInfo.xpToNext} XP to ${myLvInfo.next.title} (${myLvInfo.pct}% there). Fastest: complete high priority tasks.`;
-    } else if(is("leaderboard","who has most xp","top scorer","who's winning","ranking")){
-      const ranked=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role)).map(e=>({name:e.name,xp:(progress[e.id]||{}).xp||0})).sort((a,b)=>b.xp-a.xp).slice(0,5);
-      if(ranked.length===0) reply="No XP data yet.";
-      else reply=ranked.map((e,i)=>`${i+1}. ${e.name} — ${e.xp} XP`).join("\n");
+      } else if(has("how are you","how r u","how're you","hows it going","how's it going","you good","you okay","how have you been","you alright","how you doing")){
+        const r=["Doing great! Ready to help.","All good! What do you need, "+nick+"?","Running smooth. What can I do for you?"];
+        reply=r[Math.floor(Math.random()*r.length)];
 
-    // ── PERFORMANCE ───────────────────────────────────────────────────────────
-    } else if(is("activity drop","why did my","activity down","less active","dropped off")){
-      if(thisWeek>=lastWeek) reply=`No drop — you completed ${thisWeek} tasks this week vs ${lastWeek} last week. Trending ${thisWeek>lastWeek?"up ↑":"steady →"}.`;
-      else reply=`This week: ${thisWeek} completed. Last week: ${lastWeek}. ${lastWeek-thisWeek} fewer. ${overdueTasks.length>0?"You have "+overdueTasks.length+" overdue tasks pulling attention.":"Focus on clearing open tasks."}`;
-    } else if(is("summarize my week","week summary","how was my week","weekly report","this week")){
-      const parts=[];
-      parts.push(`This week: ${thisWeek} task${thisWeek!==1?"s":""} completed`);
-      if(overdueTasks.length>0) parts.push(`${overdueTasks.length} overdue`);
-      if(isXP) parts.push(`${myProg.xp} XP total`);
-      if(unreadDMs>0) parts.push(`${unreadDMs} unread messages`);
-      reply=parts.join(", ")+".";
-    } else if(is("what should i improve","improve","get better","tips","advice")){
-      const tips=[];
-      if(overdueTasks.length>0) tips.push(`Clear ${overdueTasks.length} overdue task${overdueTasks.length>1?"s":""}`);
-      if(highPri.length>0) tips.push(`Finish ${highPri.length} high-priority task${highPri.length>1?"s":""}`);
-      if(sentDMs===0) tips.push("Start sending DMs — earns 5 XP each");
-      if(isXP&&myProg.streak<3) tips.push("Log in daily to build your streak");
-      if(lowInv.length>0) tips.push(`Restock ${lowInv.length} low item${lowInv.length>1?"s":""}`);
-      if(tips.length===0) tips.push("You're doing great — keep completing tasks");
-      reply=tips.map((t,i)=>`${i+1}. ${t}`).join("\n");
-    } else if(is("remind","haven't finished","not done","pending","unfinished")){
-      if(openTasks.length===0) reply="Nothing unfinished — all clear!";
-      else reply=`Still open: ${openTasks.slice(0,5).map(t=>t.title).join(", ")}${openTasks.length>5?" +"+( openTasks.length-5)+" more":""}. `;
+      } else if(has("not bad","doing well","pretty good","good thanks","doing great","all good","im good","i am good","im fine","i am fine","doing fine")){
+        reply="Good to hear, "+nick+"! "+(openTasks.length>0?"You have "+openTasks.length+" open task"+(openTasks.length>1?"s":"")+" — want a summary?":"No open tasks right now, all clear.");
 
-    // ── ANNOUNCEMENTS ─────────────────────────────────────────────────────────
-    } else if(is("announcement","any news","what's new","notice")){
-      const active=anns.filter(a=>!(a.dismissed||[]).includes(user?.id));
-      if(active.length===0) reply="No active announcements.";
-      else reply=`${active.length} announcement${active.length>1?"s":""}: ${active.slice(0,2).map(a=>a.msg.slice(0,60)).join(" | ")}.`;
+      } else if(q==="hi"||q==="hey"||q==="hello"||q==="yo"||q==="sup"||q==="hiya"||q==="howdy"||has("hi ","hey ","hello ","hiya","howdy")){
+        const h=now.getHours();
+        const g=h<12?"Morning":"Hey";
+        const nudge=overdueTasks.length>0?" "+overdueTasks.length+" overdue task"+(overdueTasks.length>1?"s":"")+" waiting.":(openTasks.length>0?" "+openTasks.length+" open task"+(openTasks.length>1?"s":"")+".":"");
+        reply=g+", "+nick+"!"+nudge;
 
-    // ── HELP ──────────────────────────────────────────────────────────────────
-    } else if(is("help","what can you do","commands","what do you know","capabilities")){
-      reply="1. Tasks: open, overdue, high priority, next\n2. Inventory: low stock, out of stock\n3. Messages: unread count\n4. XP: stats, tips, leaderboard\n5. Performance: weekly summary, activity\n6. Navigate: say take me to tasks\n7. Time and date: ask anytime";
+      // ── CONTEXT FOLLOW-UPS ────────────────────────────────────────────────
+      } else if(has("tell me more","what else","more info","go on","keep going","and then","what about","how about","elaborate","explain that","what does that mean")&&ctx.xp){
+        reply=isXP?"You are "+myLvInfo.pct+"% to "+( myLvInfo.next?.title||"max level")+". "+myLvInfo.xpToNext+" XP needed. Best way: complete a high priority task (50 XP).":"Your role does not earn XP.";
 
-    // ── FALLBACK ──────────────────────────────────────────────────────────────
-    } else {
-      const suggestions=[];
-      if(overdueTasks.length>0) suggestions.push(`${overdueTasks.length} overdue task${overdueTasks.length>1?"s":""}`);
-      if(highPri.length>0) suggestions.push(`${highPri.length} high-priority task${highPri.length>1?"s":""}`);
-      if(lowInv.length>0) suggestions.push(`${lowInv.length} low-stock item${lowInv.length>1?"s":""}`);
-      if(unreadDMs>0) suggestions.push(`${unreadDMs} unread message${unreadDMs>1?"s":""}`);
-      if(suggestions.length>0) reply=`Not sure about that. Right now: ${suggestions.join(", ")}. Try asking about tasks, inventory, XP, or say "help".`;
-      else reply="Not sure about that. Try: tasks, inventory, XP, leaderboard, weekly summary, or say 'help'.";
+      } else if(has("tell me more","what else","more info","go on")&&ctx.tasks){
+        reply=openTasks.length===0?"No open tasks right now. All clear!":"Top task: "+openTasks[0].title+" ["+openTasks[0].priority+"]."+(overdueTasks.length>0?" "+overdueTasks.length+" overdue.":"");
+
+      } else if((q==="yes"||q==="yeah"||q==="yep"||q==="sure"||q==="ok"||q==="okay")&&ctx.asked){
+        if(ctx.xp) reply="Your XP: "+myProg.xp+". Level "+myProg.level+" ("+myProg.title+"). "+myLvInfo.xpToNext+" to next.";
+        else if(ctx.tasks) reply=openTasks.length>0?"Open tasks:\n"+openTasks.slice(0,3).map((t,i)=>(i+1)+". "+t.title+" ["+t.priority+"]").join("\n"):"No open tasks.";
+        else reply="Sure! What do you need?";
+
+      // ── THANKS ────────────────────────────────────────────────────────────
+      } else if(has("thanks","thank you"," ty ","thx","appreciate","cheers","nice one","good job","great job","well done")||q==="ty"){
+        const r=["No problem!","Anytime!","Happy to help!","Of course, "+nick+"!"];
+        reply=r[Math.floor(Math.random()*r.length)]+(openTasks.length>0?" "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" still open.":"");
+
+      } else if(has("lol","lmao","haha","hehe")||q.includes("😂")||q.includes("💀")){
+        reply="😄 Glad I could help. Back to work, "+nick+"!";
+
+      } else if(has("bored","nothing to do","slow day","quiet day")){
+        reply=openTasks.length>0?"Never dull — "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" waiting. Want me to list them?":"Nothing open. Good time to check announcements or message a teammate.";
+
+      } else if(has("tired","exhausted","sleepy","burnt out","worn out")){
+        reply="Hang in there, "+nick+"! "+(openTasks.length>0?openTasks.length+" task"+(openTasks.length>1?"s":"")+" left. Start small.":"No open tasks — take a breather.");
+
+      } else if(has("stressed","overwhelmed","too much","swamped","drowning")){
+        reply=openTasks.length>0?"One at a time. Start with: "+openTasks[0].title+".":"No open tasks right now. Breathe — you are caught up.";
+
+      } else if(has("joke","make me laugh","something funny","tell me something funny")){
+        const jokes=["Why did the inventory manager quit? He could not count on anyone.","What did the overdue task say? I need closure!","Why do tasks love Finn? I never leave them hanging."];
+        reply=jokes[Math.floor(Math.random()*jokes.length)];
+
+      // ── NAVIGATE ──────────────────────────────────────────────────────────
+      } else if(hasAll("task")&&has("go to","take me","open ","show me","navigate","switch to","bring up")){
+        reply="Taking you to Tasks. ↗"; setTimeout(()=>setPage&&setPage("tasks"),350);
+      } else if(has("inventory","stock")&&has("go to","take me","open ","show me","navigate","switch to")){
+        reply="Taking you to Inventory. ↗"; setTimeout(()=>setPage&&setPage("inv"),350);
+      } else if(has("message","dms","inbox")&&has("go to","take me","open ","show me","navigate","switch to")){
+        reply="Taking you to Messages. ↗"; setTimeout(()=>setPage&&setPage("dms"),350);
+      } else if(has("announcement","notices")&&has("go to","take me","open ","show me","navigate","switch to")){
+        reply="Taking you to Announcements. ↗"; setTimeout(()=>setPage&&setPage("anns"),350);
+      } else if(has("activity","log","history")&&has("go to","take me","open ","show me","navigate","switch to")){
+        reply="Taking you to Activity. ↗"; setTimeout(()=>setPage&&setPage("act"),350);
+      } else if(has("settings","preferences","profile")&&has("go to","take me","open ","show me","navigate","switch to")){
+        reply="Taking you to Settings. ↗"; setTimeout(()=>setPage&&setPage("set"),350);
+      } else if(has("go home","take me home","home page")){
+        reply="Taking you home. ↗"; setTimeout(()=>setPage&&setPage("home"),350);
+
+      // ── SETTINGS ──────────────────────────────────────────────────────────
+      } else if(has("dark mode")&&has("on","enable","turn on","activate","switch on")){
+        if(applyTheme) applyTheme(true,compact); reply="Dark mode on. ✅";
+      } else if(has("dark mode")&&has("off","disable","turn off")){
+        if(applyTheme) applyTheme(false,compact); reply="Light mode on. ✅";
+      } else if(has("light mode")||has("turn on light","enable light")){
+        if(applyTheme) applyTheme(false,compact); reply="Light mode on. ✅";
+      } else if(has("compact")&&has("on","enable","turn on","activate")){
+        if(applyTheme) applyTheme(dark,true); reply="Compact layout on. ✅";
+      } else if(has("comfortable","normal layout","default layout")){
+        if(applyTheme) applyTheme(dark,false); reply="Comfortable layout on. ✅";
+      } else if(has("set","change","mark")&&has("status","me as")&&has("online","offline","busy")){
+        const s=q.includes("busy")?"busy":q.includes("offline")?"offline":"online";
+        if(saveStatus) saveStatus(s); reply="Status set to "+s+". ✅";
+
+      // ── CREATE ────────────────────────────────────────────────────────────
+      } else if(has("create task","make a task","add a task","new task","make task","add task")||(has("create","make","add","new")&&has("task","to-do","todo","assignment"))){
+        const stripped=text.replace(/create|make|add|new|a |task|to-?do|assignment|can you|please/gi,"").trim();
+        if(stripped.length>2){
+          setPendingAction({type:"create_task",data:{title:stripped,priority:null,assignedTo:null}});
+          reply="Creating task: "+stripped+". What priority?";
+        } else {
+          setPendingAction({type:"create_task",data:{title:null,priority:null,assignedTo:null}});
+          reply="Sure! What should the task be called?";
+        }
+      } else if(has("add item","add to inventory","new item","create item","add stock")||(has("add","create","new")&&has("item","inventory","stock","product","supply"))){
+        const stripped=text.replace(/add|create|new|item|inventory|stock|product|supply|to|can you|please/gi,"").trim();
+        if(stripped.length>2){
+          setPendingAction({type:"create_inv",data:{name:stripped,stock:undefined}});
+          reply="Adding "+stripped+" to inventory. How many in stock?";
+        } else {
+          setPendingAction({type:"create_inv",data:{name:null,stock:undefined}});
+          reply="What item do you want to add?";
+        }
+      } else if(has("announce","send announcement","post announcement","make announcement","create announcement")||(has("announce","announcement")&&has("send","post","create","make","write"))){
+        if(!can(user,"assign")){ reply="You need Manager or above to post announcements."; }
+        else {
+          const stripped=text.replace(/announce|send|post|make|create|write|announcement|can you|please/gi,"").trim();
+          if(stripped.length>3){
+            setPendingAction({type:"create_ann",data:{msg:stripped,level:null}});
+            reply="Announcement: "+stripped+". Level — info, warning, or urgent?";
+          } else {
+            setPendingAction({type:"create_ann",data:{msg:null,level:null}});
+            reply="What do you want to announce?";
+          }
+        }
+
+      // ── TIME / DATE ───────────────────────────────────────────────────────
+      } else if(has("what time","current time","time is it","what's the time","what time is it")){
+        reply="It is "+timeStr+".";
+      } else if(has("what day","what date","today's date","what is today","what's today","what is the date","the date")){
+        reply="Today is "+dateStr+".";
+
+      // ── SEND DM ───────────────────────────────────────────────────────────
+      } else if(has("send a message","send message","send dm","message to ","dm to ","text to ")){
+        const empMatch=emps.find(e=>e.id!==user?.id&&words.some(w=>w.length>2&&e.name.toLowerCase().includes(w)));
+        if(empMatch){
+          setPendingAction({type:"send_dm",data:{to:empMatch.id,toName:empMatch.name,msg:null}});
+          reply="Messaging "+empMatch.name+". What do you want to say?";
+        } else {
+          setPendingAction({type:"send_dm",data:{to:null,toName:null,msg:null}});
+          reply="Who do you want to message?";
+        }
+
+      // ── FEEDBACK ──────────────────────────────────────────────────────────
+      } else if(has("bug","report","broken","feature request","suggestion","feedback","doesn't work","not working")){
+        setPendingAction({type:"send_dm",data:{to:"TECH",toName:"Tech Admin",msg:null}});
+        reply="I will send that to the Technical Administrator. What is the issue?";
+
+      // ── TASKS INFO ────────────────────────────────────────────────────────
+      } else if(has("overdue","past due","late tasks","missed deadline")){
+        if(overdueTasks.length===0) reply="No overdue tasks. You are ahead. ✅";
+        else reply=overdueTasks.length+" overdue: "+overdueTasks.map(t=>t.title).join(", ")+".";
+      } else if(has("list tasks","show tasks","all tasks","my tasks","show my tasks","what are my tasks","what tasks")){
+        if(openTasks.length===0) reply="No open tasks right now.";
+        else reply="Your tasks:\n"+openTasks.map((t,i)=>(i+1)+". "+t.title+" ["+t.priority+"]").join("\n");
+      } else if(has("what should i do","next task","where do i start","what to do","suggest a task","recommend")){
+        if(overdueTasks.length>0) reply="Start with: "+overdueTasks[0].title+" — overdue.";
+        else if(highPri.length>0) reply="Next: "+highPri[0].title+" — high priority.";
+        else if(openTasks.length>0) reply="Work on: "+openTasks[0].title+".";
+        else reply="No open tasks. All clear! ✅";
+      } else if(has("how many tasks","task count","tasks open","open tasks")){
+        reply=openTasks.length+" open: "+overdueTasks.length+" overdue, "+highPri.length+" high priority. "+doneTasks.length+" completed total.";
+      } else if(has("high priority","urgent tasks","important tasks","priority tasks")){
+        if(highPri.length===0) reply="No high priority tasks right now.";
+        else reply=highPri.length+" high priority: "+highPri.map(t=>t.title).join(", ")+".";
+      } else if(has("completed tasks","finished tasks","done tasks","how many done","tasks done")){
+        reply=doneTasks.length+" completed. This week: "+thisWeek+", last week: "+lastWeek+".";
+
+      // ── INVENTORY INFO ────────────────────────────────────────────────────
+      } else if(has("low stock","running low","what's low","low inventory")){
+        if(lowInv.length===0) reply="All items well stocked. 👍";
+        else reply=lowInv.length+" low: "+lowInv.map(i=>i.name+" ("+i.stock+")").join(", ")+".";
+      } else if(has("out of stock","what's out","empty stock")){
+        if(outInv.length===0) reply="Nothing out of stock.";
+        else reply="Out of stock: "+outInv.map(i=>i.name).join(", ")+".";
+      } else if(has("inventory","stock summary","what's in stock","items we have")){
+        reply=inv.length+" items tracked. "+outInv.length+" out, "+lowInv.length+" low.";
+
+      // ── MESSAGES INFO ─────────────────────────────────────────────────────
+      } else if(has("unread messages","unread dms","new messages","do i have messages")){
+        reply=unreadDMs===0?"No unread messages.":unreadDMs+" unread message"+(unreadDMs>1?"s":"")+".";
+      } else if(has("messages sent","how many messages","dms sent")){
+        reply="You have sent "+sentDMs+" message"+(sentDMs!==1?"s":"")+"."+( sentDMs===0?" Each DM earns 5 XP!":"");
+
+      // ── XP & LEVELS ───────────────────────────────────────────────────────
+      } else if(has("my xp","my level","my rank","my title","my progress","how much xp","what level","what's my level")){
+        if(!isXP) reply="Your role does not earn XP.";
+        else reply="Level "+myProg.level+" — "+myProg.title+". "+myProg.xp+" XP. "+myLvInfo.xpToNext+" XP to "+( myLvInfo.next?.title||"max")+".";
+      } else if(has("my streak","login streak","how long streak","day streak")){
+        if(!isXP) reply="Streaks are not tracked for your role.";
+        else if(myProg.streak===0) reply="No streak yet. Log in daily to build one — 10 XP per day.";
+        else reply=myProg.streak+"-day streak! 🔥 Keep logging in daily.";
+      } else if(has("earn xp","how to earn","get xp","gain xp","xp tips","ways to level")){
+        reply="XP: Login daily=10, Task done=25, High priority task=50, DM sent=5.";
+      } else if(has("next level","level up","how close","how far","xp to next")){
+        if(!isXP) reply="XP not tracked for your role.";
+        else if(!myLvInfo.next) reply="Max level — Top Contributor. 🏆";
+        else reply=myLvInfo.xpToNext+" XP to "+myLvInfo.next.title+" ("+myLvInfo.pct+"% there). Complete a high priority task for 50 XP.";
+      } else if(has("leaderboard","top xp","who has most xp","xp ranking","who is winning")){
+        const ranked=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role)).map(e=>({name:e.name,xp:(progress[e.id]||{}).xp||0})).sort((a,b)=>b.xp-a.xp).slice(0,5);
+        reply=ranked.length===0?"No XP data yet.":ranked.map((e,i)=>(i+1)+". "+e.name+" — "+e.xp+" XP").join("\n");
+
+      // ── PERFORMANCE ───────────────────────────────────────────────────────
+      } else if(has("activity drop","why did my activity","less active","dropped off","doing less")){
+        if(thisWeek>=lastWeek) reply="No drop — "+thisWeek+" done this week vs "+lastWeek+" last. Trending "+(thisWeek>lastWeek?"up ↑":"steady →")+".";
+        else reply="This week: "+thisWeek+" vs last week: "+lastWeek+". Down "+(lastWeek-thisWeek)+". "+(overdueTasks.length>0?overdueTasks.length+" overdue tasks pulling focus.":"Try blocking time for focused work.");
+      } else if(has("my week","this week","weekly summary","how did i do","recap","weekly report")){
+        const p=[];
+        p.push(thisWeek+" task"+(thisWeek!==1?"s":"")+" completed");
+        if(overdueTasks.length>0) p.push(overdueTasks.length+" overdue");
+        if(isXP) p.push(myProg.xp+" XP");
+        if(unreadDMs>0) p.push(unreadDMs+" unread messages");
+        reply="This week: "+p.join(", ")+".";
+      } else if(has("what should i improve","how to improve","tips","advice","how to get better","boost my")){
+        const tips=[];
+        if(overdueTasks.length>0) tips.push("Clear "+overdueTasks.length+" overdue task"+(overdueTasks.length>1?"s":""));
+        if(highPri.length>0) tips.push("Finish "+highPri.length+" high priority task"+(highPri.length>1?"s":""));
+        if(sentDMs===0) tips.push("Send a DM — earns 5 XP");
+        if(isXP&&myProg.streak<3) tips.push("Log in daily to build streak");
+        if(lowInv.length>0) tips.push("Restock "+lowInv.length+" item"+(lowInv.length>1?"s":""));
+        if(tips.length===0) tips.push("Looking solid — keep completing tasks");
+        reply=tips.map((t,i)=>(i+1)+". "+t).join("\n");
+      } else if(has("what's left","unfinished","pending tasks","remind me","not done yet")){
+        if(openTasks.length===0) reply="All clear — nothing unfinished! ✅";
+        else reply="Still open: "+openTasks.slice(0,5).map(t=>t.title).join(", ")+(openTasks.length>5?" +"+(openTasks.length-5)+" more":"")+".";
+
+      // ── TEAM ──────────────────────────────────────────────────────────────
+      } else if(has("who's online","who is online","online now","who's on","who's working")){
+        const online=emps.filter(e=>e.status==="online"&&e.id!==user?.id);
+        reply=online.length===0?"No one else online.":"Online: "+online.map(e=>e.name).join(", ")+".";
+      } else if(has("how many people","team size","staff count","how many employees","how many members")){
+        reply=emps.length+" team members total.";
+
+      // ── ANNOUNCEMENTS ─────────────────────────────────────────────────────
+      } else if(has("any announcements","what's new","any news","announcements","latest update","recent updates")){
+        const active=anns.filter(a=>!(a.dismissed||[]).includes(user?.id));
+        if(active.length===0) reply="No active announcements.";
+        else reply=active.length+" announcement"+(active.length>1?"s":"")+": "+active.slice(0,2).map(a=>a.msg.slice(0,70)).join(" | ")+".";
+
+      // ── WHO AM I / WHO IS FINN ────────────────────────────────────────────
+      } else if(has("who are you","what are you","about finn","your name","what is finn","introduce yourself")){
+        reply="I am Finn — Fusion Integrated Neural Navigator v"+FINN_VERSION+". I help with tasks, inventory, XP, messages, and more. Just talk naturally.";
+      } else if(has("who am i","my name","my role","about me","my account")){
+        reply="You are "+user?.name+", "+ROLES[user?.role]?.label+" at MNU Neer Locker."+(isXP?" Level "+myProg.level+" ("+myProg.title+"), "+myProg.xp+" XP.":"");
+
+      // ── HELP ──────────────────────────────────────────────────────────────
+      } else if(has("help","what can you do","commands","capabilities")){
+        reply="Here is what I can do:\n1. Tasks — view, create, prioritize\n2. Inventory — stock, add items\n3. Messages — unread, send DM\n4. Announcements — view, create\n5. XP — stats, streak, leaderboard\n6. Performance — weekly summary, tips\n7. Settings — dark mode, status, layout\n8. Navigate — say: take me to tasks\n\nJust say what you need — I will figure it out.";
+
+      // ── AGREED / OK ───────────────────────────────────────────────────────
+      } else if(q==="ok"||q==="okay"||q==="cool"||q==="got it"||q==="sounds good"||q==="alright"||q==="noted"||q==="perfect"||has("sounds good","that works","makes sense","understood")){
+        reply=openTasks.length>0?"Got it! "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" still open if you need a starting point.":"Got it! Anything else?";
+
+      } else if(has("nice","awesome","great","amazing","love it","fire ","that's fire","lit ")||q==="fire"||q==="lit"){
+        reply="Let's go! 🎉 "+(openTasks.length>0?"Back to it — "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" waiting.":"All clear!");
+
+      // ── UNKNOWN ───────────────────────────────────────────────────────────
+      } else {
+        // Check if a team member name is explicitly mentioned (exact first or last name word)
+        const namedEmp=emps.find(e=>e.id!==user?.id&&e.name.toLowerCase().split(" ").some(namePart=>namePart.length>3&&words.includes(namePart)));
+        if(namedEmp){
+          setPendingAction({type:"send_dm",data:{to:namedEmp.id,toName:namedEmp.name,msg:null}});
+          reply="Want to message "+namedEmp.name+"? What do you want to say?";
+        } else {
+          const hints=[];
+          if(overdueTasks.length>0) hints.push(overdueTasks.length+" overdue");
+          if(unreadDMs>0) hints.push(unreadDMs+" unread");
+          if(lowInv.length>0) hints.push(lowInv.length+" low stock");
+          const fallbacks=[
+            "Not sure I caught that, "+nick+". Try: tasks, inventory, XP, or just chat!",
+            "Could you rephrase? I can help with tasks, messages, XP, inventory, and more.",
+            "Hmm, not quite sure about that one. Say help for a full list.",
+          ];
+          reply=fallbacks[Math.floor(Math.random()*fallbacks.length)]+(hints.length>0?" Heads up: "+hints.join(", ")+".":"");
+        }
+      }
+
+    } catch(err){
+      reply="Something went wrong on my end. Try again!";
     }
 
-    // Small delay for feel
+    if(!reply) reply="I am here, "+nick+"! What do you need?";
     setTimeout(()=>{
       setMsgs(prev=>[...prev,{role:"assistant",content:reply}]);
       setLoading(false);
-    },320);
-  };
+    },280);
+  }
 
 
   return (
-    <div style={{position:"fixed",bottom:0,right:0,width:"min(420px,100vw)",height:"min(600px,90vh)",zIndex:9999,display:"flex",flexDirection:"column",background:T.surf,border:`1px solid ${T.bor}`,borderRadius:"18px 18px 0 0",boxShadow:"0 -8px 40px rgba(0,0,0,.22)",animation:"finnSlideUp .45s cubic-bezier(.23,1,.32,1) both",animationDelay:"0.05s"}}>
+    <div style={{position:"fixed",bottom:0,right:0,width:"min(420px,100vw)",height:"min(600px,90vh)",zIndex:9999,display:"flex",flexDirection:"column",background:T.surf,border:`1px solid ${T.bor}`,borderRadius:"18px 18px 0 0",boxShadow:"0 -8px 40px rgba(0,0,0,.22), 0 0 60px #1e7fa808",animation:"finnSlideUp .45s cubic-bezier(.23,1,.32,1) both",animationDelay:"0.05s"}}>
+      {/* Subtle glow border */}
+      <div style={{position:"absolute",inset:0,borderRadius:"18px 18px 0 0",boxShadow:"inset 0 0 0 1px #1e7fa822, inset 0 1px 0 #C8102E33",pointerEvents:"none",zIndex:10}}/>
       {/* Header */}
-      <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",borderBottom:`1px solid ${T.bor}`,background:"#0f2744",borderRadius:"18px 18px 0 0",flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",borderBottom:`1px solid ${T.bor}`,background:"linear-gradient(135deg,#0a1e36 0%,#0f2744 60%,#0d1f38 100%)",borderRadius:"18px 18px 0 0",flexShrink:0,position:"relative",overflow:"hidden"}}>
+        {/* Header glow */}
+        <div style={{position:"absolute",top:-20,right:40,width:100,height:100,borderRadius:"50%",background:"radial-gradient(circle,#C8102E22 0%,transparent 70%)",pointerEvents:"none"}}/>
+        <div style={{position:"absolute",top:-20,left:60,width:80,height:80,borderRadius:"50%",background:"radial-gradient(circle,#1e7fa822 0%,transparent 70%)",pointerEvents:"none"}}/>
         <FinnLogo/>
-        <div style={{flex:1}}>
+        <div style={{flex:1,position:"relative",zIndex:1}}>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-0.3px"}}>Finn</div>
-          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase"}}>Fully Integrated Neural Navigator</div>
+          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase"}}>Fusion Integrated Neural Navigator</div>
         </div>
-        <button onClick={onClose} style={{background:"none",border:"none",color:"#ffffff88",fontSize:20,cursor:"pointer",padding:"4px 8px",borderRadius:8,fontFamily:"inherit",lineHeight:1}}>✕</button>
+        <div style={{display:"flex",alignItems:"center",gap:8,position:"relative",zIndex:1}}>
+          <div style={{background:"#1e7fa822",border:"1px solid #1e7fa844",borderRadius:6,padding:"2px 7px",fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.04em"}}>v{FINN_VERSION}</div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#ffffff66",fontSize:20,cursor:"pointer",padding:"4px 8px",borderRadius:8,fontFamily:"inherit",lineHeight:1,transition:"color .15s"}}
+            onMouseEnter={e=>e.currentTarget.style.color="#fff"}
+            onMouseLeave={e=>e.currentTarget.style.color="#ffffff66"}
+          >✕</button>
+        </div>
       </div>
 
       {/* Messages */}
-      <div style={{flex:1,overflowY:"auto",padding:"14px 14px 8px",display:"flex",flexDirection:"column",gap:10}}>
+      <div style={{flex:1,overflowY:"auto",padding:"14px 14px 8px",display:"flex",flexDirection:"column",gap:10,background:T.dark?"#0a0608":"#fafafa"}}>
         {msgs.map((m,i)=>(
-          <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",flexDirection:m.role==="user"?"row-reverse":"row"}}>
-            {m.role==="assistant"&&<FinnLogo/>}
+          <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start",flexDirection:m.role==="user"?"row-reverse":"row",animation:"fadeUp .2s ease both"}}>
+            {m.role==="assistant"&&(
+              <div style={{filter:"drop-shadow(0 0 6px #1e7fa844)",flexShrink:0}}>
+                <FinnLogo/>
+              </div>
+            )}
             {m.role==="user"&&(
               <div style={{width:28,height:28,borderRadius:"50%",background:ROLES[user?.role]?.color+"33",border:`2px solid ${ROLES[user?.role]?.color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:11,color:ROLES[user?.role]?.color,flexShrink:0}}>
                 {user?.name?.[0]||"?"}
               </div>
             )}
-            <div style={{maxWidth:"78%",background:m.role==="user"?"#0f2744":T.surfH,color:m.role==="user"?"#fff":T.txt,borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",padding:"10px 14px",fontSize:13,lineHeight:1.55,border:`1px solid ${m.role==="user"?"#1e7fa844":T.bor}`}}>
+            <div style={{maxWidth:"78%",background:m.role==="user"?"#0f2744":T.surf,color:m.role==="user"?"#fff":T.txt,borderRadius:m.role==="user"?"18px 18px 4px 18px":"18px 18px 18px 4px",padding:"10px 14px",fontSize:13,lineHeight:1.6,border:`1px solid ${m.role==="user"?"#1e7fa833":T.bor}`,boxShadow:m.role==="assistant"?"0 2px 8px rgba(0,0,0,0.06), 0 0 0 1px #1e7fa808":m.role==="user"?"0 0 12px #1e7fa822":"none",whiteSpace:"pre-wrap"}}>
               {m.content}
             </div>
           </div>
         ))}
         {loading&&(
           <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-            <FinnLogo/>
-            <div style={{background:T.surfH,borderRadius:"18px 18px 18px 4px",padding:"12px 16px",border:`1px solid ${T.bor}`,display:"flex",gap:5,alignItems:"center"}}>
-              {[0,1,2].map(i=><div key={i} style={{width:6,height:6,borderRadius:"50%",background:T.mut,animation:`pulse 1s ${i*180}ms ease-in-out infinite`}}/>)}
+            <div style={{filter:"drop-shadow(0 0 8px #1e7fa866)"}}><FinnLogo/></div>
+            <div style={{background:T.surf,borderRadius:"18px 18px 18px 4px",padding:"11px 16px",border:`1px solid ${T.bor}`,display:"flex",gap:6,alignItems:"center",boxShadow:"0 0 12px #1e7fa811"}}>
+              <span style={{fontSize:11,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.04em",marginRight:4}}>Processing</span>
+              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:"#1e7fa8",animation:`pulse 1s ${i*200}ms ease-in-out infinite`}}/>)}
             </div>
           </div>
         )}
         <div ref={endRef}/>
       </div>
 
+      {/* Pending action indicator */}
+      {pendingAction&&(
+        <div style={{padding:"6px 14px",background:"#1e7fa811",borderTop:`1px solid #1e7fa822`,fontSize:11,color:"#1e7fa8",fontWeight:700,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span>Creating {pendingAction.type==="create_task"?"task":pendingAction.type==="create_inv"?"inventory item":pendingAction.type==="create_ann"?"announcement":"DM"}…</span>
+          <button onClick={()=>{setPendingAction(null);addMsg("assistant","Cancelled.");}} style={{background:"none",border:"none",color:"#1e7fa8",cursor:"pointer",fontSize:11,fontWeight:700,fontFamily:"inherit"}}>Cancel</button>
+        </div>
+      )}
+
       {/* Input */}
-      <div style={{padding:"10px 14px 14px",borderTop:`1px solid ${T.bor}`,display:"flex",gap:8,flexShrink:0}}>
+      <div style={{padding:"10px 14px 14px",borderTop:`1px solid ${T.bor}`,display:"flex",gap:8,flexShrink:0,background:T.surf}}>
         <input ref={inputRef} value={input} onChange={e=>setInput(e.target.value)}
           onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()}
-          placeholder="Ask Finn anything…"
-          style={{flex:1,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:12,padding:"10px 14px",fontSize:13,fontFamily:"inherit",color:T.txt,outline:"none"}}
+          placeholder={pendingAction?"Type your answer…":"Ask Finn anything…"}
+          style={{flex:1,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:12,padding:"10px 14px",fontSize:13,fontFamily:"inherit",color:T.txt,outline:"none",transition:"border-color .15s,box-shadow .15s"}}
+          onFocus={e=>{e.target.style.borderColor="#1e7fa8";e.target.style.boxShadow="0 0 0 3px #1e7fa811";}}
+          onBlur={e=>{e.target.style.borderColor=T.bor;e.target.style.boxShadow="none";}}
         />
         <button onClick={send} disabled={loading||!input.trim()}
-          style={{background:"#0f2744",border:"none",borderRadius:12,padding:"10px 14px",cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,color:"#fff",fontWeight:700,fontSize:13,fontFamily:"inherit",transition:"opacity .15s"}}>
-          Send
-        </button>
+          style={{background:"linear-gradient(135deg,#0f2744,#1a3a5c)",border:"1px solid #1e7fa833",borderRadius:12,padding:"10px 14px",cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,color:"#fff",fontWeight:700,fontSize:13,fontFamily:"inherit",transition:"opacity .15s,box-shadow .15s",boxShadow:"0 0 0 0 #1e7fa8"}}
+          onMouseEnter={e=>{if(!loading&&input.trim())e.currentTarget.style.boxShadow="0 0 12px #1e7fa844";}}
+          onMouseLeave={e=>e.currentTarget.style.boxShadow="0 0 0 0 #1e7fa8"}
+        >Send</button>
       </div>
     </div>
   );
 }
+
 
 // ─── GLOBAL SEARCH ────────────────────────────────────────────────────────────
 function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
@@ -2988,6 +3316,7 @@ export default function App() {
 
   // Finn proactive push — runs once after login, checks for smart insights
   const finnProactivePush=async(emp, progData)=>{
+    // Note: push icon set in service-worker.js — use /finn-icon.png if available
     if(!XP_ELIGIBLE_ROLES.includes(emp.role)) return;
     if(!LS.get("nl3-notif-enabled")) return;
     const pg=progData[emp.id]||{xp:0,streak:0,level:1,title:"Pioneer"};
@@ -3000,19 +3329,26 @@ export default function App() {
     const hoursSincePush=(now-lastPush)/3600000;
     // Only push once per 4 hours max
     if(hoursSincePush<4) return;
+    const hour=new Date().getHours();
     let title=null; let body=null;
     if(overdue.length>0){
-      title="Finn: Overdue Alert ⚠️";
-      body=`${overdue.length} task${overdue.length>1?"s are":" is"} overdue. Top: ${overdue[0].title}`;
-    } else if(highPri.length>0 && highPri.length>=2){
-      title="Finn: High Priority Queue 🔴";
-      body=`${highPri.length} high-priority tasks open. Next: ${highPri[0].title}`;
+      title="Finn — Action Needed";
+      body=`${overdue.length} task${overdue.length>1?"s are":" is"} overdue. Top: "${overdue[0].title}" — handle this now?`;
+    } else if(highPri.length>=2){
+      title="Finn — Priority Queue";
+      body=`${highPri.length} high-priority tasks open. Next: "${highPri[0].title}" — ready to start?`;
     } else if(pg.streak>0 && pg.streak%7===0){
-      title="Finn: Streak Milestone 🔥";
-      body=`${pg.streak}-day login streak! You're a ${pg.title}. Keep it going.`;
+      title="Finn — Streak Milestone";
+      body=`${pg.streak}-day streak! You're a ${pg.title}. One more login keeps it alive.`;
+    } else if(pg.xp>0 && getLevelInfo(pg.xp).xpToNext<=50){
+      title="Finn — Level Up Close";
+      body=`You're ${getLevelInfo(pg.xp).xpToNext} XP from ${getLevelInfo(pg.xp).next?.title||"max"}. One task away!`;
     } else if(myOpenTasks.length===0){
-      title="Finn: All Clear ✅";
-      body="No open tasks. Great work — check in with your team.";
+      title="Finn — All Clear";
+      body="No open tasks. Nice work — check announcements or message a teammate.";
+    } else if(pg.streak>0){
+      const streakHours=24-((Date.now()-Date.parse(new Date().toDateString()))/3600000);
+      if(streakHours<3) { title="Finn — Streak Alert"; body=`Your ${pg.streak}-day streak ends soon. Log a task to keep it going!`; }
     }
     if(title&&body){
       LS.set(lastPushKey, now);
@@ -3222,32 +3558,36 @@ export default function App() {
                   <span style={{fontSize:17}}>🎓</span>
                   <span style={{display:"flex",gap:4}}>{"MNU's"} <span style={{color:T.scarlet}}>Neer Locker</span></span>
                 </button>
-                {/* Global search button — icon only on mobile */}
+
+                {/* Responsive right section */}
+              <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,marginLeft:"auto"}}>
+                {/* Tablet/Desktop: full search bar */}
                 <button onClick={()=>{setShowGlobalSearch(true);playSound("open");}}
-                  title="Search (⌘K)"
-                  style={{flexShrink:0,margin:"0 4px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"6px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:4,color:T.sub,fontSize:11,fontFamily:"inherit",transition:"all .15s"}}
+                  title="Search (Cmd+K)"
+                  className="search-full"
+                  style={{display:"flex",alignItems:"center",gap:6,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"5px 12px",cursor:"pointer",color:T.sub,fontSize:12,fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap"}}
                   onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"66";e.currentTarget.style.color=T.txt;}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
                 >
-                  <span style={{fontSize:14}}>🔍</span>
-                  <span className="search-label" style={{display:"none"}}>Search</span>
+                  <span style={{fontSize:13}}>🔍</span>
+                  <span>Search</span>
+                  <span style={{fontSize:10,opacity:0.5,marginLeft:4}}>⌘K</span>
                 </button>
-                <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,paddingRight:8}}>
-                  {/* Clickable profile area → Settings/Profile */}
-                  <button onClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}
-                    style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:10,transition:"background .15s",fontFamily:"inherit",minWidth:0,overflow:"hidden"}}
-                    onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
-                    onMouseLeave={e=>e.currentTarget.style.background="none"}
-                    title="Go to Profile Settings"
-                  >
-                    <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={30}/>
-                    <div style={{display:"flex",flexDirection:"column",lineHeight:1.2,minWidth:0,textAlign:"left"}}>
-                      <span style={{fontSize:13,color:T.txt,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:90}}>{user.name.split(" ")[0]}</span>
-                      <span style={{fontSize:10,color:T.sub,fontWeight:500}}>{ROLES[user.role]?.label||""}</span>
-                    </div>
-                  </button>
-                  <Btn T={T} xs variant="ghost" onClick={doLogout} style={{flexShrink:0,whiteSpace:"nowrap",padding:"5px 8px",fontSize:11}}>Sign Out</Btn>
-                </div>
+                {/* Profile button */}
+                <button onClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}
+                  style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:10,transition:"background .15s",fontFamily:"inherit",minWidth:0}}
+                  onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
+                  onMouseLeave={e=>e.currentTarget.style.background="none"}
+                  title="Profile Settings"
+                >
+                  <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={30}/>
+                  <div className="header-name" style={{display:"flex",flexDirection:"column",lineHeight:1.2,minWidth:0,textAlign:"left"}}>
+                    <span style={{fontSize:13,color:T.txt,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:90}}>{user.name.split(" ")[0]}</span>
+                    <span style={{fontSize:10,color:T.sub,fontWeight:500}}>{ROLES[user.role]?.label||""}</span>
+                  </div>
+                </button>
+                <Btn T={T} xs variant="ghost" onClick={doLogout} style={{flexShrink:0,whiteSpace:"nowrap",padding:"5px 10px",fontSize:11}}>Sign Out</Btn>
+              </div>
               </div>
             </header>
 
@@ -4028,7 +4368,7 @@ export default function App() {
           )}
 
           {/* Finn chat panel */}
-          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} onClose={()=>setShowFinn(false)} setPage={p=>{setShowFinn(false);setPage(p);}}/>}
+          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} onClose={()=>setShowFinn(false)} setPage={p=>{setShowFinn(false);setPrevPage(page);setPage(p);}} toast={toast} saveTask={upsertTask} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact}/>}
 
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
 
@@ -4509,6 +4849,7 @@ function HelpModal({T,bottom}) {
   const [open,setOpen]=useState(false);
   const items=[
     {icon:"⊙",title:"Circle Menu Button (top-left)",desc:"The floating circle button fixed below the logo — always visible as you scroll. Tap it to open navigation from any page."},
+    {icon:"🤖",title:"Ask Finn — Your AI Assistant",desc:"Tap the Finn button (bottom-right hex icon) to chat with Finn, your Fusion Integrated Neural Navigator. Ask about tasks, inventory, XP, or say \'take me to tasks\' to navigate. Finn can also create tasks and announcements for you!"},
     {icon:"🏠",title:"Home",desc:"Your personal dashboard — quick stats, online team, and announcements."},
     {icon:"✅",title:"Tasks",desc:"View and complete tasks assigned to you. Managers can create, assign, and delete tasks."},
     {icon:"📦",title:"Inventory",desc:"Track stock levels in real time. Tap + or − to adjust quantities."},
