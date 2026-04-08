@@ -2965,6 +2965,13 @@ export default function App() {
       setEmps(mappedEmps);
       // Seed initial employees if none exist
       if(!empRows?.length){for(const s of SEED)await SB.upsert("employees",{id:s.id,email:s.email,name:s.name,role:s.role,pin:s.pin||"",status:"offline",created_at:s.createdAt||Date.now()});}
+      // Force-upsert any SEED employees missing from Supabase (e.g. new additions)
+      const existingEmails=new Set((empRows||[]).map(e=>e.email));
+      for(const s of SEED){
+        if(!existingEmails.has(s.email)){
+          await SB.upsert("employees",{id:s.id,email:s.email,name:s.name,role:s.role,pin:s.pin||"",status:"offline",created_at:s.createdAt||Date.now()});
+        }
+      }
 
       setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:t.repeat_days||[],createdAt:t.created_at})));
       setInv((invRows||[]).map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
