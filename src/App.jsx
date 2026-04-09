@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.7.0";
+const VERSION   = "1.7.1";
 const FINN_VERSION = "1.1.0";
 const FINN_PATCH_NOTES = {
   "1.1.0": [
@@ -29,6 +29,13 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.7.1": [
+    "Fix: Haptic feedback now works and can be toggled in Settings",
+    "Fix: Sign Out button no longer overflows on mobile",
+    "Fix: MNU Neer Locker version badge restored to bottom right",
+    "Fix: Header layout tightened on small screens",
+    "Fix: TaskCard swipe and long press context menu fully repaired",
+  ],
   "1.7.0": [
     "UI: Dark mode follows system by default — System/Light/Dark selector in Settings",
     "UI: Pull to refresh on all pages",
@@ -476,7 +483,7 @@ const buildCSS = T => `
     .main-pad{padding:12px 12px 80px!important;}
     .nav-circle-btn{width:52px!important;height:52px!important;}
     .float-action-btn{width:46px!important;height:46px!important;font-size:18px!important;}
-    .search-full{min-width:80px;max-width:110px;}
+    .search-full{min-width:60px;max-width:90px;}
     .header-name{display:none!important;}
     .search-label{display:none!important;}
   }
@@ -605,7 +612,7 @@ function ToastList({items}) {
 
 function VersionBadge({T,hide}) {
   return (
-    <div style={{position:"fixed",bottom:12,right:14,zIndex:9999,background:T.surf,border:`1px solid ${T.bor}`,borderRadius:8,padding:"4px 12px",fontSize:10,fontWeight:700,letterSpacing:"0.03em",userSelect:"none",display:"flex",gap:5,alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)",opacity:hide?0:1,transform:hide?"translateY(12px)":"translateY(0)",transition:"opacity .25s ease,transform .25s ease",pointerEvents:hide?"none":"auto"}}>
+    <div style={{position:"fixed",bottom:12,right:8,zIndex:499,background:T.surf,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:"0.03em",userSelect:"none",display:"flex",gap:5,alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)",opacity:hide?0:1,transform:hide?"translateY(12px)":"translateY(0)",transition:"opacity .25s ease,transform .25s ease",pointerEvents:hide?"none":"auto"}}>
       <span style={{color:T.scarlet,fontWeight:800}}>MNU</span>
       <span style={{color:T.faint}}>·</span>
       <span style={{color:T.sub}}>Neer Locker</span>
@@ -4152,7 +4159,7 @@ export default function App() {
         <div style={{display:"flex",minHeight:"100vh"}}>
           <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflowX:"hidden"}}>
             {/* Top bar */}
-            <header style={{background:T.surf,borderBottom:`1px solid ${T.bor}`,padding:"env(safe-area-inset-top, 0px) 16px 0",position:"sticky",top:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.06)"}}>
+            <header style={{background:T.surf,borderBottom:"1px solid "+T.bor,padding:"env(safe-area-inset-top, 0px) 8px 0",position:"sticky",top:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.06)"}}>
               <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.scarlet},${T.blue})`}}/>
               <div style={{display:"flex",alignItems:"center",gap:12,minHeight:56,padding:"0 4px"}}>
                 {/* Brand — tappable, goes home */}
@@ -4165,7 +4172,7 @@ export default function App() {
                 </button>
 
                 {/* Responsive right section */}
-              <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,marginLeft:"auto"}}>
+              <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,marginLeft:"auto",minWidth:0}}>
                 {/* Tablet/Desktop: full search bar */}
                 <button onClick={()=>{setShowGlobalSearch(true);playSound("open");}}
                   title="Search (⌘K)"
@@ -4192,7 +4199,7 @@ export default function App() {
                     <span style={{fontSize:10,color:T.sub,fontWeight:500}}>{ROLES[user.role]?.label||""}</span>
                   </div>
                 </button>
-                <Btn T={T} xs variant="ghost" onClick={doLogout} style={{flexShrink:0,whiteSpace:"nowrap",padding:"5px 10px",fontSize:11}}>Sign Out</Btn>
+                <button onClick={()=>{playSound("click");haptic("light");doLogout();}} title="Sign Out" style={{flexShrink:0,background:"none",border:"1px solid "+T.bor,borderRadius:8,padding:"5px 8px",cursor:"pointer",color:T.sub,fontSize:13,fontFamily:"inherit",transition:"all .15s",display:"flex",alignItems:"center",gap:4}} onMouseEnter={e=>e.currentTarget.style.color=T.scarlet} onMouseLeave={e=>e.currentTarget.style.color=T.sub}><span>↩</span><span className="header-name" style={{fontSize:11,fontWeight:700}}>Sign Out</span></button>
               </div>
               </div>
             </header>
@@ -4771,6 +4778,22 @@ export default function App() {
 
 
                         {/* Sound controls */}
+                        {/* Haptics toggle */}
+                        <div style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontWeight:700,color:T.txt}}>📳 Haptic Feedback</div>
+                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Vibration on taps and actions</div>
+                          </div>
+                          <button onClick={()=>{
+                            const next=!window._hapticsOff;
+                            window._hapticsOff=next;
+                            LS.set("nl3-haptics-off",next);
+                            if(!next){ setTimeout(()=>haptic("success"),50); }
+                            setForm(p=>({...p}));
+                          }} style={{width:50,height:27,borderRadius:14,background:!window._hapticsOff?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                            <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:!window._hapticsOff?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                          </button>
+                        </div>
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16,display:"grid",gap:12}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:2}}>🔊 Sound & Audio</div>
                           {/* On/Off */}
