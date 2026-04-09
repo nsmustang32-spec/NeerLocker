@@ -184,6 +184,16 @@ let _audioCtx = null;
 // Sound settings controlled by app — stored on window for easy access from playSound
 window._soundOn = true;
 window._soundVol = 0.22;
+
+// Haptic feedback — works on iOS and Android
+function haptic(type="light") {
+  try {
+    if(navigator.vibrate) {
+      const patterns={light:10,medium:20,heavy:40,success:[10,50,10],error:[20,30,20,30,20]};
+      navigator.vibrate(patterns[type]||10);
+    }
+  } catch(e){}
+}
 function getCtx() {
   try {
     if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -462,6 +472,8 @@ const buildCSS = T => `
   @media(min-width:1025px){
     .search-full{min-width:200px;}
   }
+  @keyframes ptrSpin{to{transform:rotate(360deg);}}
+  .ptr-spinner{animation:ptrSpin .6s linear infinite;}
   @media(max-width:480px){
     .brand-text{font-size:13px!important;}
     .header-name{display:none!important;}
@@ -1423,6 +1435,8 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
   const [msgInput,setMsgInput]=useState("");
   const msgEndRef=useRef(null);
   const inputRef=useRef(null);
+  const [isTyping,setIsTyping]=useState(false);
+  const typingTimer=useRef(null);
 
   // saveDMs — now handled by saveDms useCallback below
   const otherEmps=emps.filter(e=>e.id!==user.id);
@@ -1457,7 +1471,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
     setMsgInput("");
     const isGroup=selected.id===GROUP_ID;
     const newMsg={id:uid(),from:user.id,to:isGroup?GROUP_ID:selected.id,text:san(text),at:Date.now(),read:false,group:isGroup};
-    playSound("dm");
+    playSound("dm"); haptic("light");
     if(onXP) onXP();
     const updated=dms.map(d=>d.from===selected.id&&d.to===user.id?{...d,read:true}:d);
     const next=[...updated,newMsg];
@@ -1594,6 +1608,15 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
             }
             <div ref={msgEndRef}/>
           </div>
+          {/* Typing indicator */}
+          {isTyping&&(
+            <div style={{padding:"4px 18px",fontSize:11,color:T.sub,display:"flex",alignItems:"center",gap:6}}>
+              <div style={{display:"flex",gap:3}}>
+                {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:"50%",background:T.mut,animation:`pulse 1s ${i*200}ms ease-in-out infinite`}}/>)}
+              </div>
+              <span>typing…</span>
+            </div>
+          )}
           <div style={{padding:"10px 14px",borderTop:`1px solid ${T.bor}`,display:"flex",gap:8,flexShrink:0,background:T.surfH,alignItems:"center"}}>
             {/* Red back button — prominent, at left of send bar */}
             <button onClick={()=>setSelected(null)}
@@ -1602,7 +1625,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
               onMouseLeave={e=>{e.currentTarget.style.background="#dc2626";e.currentTarget.style.transform="scale(1)";}}
               title="Back to all messages"
             >←</button>
-            <input ref={inputRef} value={msgInput} onChange={e=>setMsgInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendMsg()} placeholder="Type a message… (Enter to send)"
+            <input ref={inputRef} value={msgInput} onChange={e=>{setMsgInput(e.target.value);setIsTyping(true);clearTimeout(typingTimer.current);typingTimer.current=setTimeout(()=>setIsTyping(false),1500);}} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendMsg()} placeholder="Type a message… (Enter to send)"
               style={{flex:1,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:12,color:T.txt,padding:"11px 16px",fontSize:14,fontFamily:"inherit",outline:"none",transition:"border-color .18s"}}
               onFocus={e=>e.target.style.borderColor=T.scarlet}
               onBlur={e=>e.target.style.borderColor=T.bor}
@@ -1624,14 +1647,62 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
 function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
   const [hov,setHov]=useState(false);
   const [expanded,setExpanded]=useState(false);
+  const [swipeX,setSwipeX]=useState(0);
+  const [swiping,setSwiping]=useState(false);
+  const swipeStart=useRef(null);
+  const [showCtx,setShowCtx]=useState(false);
+  const longPressRef=useRef(null);
+  const handleLongPress=()=>{ haptic("medium"); setShowCtx(true); };
+  const startLongPress=(e)=>{ longPressRef.current=setTimeout(handleLongPress,500); };
+  const cancelLongPress=()=>{ clearTimeout(longPressRef.current); };
+
+  const handleSwipeStart=(e)=>{ swipeStart.current=e.touches[0].clientX; setSwiping(false); };
+  const handleSwipeMove=(e)=>{
+    if(swipeStart.current===null) return;
+    const dx=e.touches[0].clientX-swipeStart.current;
+    if(Math.abs(dx)>8){ setSwiping(true); setSwipeX(Math.max(-80,Math.min(80,dx))); }
+  };
+  const handleSwipeEnd=()=>{
+    if(swipeX>50&&!isDone){ onToggle(task.id); }
+    else if(swipeX<-50&&canManage){ onDelete(task.id); }
+    setSwipeX(0); setSwiping(false); swipeStart.current=null;
+  };
   const assignee=task.assignedTo==="all"?null:emps.find(e=>e.id===task.assignedTo);
   const creator=emps.find(e=>e.id===task.createdBy);
   const overdue=task.dueDate&&!task.done&&new Date(task.dueDate)<new Date();
   const pc={Low:T.mut,Medium:T.blue,High:T.scarlet};
   const dl=daysLeft(task.dueDate);
   return (
+    <div style={{position:"relative",overflow:"hidden",borderRadius:T.sp.r+4,animation:`fadeUp .25s ${delay||0}ms ease both`}}>
+      {/* Swipe action backgrounds */}
+      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"space-between",borderRadius:T.sp.r+4,pointerEvents:"none"}}>
+        <div style={{background:"#16a34a",width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX>20?Math.min((swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:`${T.sp.r+4}px 0 0 ${T.sp.r+4}px`}}>
+          <span style={{fontSize:22,color:"#fff"}}>✓</span>
+        </div>
+        {canManage&&<div style={{background:T.err,width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX<-20?Math.min((-swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:`0 ${T.sp.r+4}px ${T.sp.r+4}px 0`}}>
+          <span style={{fontSize:22,color:"#fff"}}>🗑️</span>
+        </div>}
+      </div>
+      <div
+        onTouchStart={handleSwipeStart} onTouchMove={handleSwipeMove} onTouchEnd={handleSwipeEnd}
+        style={{transform:`translateX(${swipeX}px)`,transition:swiping?"none":"transform .25s cubic-bezier(.23,1,.32,1)"}}
+      >
+    {/* Long press context menu */}
+    {showCtx&&(
+      <div onClick={()=>setShowCtx(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{background:T.surf,borderRadius:16,padding:8,minWidth:200,boxShadow:"0 12px 40px rgba(0,0,0,.25)",animation:"bounceIn .3s cubic-bezier(.34,1.56,.64,1)"}}>
+          <div style={{padding:"8px 14px",fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em"}}>{task.title.slice(0,30)}</div>
+          {!isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.ok,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}} onMouseEnter={e=>e.currentTarget.style.background=T.surfH} onMouseLeave={e=>e.currentTarget.style.background="none"}>✅ Mark Complete</button>}
+          {isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.sub,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}} onMouseEnter={e=>e.currentTarget.style.background=T.surfH} onMouseLeave={e=>e.currentTarget.style.background="none"}>↩ Mark Incomplete</button>}
+          <button onClick={()=>{setShowCtx(false);setExpanded(e=>!e);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.txt,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}} onMouseEnter={e=>e.currentTarget.style.background=T.surfH} onMouseLeave={e=>e.currentTarget.style.background="none"}>📋 {expanded?"Hide":"View"} Details</button>
+          {canManage&&<button onClick={()=>{setShowCtx(false);onDelete(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.err,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}} onMouseEnter={e=>e.currentTarget.style.background="#fee2e288"} onMouseLeave={e=>e.currentTarget.style.background="none"}>🗑️ Delete Task</button>}
+        </div>
+      </div>
+    )}
     <div className="card" onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      style={{background:isDone?T.bg:T.card,border:`1px solid ${expanded?T.scarlet+"66":overdue?T.scarlet+"55":hov?T.borH:T.bor}`,borderRadius:T.sp.r+4,opacity:isDone?0.55:1,animation:`fadeUp .25s ${delay||0}ms ease both`,overflow:"hidden",transition:"border-color .2s"}}>
+      onTouchStart={startLongPress} onTouchEnd={cancelLongPress} onTouchMove={cancelLongPress}
+      onContextMenu={e=>{e.preventDefault();setShowCtx(true);}}
+      style={{background:isDone?T.bg:T.card,border:`1px solid ${expanded?T.scarlet+"66":overdue?T.scarlet+"55":hov?T.borH:T.bor}`,borderRadius:T.sp.r+4,opacity:isDone?0.55:1,overflow:"hidden",transition:"border-color .2s"}}>
       {/* Main row */}
       <div style={{padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"flex-start",gap:12}}>
         <button onClick={e=>{e.stopPropagation();onToggle(task.id);}} style={{width:22,height:22,borderRadius:6,border:`2px solid ${isDone?T.blue:hov?T.blue:T.bor}`,background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
@@ -2711,6 +2782,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
 
 // ─── GLOBAL SEARCH ────────────────────────────────────────────────────────────
 function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
+  const [filter,setFilter]=useState("all"); // all | tasks | inv | staff | anns
   const [q,setQ]=useState("");
   const ref=useRef(null);
   useEffect(()=>{ref.current?.focus();},[]);
@@ -2741,6 +2813,11 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
             style={{flex:1,background:"none",border:"none",outline:"none",fontSize:16,color:T.txt,fontFamily:"inherit"}}
             onKeyDown={e=>e.key==="Escape"&&onClose()}/>
           {q&&<button onClick={()=>setQ("")} style={{background:"none",border:"none",color:T.sub,cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
+        </div>
+        <div style={{display:"flex",gap:6,padding:"8px 14px",borderBottom:`1px solid ${T.bor}`,overflowX:"auto",scrollbarWidth:"none"}}>
+          {[["all","All"],["tasks","✅ Tasks"],["inv","📦 Inventory"],["staff","👤 Staff"],["anns","🔔 Announcements"]].map(([key,label])=>(
+            <button key={key} onClick={()=>setFilter(key)} style={{background:filter===key?T.scarlet:T.surfH,color:filter===key?"#fff":T.sub,border:`1px solid ${filter===key?T.scarlet:T.bor}`,borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,transition:"all .15s"}}>{label}</button>
+          ))}
         </div>
         {q&&(
           <div style={{maxHeight:360,overflowY:"auto"}}>
@@ -2898,6 +2975,74 @@ function LeaderboardPage({emps,progress,user,T}) {
   );
 }
 
+// ─── SKELETON LOADER ─────────────────────────────────────────────────────────
+function SkeletonCard({T,lines=2}) {
+  return (
+    <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:8,overflow:"hidden",position:"relative"}}>
+      <div style={{position:"absolute",inset:0,background:`linear-gradient(90deg,transparent 0%,${T.bor} 50%,transparent 100%)`,backgroundSize:"200% 100%",animation:"shimmer 1.4s ease infinite",opacity:0.5}}/>
+      <div style={{height:14,background:T.bor,borderRadius:6,width:"60%",marginBottom:10}}/>
+      {Array.from({length:lines}).map((_,i)=>(
+        <div key={i} style={{height:10,background:T.bor,borderRadius:6,width:i===lines-1?"40%":"85%",marginBottom:i<lines-1?8:0}}/>
+      ))}
+    </div>
+  );
+}
+
+// ─── NOTIFICATION BELL ────────────────────────────────────────────────────────
+function NotifBell({T,anns,dms,tasks,user,onOpen}) {
+  const count=(anns.filter(a=>!(a.dismissed||[]).includes(user?.id)).length)+(dms.filter(d=>d.to===user?.id&&!d.read).length);
+  return (
+    <button onClick={onOpen} style={{position:"relative",background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:8,display:"flex",alignItems:"center",transition:"background .15s"}}
+      onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
+      onMouseLeave={e=>e.currentTarget.style.background="none"}
+    >
+      <span style={{fontSize:18}}>🔔</span>
+      {count>0&&<div style={{position:"absolute",top:0,right:0,background:T.scarlet,color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{count>9?"9+":count}</div>}
+    </button>
+  );
+}
+
+// ─── NOTIFICATION CENTER ──────────────────────────────────────────────────────
+function NotifCenter({T,anns,dms,tasks,user,emps,onClose,setPage,onDismiss}) {
+  const activeAnns=anns.filter(a=>!(a.dismissed||[]).includes(user?.id)).slice(0,5);
+  const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).slice(0,5);
+  const overdue=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id)&&t.dueDate&&new Date(t.dueDate)<new Date()).slice(0,3);
+  const items=[
+    ...overdue.map(t=>({id:"t"+t.id,icon:"⚠️",title:"Overdue: "+t.title,sub:"Due "+new Date(t.dueDate).toLocaleDateString(),color:T.err,action:()=>{setPage("tasks");onClose();}})),
+    ...unreadDMs.map(d=>({id:"d"+d.id,icon:"💬",title:emps.find(e=>e.id===d.from)?.name||"Message",sub:d.text.slice(0,50),color:T.blue,action:()=>{setPage("dms");onClose();}})),
+    ...activeAnns.map(a=>({id:"a"+a.id,icon:({info:"ℹ️",warn:"⚠️",danger:"🚨"})[a.level]||"🔔",title:a.msg.slice(0,60),sub:"Announcement",color:T.scarlet,action:()=>{onDismiss(a.id);}})),
+  ];
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,0.3)",backdropFilter:"blur(4px)",display:"flex",justifyContent:"flex-end",alignItems:"flex-start",paddingTop:60,animation:"fadeIn .15s ease"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:16,width:"min(360px,92vw)",maxHeight:"70vh",overflowY:"auto",margin:"0 12px",boxShadow:"0 12px 40px rgba(0,0,0,.2)",animation:"fadeUp .2s ease"}}>
+        <div style={{padding:"14px 16px",borderBottom:`1px solid ${T.bor}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:T.txt}}>Notifications</div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:T.mut,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
+        </div>
+        {items.length===0?(
+          <div style={{padding:"32px 16px",textAlign:"center",color:T.sub,fontSize:14}}>🎉 All caught up!</div>
+        ):(
+          <div>
+            {items.map((item,i)=>(
+              <div key={item.id} onClick={item.action} style={{padding:"12px 16px",borderBottom:`1px solid ${T.bor}`,cursor:"pointer",display:"flex",gap:12,alignItems:"flex-start",transition:"background .15s",animation:`fadeUp .2s ${i*40}ms ease both`}}
+                onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
+                onMouseLeave={e=>e.currentTarget.style.background="none"}
+              >
+                <span style={{fontSize:20,flexShrink:0}}>{item.icon}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,fontWeight:700,color:T.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.title}</div>
+                  <div style={{fontSize:11,color:T.sub,marginTop:2}}>{item.sub}</div>
+                </div>
+                <div style={{width:8,height:8,borderRadius:"50%",background:item.color,flexShrink:0,marginTop:4}}/>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin,rememberMe,setRememberMe}) {
   const [tick,setTick]=useState(0);
@@ -3044,7 +3189,7 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
   const [T,setT]=useState(T0);
-  const [dark,setDk]=useState(false);
+  const [dark,setDk]=useState(LS.get('nl3-dark')!==null?LS.get('nl3-dark'):window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [compact,setCompact]=useState(false);
   const [accent,setAccent]=useState("");
   const [soundOn,setSoundOn]=useState(true);
@@ -3104,6 +3249,7 @@ export default function App() {
   const [showFeedback,setShowFeedback]=useState(false);
   const [showFinn,setShowFinn]=useState(false);
   const [xpToasts,setXpToasts]=useState([]);
+  const [showNotifCenter,setShowNotifCenter]=useState(false);
   const [showWelcomePortal,setShowWelcomePortal]=useState(false);
   const [finnAnim,setFinnAnim]=useState(false);
   const openFinn=()=>{setFinnAnim(true);setTimeout(()=>setShowFinn(true),420);};
@@ -3113,6 +3259,7 @@ export default function App() {
   const [pinRevealed,setPinRevealed]=useState(false);
 
   const [emps,setEmps]=useState(SEED);
+  const [dataLoaded,setDataLoaded]=useState(false);
   const [tasks,setTasks]=useState([]);
   const [inv,setInv]=useState([]);
   const [anns,setAnns]=useState([]);
@@ -3124,6 +3271,9 @@ export default function App() {
   const [siteOffline,setSiteOffline]=useState(false);
 
   const [page,setPage]=useState("home");
+  const [ptrActive,setPtrActive]=useState(false);
+  const [ptrY,setPtrY]=useState(0);
+  const ptrRef=useRef(null);
   const [swipeBacking,setSwipeBacking]=useState(false);
   const [prevPage,setPrevPage]=useState(null);
   const [modal,setModal]=useState(null);
@@ -3187,6 +3337,7 @@ export default function App() {
       const d=dk??false; const c=cp??false; const av=accentVal||"";
       setDk(d); setCompact(c); setAccent(av); setT(mkTheme(d,c,av));
       if(offlineVal) setSiteOffline(offlineVal);
+      setDataLoaded(true);
       // Sound prefs loaded separately
       const sOn=LS.get("nl3-sound-on"); if(sOn!==null)setSoundOn(sOn);
       const sVol=LS.get("nl3-sound-vol"); if(sVol!==null)setSoundVol(sVol);
@@ -3272,6 +3423,27 @@ export default function App() {
     window.addEventListener("offline",goOffline);
     window.addEventListener("online",goOnline);
     return()=>{window.removeEventListener("offline",goOffline);window.removeEventListener("online",goOnline);};
+  },[]);
+
+  // Shake to report bug
+  useEffect(()=>{
+    let lastX=0,lastY=0,lastZ=0,lastT=0;
+    const handleMotion=(e)=>{
+      const {x,y,z}=e.acceleration||{};
+      if(!x&&!y&&!z) return;
+      const now=Date.now();
+      if(now-lastT<100) return;
+      lastT=now;
+      const delta=Math.abs(x-lastX)+Math.abs(y-lastY)+Math.abs(z-lastZ);
+      lastX=x;lastY=y;lastZ=z;
+      if(delta>30){
+        playSound("notify");
+        haptic("medium");
+        setShowFeedback(true);
+      }
+    };
+    window.addEventListener("devicemotion",handleMotion);
+    return()=>window.removeEventListener("devicemotion",handleMotion);
   },[]);
 
   // Keyboard shortcut — Cmd+K or Ctrl+K opens global search
@@ -3399,6 +3571,17 @@ export default function App() {
     setToasts(p=>[...p.slice(-4),{id,msg,type}]);
     setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)),3200);
   },[]);
+
+  // Listen for system dark mode changes
+  useEffect(()=>{
+    const mq=window.matchMedia('(prefers-color-scheme: dark)');
+    const handler=(e)=>{
+      // Only auto-switch if user hasn't manually set a preference
+      if(LS.get('nl3-dark')===null) { setDk(e.matches); setT(mkTheme(e.matches,compact,accent)); }
+    };
+    mq.addEventListener('change',handler);
+    return()=>mq.removeEventListener('change',handler);
+  },[compact,accent]);
 
   const applyTheme=useCallback(async(d,c,a)=>{const ac=a!==undefined?a:accent;setDk(d);setCompact(c);setAccent(ac);setT(mkTheme(d,c,ac));LS.set("nl3-dark",d);LS.set("nl3-compact",c);if(a!==undefined)LS.set("nl3-accent",a);},[accent]);
 
@@ -3580,7 +3763,7 @@ export default function App() {
     if(completing){
       addAct("task_done",`"${task.title}" completed by ${user?.name}`,user?.id);
       grantXP(task.priority==="High"?50:25,"task complete");
-      playSound("task");
+      playSound("task"); haptic("success");
       clearTimeout(undoRef.current);setUndoId(id);
       undoRef.current=setTimeout(()=>setUndoId(null),7000);
       // If repeat, recreate. If repeatDays, schedule for next matching day
@@ -3765,6 +3948,19 @@ export default function App() {
     if(title&&body){
       LS.set(lastPushKey, now);
       await NOTIF.send(emp.id, title, body, "finn-insight");
+    }
+
+    // Weekly digest — Monday mornings only
+    const isMonday=new Date().getDay()===1;
+    const lastWeeklyKey="nl3-finn-last-weekly";
+    const lastWeekly=LS.get(lastWeeklyKey)||0;
+    const daysSinceWeekly=(now-lastWeekly)/86400000;
+    if(isMonday&&daysSinceWeekly>6){
+      const pg2=progData[emp.id]||{xp:0,streak:0,title:"Pioneer"};
+      const weeklyTitle="Finn — Weekly Digest 📊";
+      const weeklyBody="Week ahead: "+myOpenTasks.length+" open tasks"+( overdue.length>0?", "+overdue.length+" overdue":"")+". You're a "+pg2.title+" with "+pg2.xp+" XP.";
+      LS.set(lastWeeklyKey, now);
+      await NOTIF.send(emp.id, weeklyTitle, weeklyBody, "finn-weekly");
     }
   };
 
@@ -3988,6 +4184,7 @@ export default function App() {
                   <span className="search-label">Search</span>
                   <span className="search-label" style={{fontSize:10,opacity:0.5}}>⌘K</span>
                 </button>
+                <NotifBell T={T} anns={anns} dms={dms} tasks={tasks} user={user} onOpen={()=>{playSound("open");setShowNotifCenter(true);}}/>
                 {/* Profile button */}
                 <button onClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}
                   style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:10,transition:"background .15s",fontFamily:"inherit",minWidth:0}}
@@ -4013,7 +4210,21 @@ export default function App() {
 
             {/* Page content */}
             <main
-              style={{flex:1,padding:T.compact?"12px 14px 60px":"18px 20px 80px",overflowY:"auto",overflowX:"hidden"}}
+              style={{flex:1,padding:T.compact?"12px 14px 60px":"18px 20px 80px",overflowY:"auto",overflowX:"hidden",position:"relative"}}
+              ref={ptrRef}
+              onTouchStart={e=>{
+                if(ptrRef.current?.scrollTop===0) window._ptrStartY=e.touches[0].clientY;
+              }}
+              onTouchMove={e=>{
+                if(window._ptrStartY===undefined) return;
+                const dy=e.touches[0].clientY-window._ptrStartY;
+                if(dy>0&&ptrRef.current?.scrollTop===0) setPtrY(Math.min(dy*0.4,60));
+              }}
+              onTouchEnd={async()=>{
+                if(ptrY>45){ setPtrActive(true); await refreshData(); setTimeout(()=>{setPtrActive(false);setPtrY(0);},600); }
+                else setPtrY(0);
+                window._ptrStartY=undefined;
+              }}
               onTouchStart={e=>{
                 if(document.documentElement.getAttribute("data-device")==="mobile"){
                   window._swipeStartX=e.touches[0].clientX;
@@ -4048,6 +4259,15 @@ export default function App() {
                 window._swipeStartX=0;window._swipeStartY=0;window._swipePct=0;
               }}
             >
+              {/* Pull to refresh indicator */}
+              {(ptrY>0||ptrActive)&&(
+                <div style={{position:"absolute",top:0,left:0,right:0,display:"flex",justifyContent:"center",paddingTop:8,zIndex:200,pointerEvents:"none",transform:`translateY(${ptrActive?0:ptrY-40}px)`,transition:ptrActive?"transform .2s":"none"}}>
+                  <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:20,padding:"6px 14px",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 12px rgba(0,0,0,.12)",fontSize:12,fontWeight:700,color:T.sub}}>
+                    <span className={ptrActive?"ptr-spinner":""} style={{fontSize:14,display:"inline-block",transform:ptrActive?"none":`rotate(${ptrY*3}deg)`}}>↻</span>
+                    {ptrActive?"Refreshing…":"Pull to refresh"}
+                  </div>
+                </div>
+              )}
               {/* Drag-tracking swipe overlay (fades with finger) */}
               <div id="swipe-overlay" style={{position:"fixed",inset:0,background:`linear-gradient(90deg,${T.scarlet}88,transparent)`,opacity:0,pointerEvents:"none",zIndex:800,transition:"opacity .06s ease"}}/>
               {/* Swipe-back commit animation */}
@@ -4076,7 +4296,8 @@ export default function App() {
                     {can(user,"assign")&&<Btn T={T} sm onClick={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}}>+ New Task</Btn>}
                   </div>
                   <SLabel T={T}>OPEN · {openT.length}</SLabel>
-                  {openT.length===0&&<Empty icon="🎉" msg="All caught up!" T={T}/>}
+                  {openT.length===0&&dataLoaded&&<Empty icon="🎉" msg="All caught up!" T={T}/>}
+                  {!dataLoaded&&[1,2,3].map(i=><SkeletonCard key={i} T={T}/>)}
                   <div style={{display:"grid",gap:T.compact?6:8,marginBottom:20}}>
                     {openT.map((t,i)=><TaskCard key={t.id} task={t} emps={emps} canManage={can(user,"assign")} onToggle={toggleTask} onDelete={deleteTask} T={T} delay={i*35}/>)}
                   </div>
@@ -4376,15 +4597,37 @@ export default function App() {
                       <div style={{display:"grid",gap:16}}>
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>Display & Sound</div>
 
-                        {/* Dark mode toggle */}
-                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <div>
-                            <div style={{fontWeight:700,color:T.txt}}>Dark Mode</div>
-                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Switch between light and dark theme</div>
+                        {/* Dark mode — system/light/dark */}
+                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
+                          <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Appearance</div>
+                          <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Choose your theme or follow your device setting.</div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                            {[
+                              {key:"system",label:"System",icon:"🌓",desc:"Follows your device"},
+                              {key:"light", label:"Light",  icon:"☀️", desc:"Always light"},
+                              {key:"dark",  label:"Dark",   icon:"🌙", desc:"Always dark"},
+                            ].map(opt=>{
+                              const current=LS.get('nl3-dark')===null?"system":dark?"dark":"light";
+                              const active=current===opt.key;
+                              return (
+                                <button key={opt.key} onClick={()=>{
+                                  playSound("click");
+                                  if(opt.key==="system"){
+                                    LS.set('nl3-dark',null);
+                                    const sys=window.matchMedia('(prefers-color-scheme: dark)').matches;
+                                    applyTheme(sys,compact);
+                                  } else {
+                                    applyTheme(opt.key==="dark",compact);
+                                  }
+                                }} style={{background:active?T.scarlet+"18":"none",border:`2px solid ${active?T.scarlet:T.bor}`,borderRadius:12,padding:"12px 8px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",transition:"all .2s"}}>
+                                  <div style={{fontSize:20,marginBottom:4}}>{opt.icon}</div>
+                                  <div style={{fontWeight:700,color:active?T.scarlet:T.txt,fontSize:13}}>{opt.label}</div>
+                                  <div style={{fontSize:10,color:T.sub,marginTop:2}}>{opt.desc}</div>
+                                  {active&&<div style={{fontSize:10,color:T.scarlet,fontWeight:800,marginTop:4}}>✓ Active</div>}
+                                </button>
+                              );
+                            })}
                           </div>
-                          <button onClick={()=>{playSound("click");applyTheme(!dark,compact);}} style={{width:50,height:27,borderRadius:14,background:dark?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                            <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:dark?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
-                          </button>
                         </div>
 
                         {/* Layout density */}
@@ -4798,6 +5041,9 @@ export default function App() {
               setPage={p=>{setPrevPage(page);setPage(p);setSearch("");}}
               onClose={()=>setShowGlobalSearch(false)}/>
           )}
+
+          {/* Notification center */}
+          {showNotifCenter&&<NotifCenter T={T} anns={anns} dms={dms} tasks={tasks} user={user} emps={emps} onClose={()=>setShowNotifCenter(false)} setPage={p=>{setPrevPage(page);setPage(p);}} onDismiss={dismissAnn}/>}
 
           {/* First-time welcome portal */}
           {showWelcomePortal&&<WelcomePortal T={T} onDone={()=>setShowWelcomePortal(false)}/>}
