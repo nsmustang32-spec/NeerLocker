@@ -2,7 +2,29 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const VERSION   = "1.6.0";
-const FINN_VERSION = "1.0.0";
+const FINN_VERSION = "1.1.0";
+const FINN_PATCH_NOTES = {
+  "1.1.0": [
+    "Shift summaries for managers and boss",
+    "Assign tasks directly through Finn",
+    "Complete tasks through Finn with confirmation",
+    "Confirm before any action — never acts without your approval",
+    "Conversation memory — Finn remembers last 8 messages",
+    "Smarter notifications — level-up alerts, streak countdown",
+    "Improved natural conversation for non-work topics",
+    "Restock list — ask what we should order",
+    "Team task view for managers",
+  ],
+  "1.0.0": [
+    "Finn launched — Fusion Integrated Neural Navigator",
+    "Local engine — zero cost, no API needed",
+    "Tasks, inventory, XP, messages, navigation",
+    "Multi-turn creation for tasks, inventory, announcements, DMs",
+    "Settings control — dark mode, status, layout",
+    "Glow effects and Processing indicator",
+    "Personalized intro based on your current data",
+  ],
+};
 const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
@@ -1773,7 +1795,7 @@ const NOTIF = {
   },
 
   async subscribe(userId) {
-    if(!NOTIF.supported()||!NOTIF.isPWA()) return null;
+    if(!NOTIF.supported()) return null;
     try {
       const reg = await NOTIF.register();
       if(!reg) return null;
@@ -1987,7 +2009,7 @@ function WelcomePortal({T, onDone}) {
 }
 
 // ─── FINN AI CHAT ─────────────────────────────────────────────────────────────
-function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact}) {
+function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact}) {
   const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
   const getIntro=()=>{
     const pg=progress[user?.id]||{xp:0,streak:0,title:"Pioneer"};
@@ -2042,10 +2064,12 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
 
     let reply="";
     try {
-      // ── Data snapshot ───────────────────────────────────────────────────────
       const q=text.toLowerCase().trim().replace(/[\u2018\u2019\u201A\u201B']/g,"'");
       const words=q.split(/\s+/);
+
+      // ── Live data ──────────────────────────────────────────────────────────
       const openTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id));
+      const allOpenTasks=tasks.filter(t=>!t.done); // for manager view
       const overdueTasks=openTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
       const highPri=openTasks.filter(t=>t.priority==="High");
       const lowInv=inv.filter(i=>i.stock<5);
@@ -2056,52 +2080,91 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
       const myProg=progress[user?.id]||{xp:0,level:1,title:"Pioneer",streak:0};
       const myLvInfo=getLevelInfo(myProg.xp);
       const isXP=XP_ELIGIBLE_ROLES.includes(user?.role);
+      const isMgr=["boss","manager"].includes(user?.role);
+      const isStaff=["boss","manager","assistant"].includes(user?.role);
       const now=new Date();
-      const timeStr=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-      const dateStr=now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+      const todayStr=now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+      const timeStr2=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+      const todayStart=new Date(); todayStart.setHours(0,0,0,0);
       const weekAgo=Date.now()-7*86400000;
       const thisWeek=doneTasks.filter(t=>(t.createdAt||0)>weekAgo).length;
       const lastWeek=doneTasks.filter(t=>(t.createdAt||0)>(weekAgo-7*86400000)&&(t.createdAt||0)<=weekAgo).length;
 
-      // ── Simple but reliable matcher ─────────────────────────────────────────
-      // Uses includes() — fast, no regex errors, no false negatives
-      const has=(...phrases)=>phrases.some(p=>q.includes(p));
-      const hasAll=(...phrases)=>phrases.every(p=>q.includes(p));
-
-      // ── Conversation context ────────────────────────────────────────────────
-      const history=msgs.slice(-6);
+      // ── Conversation memory (last 8 messages) ──────────────────────────────
+      const history=msgs.slice(-8);
       const lastBot=(history.filter(m=>m.role==="assistant").slice(-1)[0]?.content||"").toLowerCase();
+      const prevUser=(history.filter(m=>m.role==="user").slice(-2,-1)[0]?.content||"").toLowerCase();
       const ctx={
-        xp: lastBot.includes("xp")||lastBot.includes("level")||lastBot.includes("streak")||lastBot.includes("pioneer")||lastBot.includes("trailblazer"),
-        tasks: lastBot.includes("task")||lastBot.includes("overdue")||lastBot.includes("priority"),
-        inv: lastBot.includes("stock")||lastBot.includes("item")||lastBot.includes("inventory"),
-        dms: lastBot.includes("message")||lastBot.includes("unread"),
-        asked: lastBot.endsWith("?"),
+        xp:      lastBot.includes("xp")||lastBot.includes("level")||lastBot.includes("streak"),
+        tasks:   lastBot.includes("task")||lastBot.includes("overdue")||lastBot.includes("priority"),
+        inv:     lastBot.includes("stock")||lastBot.includes("item")||lastBot.includes("inventory"),
+        dms:     lastBot.includes("message")||lastBot.includes("unread"),
+        team:    lastBot.includes("online")||lastBot.includes("team"),
+        perf:    lastBot.includes("week")||lastBot.includes("completed")||lastBot.includes("activity"),
+        asked:   lastBot.endsWith("?"),
+        lastTopic: lastBot.includes("task")?"tasks":lastBot.includes("inventory")?"inv":lastBot.includes("xp")||lastBot.includes("level")?"xp":lastBot.includes("message")?"dms":"general",
+        // Remember last named employee mentioned
+        lastEmp: (()=>{ const m=emps.find(e=>e.id!==user?.id&&history.map(h=>h.content.toLowerCase()).some(c=>e.name.toLowerCase().split(" ").some(n=>n.length>2&&c.includes(n)))); return m||null; })(),
       };
 
+      // ── Matching helpers ───────────────────────────────────────────────────
+      const has=(...phrases)=>phrases.some(p=>q.includes(p));
+      const hasAll=(...phrases)=>phrases.every(p=>q.includes(p));
+      const empMatch=(qStr)=>emps.find(e=>e.id!==user?.id&&e.name.toLowerCase().split(" ").some(n=>n.length>2&&qStr.includes(n)));
+      const taskMatch=(qStr)=>tasks.find(t=>t.title.toLowerCase().split(" ").some(w=>w.length>3&&qStr.includes(w)));
 
       // ── PENDING MULTI-TURN ─────────────────────────────────────────────────
       if(pendingAction){
         const pa=pendingAction;
-        if(pa.type==="create_task"){
+
+        if(pa.type==="confirm"){
+          if(has("yes","yeah","yep","yup","sure","do it","confirmed","go ahead","ok","okay")){
+            // Execute the confirmed action
+            const act=pa.data;
+            if(act.action==="complete_task"){
+              const t=tasks.find(t=>t.id===act.taskId);
+              if(t&&saveTask){
+                saveTask({...t,done:true});
+                if(grantXP) grantXP(t.priority==="High"?50:25,"task complete");
+              }
+              setPendingAction(null);
+              reply="Done! "+act.taskTitle+" marked complete. ✅"+(t?.priority==="High"?" +50 XP!":"");
+            } else if(act.action==="assign_task"){
+              const t=tasks.find(t=>t.id===act.taskId);
+              if(t&&saveTask) saveTask({...t,assignedTo:act.empId});
+              setPendingAction(null);
+              reply="Done! "+act.taskTitle+" assigned to "+act.empName+". ✅";
+            } else if(act.action==="create_task"){
+              const newTask={id:Math.random().toString(36).slice(2,9),title:act.title,description:"",priority:act.priority,assignedTo:act.assignedTo,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:"",repeat:false,repeatDays:[]};
+              if(saveTask) saveTask(newTask);
+              if(addAct) addAct("task_created","Finn created: "+newTask.title,user?.id);
+              if(grantXP) grantXP(25,"finn task");
+              setPendingAction(null);
+              reply="Task created: "+newTask.title+" ["+newTask.priority+"] → "+(act.assignedTo==="all"?"Everyone":emps.find(e=>e.id===act.assignedTo)?.name||"them")+". ✅";
+            }
+          } else {
+            setPendingAction(null);
+            reply="Cancelled. What else can I help with?";
+          }
+
+        } else if(pa.type==="create_task"){
           if(!pa.data.title){
             setPendingAction({...pa,data:{...pa.data,title:text}});
-            reply="Got it. What priority — Low, Medium, or High?";
+            reply="Got it. Priority — Low, Medium, or High?";
           } else if(!pa.data.priority){
             const pri=q.includes("high")?"High":q.includes("low")?"Low":"Medium";
             setPendingAction({...pa,data:{...pa.data,priority:pri}});
             reply="Priority: "+pri+". Assign to everyone or someone specific?";
           } else {
             let assignTo="all";
-            const empMatch=emps.find(e=>e.id!==user?.id&&words.some(w=>w.length>2&&e.name.toLowerCase().includes(w)));
-            if(empMatch) assignTo=empMatch.id;
-            const newTask={id:Math.random().toString(36).slice(2,9),title:pa.data.title,description:"",priority:pa.data.priority,assignedTo:assignTo,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:"",repeat:false};
-            if(saveTask) saveTask(newTask);
-            if(addAct) addAct("task_created","Finn created task for "+user?.name,user?.id);
-            if(grantXP) grantXP(25,"finn task");
-            setPendingAction(null);
-            reply="Done! Task created: "+newTask.title+" ["+newTask.priority+"] → "+(assignTo==="all"?"Everyone":emps.find(e=>e.id===assignTo)?.name||"them")+". ✅";
+            const em=empMatch(q);
+            if(em) assignTo=em.id;
+            else if(!has("everyone","all","team")) assignTo="all";
+            const t=pa.data;
+            setPendingAction({type:"confirm",data:{action:"create_task",title:t.title,priority:t.priority,assignedTo:assignTo}});
+            reply="Creating: "+t.title+" ["+t.priority+"] → "+(assignTo==="all"?"Everyone":emps.find(e=>e.id===assignTo)?.name||"them")+". Confirm?";
           }
+
         } else if(pa.type==="create_inv"){
           if(!pa.data.name){
             setPendingAction({...pa,data:{...pa.data,name:text}});
@@ -2113,6 +2176,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
             setPendingAction(null);
             reply=newItem.name+" added — "+stock+" in stock. ✅";
           }
+
         } else if(pa.type==="create_ann"){
           if(!pa.data.msg){
             setPendingAction({...pa,data:{...pa.data,msg:text}});
@@ -2124,11 +2188,12 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
             setPendingAction(null);
             reply="Announcement posted. ✅";
           }
+
         } else if(pa.type==="send_dm"){
           if(!pa.data.to){
-            const empMatch=emps.find(e=>e.id!==user?.id&&words.some(w=>w.length>2&&e.name.toLowerCase().includes(w)));
-            if(!empMatch) reply="Could not find that person. Try their name.";
-            else { setPendingAction({...pa,data:{...pa.data,to:empMatch.id,toName:empMatch.name}}); reply="Got it. What do you want to say to "+empMatch.name+"?"; }
+            const em=empMatch(q);
+            if(!em) reply="Could not find that person. Try their name.";
+            else { setPendingAction({...pa,data:{...pa.data,to:em.id,toName:em.name}}); reply="Got it. What do you want to say to "+em.name+"?"; }
           } else {
             const newDm={id:Math.random().toString(36).slice(2,9),from:user?.id||"",to:pa.data.to,text,at:Date.now(),read:false,system:false,feedback:false};
             if(saveDms) saveDms([...dms,newDm]);
@@ -2136,69 +2201,191 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
             setPendingAction(null);
             reply="Sent to "+pa.data.toName+". ✅";
           }
+
+        } else if(pa.type==="assign_task"){
+          if(!pa.data.taskId){
+            const t=taskMatch(q)||tasks.find(tt=>!tt.done&&(tt.assignedTo==="all"||tt.assignedTo===user?.id));
+            if(!t) reply="Could not find that task. Try the task name.";
+            else { setPendingAction({...pa,data:{...pa.data,taskId:t.id,taskTitle:t.title}}); reply="Assigning: "+t.title+". Who should it go to?"; }
+          } else if(!pa.data.empId){
+            const em=empMatch(q)||(has("me","myself")?user:null);
+            if(!em) reply="Could not find that person. Try their name.";
+            else {
+              setPendingAction({type:"confirm",data:{action:"assign_task",taskId:pa.data.taskId,taskTitle:pa.data.taskTitle,empId:em.id,empName:em.name||user?.name}});
+              reply="Assign "+pa.data.taskTitle+" to "+(em.id===user?.id?"yourself":em.name)+"? Confirm?";
+            }
+          }
+
         } else {
           setPendingAction(null);
           reply="Got it! What else can I help with?";
         }
 
       // ── CANCEL ────────────────────────────────────────────────────────────
-      } else if(has("never mind","nevermind","cancel","forget it","stop that","nope","nah") && ctx.asked){
-        reply="No problem! What else can I help with?";
+      } else if((q==="no"||q==="nope"||q==="nah"||has("cancel","never mind","nevermind","forget it","stop that","don't do it"))&&(ctx.asked||pendingAction)){
+        setPendingAction(null);
+        reply="No problem! Anything else?";
+
+      // ── SHIFT SUMMARY (managers/boss) ─────────────────────────────────────
+      } else if(isMgr&&has("shift summary","what happened today","today's summary","shift report","what did","who did what","team summary","daily summary","summarize today","summarize the shift","what got done","what was done today")){
+        const todayDone=tasks.filter(t=>t.done&&(t.createdAt||0)>todayStart.getTime());
+        const onlineNow=emps.filter(e=>e.status==="online"&&e.id!==user?.id);
+        const todayAct=act ? act.filter(a=>(a.at||0)>todayStart.getTime()) : [];
+        const byEmp={};
+        todayAct.forEach(a=>{
+          if(!a.userId||a.userId===user?.id) return;
+          const emp=emps.find(e=>e.id===a.userId);
+          if(!emp) return;
+          if(!byEmp[emp.name]) byEmp[emp.name]=[];
+          byEmp[emp.name].push(a.type);
+        });
+        const lines=["Shift summary — "+todayStr+":",""];
+        if(todayDone.length>0) lines.push("Completed today: "+todayDone.map(t=>t.title).join(", ")+".");
+        else lines.push("No tasks completed today yet.");
+        lines.push("");
+        if(onlineNow.length>0) lines.push("Online now: "+onlineNow.map(e=>e.name).join(", ")+".");
+        if(Object.keys(byEmp).length>0){
+          lines.push("");
+          lines.push("Activity by person:");
+          Object.entries(byEmp).forEach(([name,types])=>{
+            const done=types.filter(t=>t==="task_done").length;
+            const logins=types.filter(t=>t==="login").length;
+            lines.push("  "+name+": "+(done>0?done+" task"+(done>1?"s":"")+" completed":"no tasks")+(logins>0?", logged in":"")+".");
+          });
+        }
+        if(allOpenTasks.length>0){
+          lines.push("");
+          lines.push("Still open: "+allOpenTasks.length+" task"+(allOpenTasks.length>1?"s":"")+(allOpenTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date()).length>0?" ("+allOpenTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date()).length+" overdue)":"")+".");
+        }
+        reply=lines.join("\n");
+
+      // ── WHAT DID [person] DO ──────────────────────────────────────────────
+      } else if(isMgr&&(has("what did","what has","how did","did they","did she","did he"))){
+        const em=empMatch(q)||ctx.lastEmp;
+        if(em){
+          const todayAct2=(act||[]).filter(a=>a.userId===em.id&&(a.at||0)>todayStart.getTime());
+          const empDone=tasks.filter(t=>t.done&&(t.assignedTo===em.id||t.assignedTo==="all")).slice(0,5);
+          const empOpen=tasks.filter(t=>!t.done&&(t.assignedTo===em.id||t.assignedTo==="all"));
+          const pg=progress[em.id]||{xp:0,level:1,title:"Pioneer"};
+          const lv=getLevelInfo(pg.xp);
+          const todayLogins=todayAct2.filter(a=>a.type==="login").length;
+          const todayDone=todayAct2.filter(a=>a.type==="task_done").length;
+          reply=em.name+" — "+lv.title+" (Level "+lv.level+", "+pg.xp+" XP).\n";
+          reply+=todayLogins>0?"Logged in today. ":"Not logged in today. ";
+          reply+=todayDone>0?todayDone+" task"+(todayDone>1?"s":"")+" completed today. ":"No tasks completed today. ";
+          reply+=(em.status==="online"?"Currently online.":"Currently offline.");
+          if(empOpen.length>0) reply+="\nOpen tasks: "+empOpen.slice(0,3).map(t=>t.title).join(", ")+(empOpen.length>3?" +more":"")+"." ;
+        } else {
+          reply="Who do you want to know about? Try mentioning their name.";
+        }
+
+      // ── COMPLETE TASK ─────────────────────────────────────────────────────
+      } else if(has("mark","complete","finish","done with","finished","check off","close out")){
+        const t=taskMatch(q)||
+          (has("first","top","next","the first")&&openTasks[0])||
+          (has("overdue","late")&&overdueTasks[0]);
+        if(t){
+          setPendingAction({type:"confirm",data:{action:"complete_task",taskId:t.id,taskTitle:t.title}});
+          reply="Mark \""+t.title+"\" as complete? Confirm?";
+        } else if(openTasks.length>0){
+          reply="Which task? You have: "+openTasks.slice(0,4).map((t,i)=>(i+1)+". "+t.title).join(", ")+".";
+        } else {
+          reply="No open tasks to complete.";
+        }
+
+      // ── ASSIGN TASK ───────────────────────────────────────────────────────
+      } else if(isStaff&&(has("assign","reassign","give the task","give that task","put on","hand off","delegate"))){
+        const t=taskMatch(q);
+        const em=empMatch(q);
+        if(t&&em){
+          setPendingAction({type:"confirm",data:{action:"assign_task",taskId:t.id,taskTitle:t.title,empId:em.id,empName:em.name}});
+          reply="Assign \""+t.title+"\" to "+em.name+"? Confirm?";
+        } else if(t){
+          setPendingAction({type:"assign_task",data:{taskId:t.id,taskTitle:t.title,empId:null}});
+          reply="Assigning \""+t.title+"\". Who should it go to?";
+        } else if(em){
+          setPendingAction({type:"assign_task",data:{taskId:null,taskTitle:null,empId:em.id,empName:em.name}});
+          reply="Assigning to "+em.name+". Which task?";
+        } else {
+          setPendingAction({type:"assign_task",data:{taskId:null,taskTitle:null,empId:null}});
+          reply="Sure. Which task do you want to assign?";
+        }
 
       // ── GREETINGS ─────────────────────────────────────────────────────────
       } else if(has("good morning","good afternoon","good evening","good night","gm ","gn ")||q==="gm"||q==="gn"){
         const h=now.getHours();
-        const nudge=overdueTasks.length>0?" Heads up — "+overdueTasks.length+" overdue task"+(overdueTasks.length>1?"s":"")+" waiting.":(openTasks.length>0?" You have "+openTasks.length+" open task"+(openTasks.length>1?"s":"")+".":" ");
-        if(has("night","gn")) reply="Night, "+nick+"! Log in tomorrow to keep your streak going. 🔥";
+        const nudge=overdueTasks.length>0?" "+overdueTasks.length+" overdue task"+(overdueTasks.length>1?"s":"")+" waiting.":(openTasks.length>0?" "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" open.":"");
+        if(has("night","gn")) reply="Night, "+nick+"! Log in tomorrow to keep your streak. 🔥";
         else if(h<12) reply="Morning, "+nick+"!"+nudge;
         else if(h<17) reply="Afternoon, "+nick+"!"+nudge;
         else reply="Evening, "+nick+"!"+nudge;
 
-      } else if(has("how are you","how r u","how're you","hows it going","how's it going","you good","you okay","how have you been","you alright","how you doing")){
-        const r=["Doing great! Ready to help.","All good! What do you need, "+nick+"?","Running smooth. What can I do for you?"];
+      } else if(has("how are you","how r u","how're you","hows it going","how's it going","how you doing","you good","you okay","how have you been","you alright","what's good","what's up","whats up","what up")){
+        const r=["Doing great, ready to help!","All good! What do you need?","Running smooth. What can I do for you?","Good! Always better when there's work to do.","Never been better — what's on your mind?"];
         reply=r[Math.floor(Math.random()*r.length)];
 
-      } else if(has("not bad","doing well","pretty good","good thanks","doing great","all good","im good","i am good","im fine","i am fine","doing fine")){
-        reply="Good to hear, "+nick+"! "+(openTasks.length>0?"You have "+openTasks.length+" open task"+(openTasks.length>1?"s":"")+" — want a summary?":"No open tasks right now, all clear.");
+      } else if(has("not bad","doing well","pretty good","good thanks","doing great","all good","im good","i am good","im fine","i am fine","doing fine","pretty well","not too bad")){
+        reply="Good to hear, "+nick+"! "+(openTasks.length>0?"You've got "+openTasks.length+" open task"+(openTasks.length>1?"s":"")+" if you need a starting point.":"No open tasks right now.");
 
-      } else if(q==="hi"||q==="hey"||q==="hello"||q==="yo"||q==="sup"||q==="hiya"||q==="howdy"||has("hi ","hey ","hello ","hiya","howdy")){
+      } else if(q==="hi"||q==="hey"||q==="hello"||q==="yo"||q==="sup"||q==="hiya"||q==="howdy"||has("hi ","hey ","hello ")){
         const h=now.getHours();
-        const g=h<12?"Morning":"Hey";
-        const nudge=overdueTasks.length>0?" "+overdueTasks.length+" overdue task"+(overdueTasks.length>1?"s":"")+" waiting.":(openTasks.length>0?" "+openTasks.length+" open task"+(openTasks.length>1?"s":"")+".":"");
+        const g=h<12?"Morning":h<17?"Hey":"Evening";
+        const nudge=overdueTasks.length>0?" "+overdueTasks.length+" overdue.":(openTasks.length>0?" "+openTasks.length+" tasks open.":"");
         reply=g+", "+nick+"!"+nudge;
 
       // ── CONTEXT FOLLOW-UPS ────────────────────────────────────────────────
-      } else if(has("tell me more","what else","more info","go on","keep going","and then","what about","how about","elaborate","explain that","what does that mean")&&ctx.xp){
-        reply=isXP?"You are "+myLvInfo.pct+"% to "+( myLvInfo.next?.title||"max level")+". "+myLvInfo.xpToNext+" XP needed. Best way: complete a high priority task (50 XP).":"Your role does not earn XP.";
+      } else if(has("tell me more","what else","more info","go on","keep going","and then","elaborate","explain more","expand on that","say more")&&ctx.lastTopic!=="general"){
+        if(ctx.xp)      reply=isXP?"You're "+myLvInfo.pct+"% to "+(myLvInfo.next?.title||"max")+". "+myLvInfo.xpToNext+" XP needed. Best: high priority task = 50 XP.":"Your role doesn't earn XP.";
+        else if(ctx.tasks) reply=openTasks.length>0?"Top task: "+openTasks[0].title+" ["+openTasks[0].priority+"]."+(overdueTasks.length>0?" "+overdueTasks.length+" overdue.":""):"No open tasks.";
+        else if(ctx.inv) reply=inv.length>0?inv.length+" items tracked. "+outInv.length+" out, "+lowInv.length+" low.":"No inventory yet.";
+        else if(ctx.dms) reply="You've sent "+sentDMs+" message"+(sentDMs>1?"s":"")+". "+unreadDMs+" unread.";
+        else reply="What do you want to know more about? I can go deeper on tasks, XP, inventory, or team.";
 
-      } else if(has("tell me more","what else","more info","go on")&&ctx.tasks){
-        reply=openTasks.length===0?"No open tasks right now. All clear!":"Top task: "+openTasks[0].title+" ["+openTasks[0].priority+"]."+(overdueTasks.length>0?" "+overdueTasks.length+" overdue.":"");
-
-      } else if((q==="yes"||q==="yeah"||q==="yep"||q==="sure"||q==="ok"||q==="okay")&&ctx.asked){
-        if(ctx.xp) reply="Your XP: "+myProg.xp+". Level "+myProg.level+" ("+myProg.title+"). "+myLvInfo.xpToNext+" to next.";
-        else if(ctx.tasks) reply=openTasks.length>0?"Open tasks:\n"+openTasks.slice(0,3).map((t,i)=>(i+1)+". "+t.title+" ["+t.priority+"]").join("\n"):"No open tasks.";
+      } else if((q==="yes"||q==="yeah"||q==="yep"||q==="sure"||q==="ok"||q==="okay"||q==="yup")&&ctx.asked&&!pendingAction){
+        if(ctx.tasks) reply=openTasks.length>0?"Open tasks:\n"+openTasks.slice(0,4).map((t,i)=>(i+1)+". "+t.title+" ["+t.priority+"]").join("\n"):"No open tasks.";
+        else if(ctx.xp) reply=isXP?"XP: "+myProg.xp+" | Level "+myProg.level+" ("+myProg.title+") | Streak: "+myProg.streak+"d | "+myLvInfo.xpToNext+" to next.":"Your role doesn't track XP.";
         else reply="Sure! What do you need?";
 
-      // ── THANKS ────────────────────────────────────────────────────────────
-      } else if(has("thanks","thank you"," ty ","thx","appreciate","cheers","nice one","good job","great job","well done")||q==="ty"){
-        const r=["No problem!","Anytime!","Happy to help!","Of course, "+nick+"!"];
+      // ── THANKS / REACT ────────────────────────────────────────────────────
+      } else if(has("thanks","thank you","ty","thx","appreciate","cheers","nice one","good job","great job","well done")||q==="ty"){
+        const r=["No problem, "+nick+"!","Anytime!","Happy to help!","Of course!","That's what I'm here for.","Any time, "+nick+"."];
         reply=r[Math.floor(Math.random()*r.length)]+(openTasks.length>0?" "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" still open.":"");
 
       } else if(has("lol","lmao","haha","hehe")||q.includes("😂")||q.includes("💀")){
-        reply="😄 Glad I could help. Back to work, "+nick+"!";
+        reply="😄 "+["Glad I could help!","Ha, right?","Always.",][Math.floor(Math.random()*3)]+" Back to work, "+nick+"!";
 
-      } else if(has("bored","nothing to do","slow day","quiet day")){
-        reply=openTasks.length>0?"Never dull — "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" waiting. Want me to list them?":"Nothing open. Good time to check announcements or message a teammate.";
+      } else if(has("bored","nothing to do","slow day","quiet day","dead today")){
+        reply=openTasks.length>0?"Never dull — "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" waiting. Want me to list them?":"Nothing open right now. Good time to check announcements or message a teammate.";
 
-      } else if(has("tired","exhausted","sleepy","burnt out","worn out")){
-        reply="Hang in there, "+nick+"! "+(openTasks.length>0?openTasks.length+" task"+(openTasks.length>1?"s":"")+" left. Start small.":"No open tasks — take a breather.");
+      } else if(has("tired","exhausted","sleepy","burnt out","worn out","drained")){
+        const encouragements=["Hang in there!","Almost there!","You got this!","Take a breath — you're doing great."];
+        reply=encouragements[Math.floor(Math.random()*encouragements.length)]+" "+(openTasks.length>0?openTasks.length+" task"+(openTasks.length>1?"s":"")+" left. Start small.":"No open tasks — maybe take a quick break.");
 
-      } else if(has("stressed","overwhelmed","too much","swamped","drowning")){
-        reply=openTasks.length>0?"One at a time. Start with: "+openTasks[0].title+".":"No open tasks right now. Breathe — you are caught up.";
+      } else if(has("stressed","overwhelmed","too much","swamped","drowning","can't keep up")){
+        reply=openTasks.length>0?"One at a time. Start with: "+openTasks[0].title+".":"No open tasks right now. Take a breath — you're actually caught up.";
 
-      } else if(has("joke","make me laugh","something funny","tell me something funny")){
-        const jokes=["Why did the inventory manager quit? He could not count on anyone.","What did the overdue task say? I need closure!","Why do tasks love Finn? I never leave them hanging."];
+      } else if(has("cool","awesome","nice","great","love it","fire ","that's fire","lit ")||q==="fire"||q==="lit"||q==="sick"||q==="goat"){
+        const hype=["Let's go! 🎉","That's what I'm talking about!","Let's keep it going!","Love to hear it!"];
+        reply=hype[Math.floor(Math.random()*hype.length)]+(openTasks.length>0?" "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" still open.":"");
+
+      } else if(q==="ok"||q==="okay"||q==="cool"||q==="got it"||q==="sounds good"||q==="alright"||q==="noted"||q==="perfect"||has("sounds good","that works","makes sense","understood","got it")){
+        reply=openTasks.length>0?"Got it! "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" open if you need a starting point.":"Got it! Anything else?";
+
+      } else if(has("joke","make me laugh","something funny","tell me a joke","funny")){
+        const jokes=["Why did the inventory manager quit? He couldn't count on anyone.","What did the overdue task say? I need closure!","Why do tasks love Finn? I never leave them hanging.","What do you call a task with no due date? Free range.","Why did the employee get promoted? Because they kept their streak alive."];
         reply=jokes[Math.floor(Math.random()*jokes.length)];
+
+      } else if(has("what do you think","your opinion","do you prefer","what would you choose","if you could","hypothetically","what's better")){
+        reply="Ha, I don't have opinions on that one — I just have your task list and inventory counts. "+nick+" gets to make the calls. 😄 What can I actually help with?";
+
+      } else if(has("what are you doing","what are you up to","you busy","you free")){
+        reply="Just here waiting for you, "+nick+". "+(openTasks.length>0?"You've got "+openTasks.length+" open task"+(openTasks.length>1?"s":"")+" I can help with.":"Nothing pending on my end either.");
+
+      } else if(has("do you sleep","do you eat","do you dream","are you alive","do you have feelings","can you feel")){
+        reply="I don't sleep, eat, or dream — but I do keep track of your task list 24/7. That counts for something, right?";
+
+      } else if(has("what's your favorite","whats your favorite","do you like","do you love","do you hate")){
+        reply="I don't have favorites — but if I did, it'd probably be a completed task list. Ask me something about the app and I'll give you a real answer. 😄";
 
       // ── NAVIGATE ──────────────────────────────────────────────────────────
       } else if(hasAll("task")&&has("go to","take me","open ","show me","navigate","switch to","bring up")){
@@ -2213,26 +2400,26 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
         reply="Taking you to Activity. ↗"; setTimeout(()=>setPage&&setPage("act"),350);
       } else if(has("settings","preferences","profile")&&has("go to","take me","open ","show me","navigate","switch to")){
         reply="Taking you to Settings. ↗"; setTimeout(()=>setPage&&setPage("set"),350);
+      } else if(has("leaderboard","rankings","top scores")&&has("go to","take me","open","show","navigate")){
+        reply="Taking you to the Leaderboard. ↗"; setTimeout(()=>setPage&&setPage("leaderboard"),350);
       } else if(has("go home","take me home","home page")){
         reply="Taking you home. ↗"; setTimeout(()=>setPage&&setPage("home"),350);
 
       // ── SETTINGS ──────────────────────────────────────────────────────────
-      } else if(has("dark mode")&&has("on","enable","turn on","activate","switch on")){
+      } else if(has("dark mode")&&has("on","enable","turn on","activate")){
         if(applyTheme) applyTheme(true,compact); reply="Dark mode on. ✅";
-      } else if(has("dark mode")&&has("off","disable","turn off")){
+      } else if(has("dark mode")&&has("off","disable","turn off")||has("light mode")){
         if(applyTheme) applyTheme(false,compact); reply="Light mode on. ✅";
-      } else if(has("light mode")||has("turn on light","enable light")){
-        if(applyTheme) applyTheme(false,compact); reply="Light mode on. ✅";
-      } else if(has("compact")&&has("on","enable","turn on","activate")){
+      } else if(has("compact")&&has("on","enable","turn on")){
         if(applyTheme) applyTheme(dark,true); reply="Compact layout on. ✅";
-      } else if(has("comfortable","normal layout","default layout")){
+      } else if(has("comfortable","normal layout","regular layout")){
         if(applyTheme) applyTheme(dark,false); reply="Comfortable layout on. ✅";
-      } else if(has("set","change","mark")&&has("status","me as")&&has("online","offline","busy")){
+      } else if(has("status","set me","mark me","change my status")&&has("online","offline","busy")){
         const s=q.includes("busy")?"busy":q.includes("offline")?"offline":"online";
         if(saveStatus) saveStatus(s); reply="Status set to "+s+". ✅";
 
-      // ── CREATE ────────────────────────────────────────────────────────────
-      } else if(has("create task","make a task","add a task","new task","make task","add task")||(has("create","make","add","new")&&has("task","to-do","todo","assignment"))){
+      // ── CREATE TASK ───────────────────────────────────────────────────────
+      } else if(has("create task","make a task","add a task","new task","add task","make task")||(has("create","make","add","new")&&has("task","to-do","todo","assignment"))){
         const stripped=text.replace(/create|make|add|new|a |task|to-?do|assignment|can you|please/gi,"").trim();
         if(stripped.length>2){
           setPendingAction({type:"create_task",data:{title:stripped,priority:null,assignedTo:null}});
@@ -2241,6 +2428,8 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
           setPendingAction({type:"create_task",data:{title:null,priority:null,assignedTo:null}});
           reply="Sure! What should the task be called?";
         }
+
+      // ── CREATE INVENTORY ──────────────────────────────────────────────────
       } else if(has("add item","add to inventory","new item","create item","add stock")||(has("add","create","new")&&has("item","inventory","stock","product","supply"))){
         const stripped=text.replace(/add|create|new|item|inventory|stock|product|supply|to|can you|please/gi,"").trim();
         if(stripped.length>2){
@@ -2250,7 +2439,9 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
           setPendingAction({type:"create_inv",data:{name:null,stock:undefined}});
           reply="What item do you want to add?";
         }
-      } else if(has("announce","send announcement","post announcement","make announcement","create announcement")||(has("announce","announcement")&&has("send","post","create","make","write"))){
+
+      // ── CREATE ANNOUNCEMENT ───────────────────────────────────────────────
+      } else if(has("announce","send announcement","post announcement","make announcement","create announcement")){
         if(!can(user,"assign")){ reply="You need Manager or above to post announcements."; }
         else {
           const stripped=text.replace(/announce|send|post|make|create|write|announcement|can you|please/gi,"").trim();
@@ -2263,86 +2454,105 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
           }
         }
 
-      // ── TIME / DATE ───────────────────────────────────────────────────────
-      } else if(has("what time","current time","time is it","what's the time","what time is it")){
-        reply="It is "+timeStr+".";
-      } else if(has("what day","what date","today's date","what is today","what's today","what is the date","the date")){
-        reply="Today is "+dateStr+".";
-
       // ── SEND DM ───────────────────────────────────────────────────────────
       } else if(has("send a message","send message","send dm","message to ","dm to ","text to ")){
-        const empMatch=emps.find(e=>e.id!==user?.id&&words.some(w=>w.length>2&&e.name.toLowerCase().includes(w)));
-        if(empMatch){
-          setPendingAction({type:"send_dm",data:{to:empMatch.id,toName:empMatch.name,msg:null}});
-          reply="Messaging "+empMatch.name+". What do you want to say?";
+        const em=empMatch(q);
+        if(em){
+          setPendingAction({type:"send_dm",data:{to:em.id,toName:em.name,msg:null}});
+          reply="Messaging "+em.name+". What do you want to say?";
         } else {
           setPendingAction({type:"send_dm",data:{to:null,toName:null,msg:null}});
           reply="Who do you want to message?";
         }
 
       // ── FEEDBACK ──────────────────────────────────────────────────────────
-      } else if(has("bug","report","broken","feature request","suggestion","feedback","doesn't work","not working")){
+      } else if(has("bug","report","broken","feature request","suggestion","feedback")){
         setPendingAction({type:"send_dm",data:{to:"TECH",toName:"Tech Admin",msg:null}});
-        reply="I will send that to the Technical Administrator. What is the issue?";
+        reply="I'll send that to the Technical Administrator. What's the issue?";
+
+      // ── TIME / DATE ───────────────────────────────────────────────────────
+      } else if(has("what time","current time","time is it","what's the time")){
+        reply="It's "+timeStr2+".";
+      } else if(has("what day","what date","today's date","what is today","what's today","the date")){
+        reply="Today is "+todayStr+".";
 
       // ── TASKS INFO ────────────────────────────────────────────────────────
       } else if(has("overdue","past due","late tasks","missed deadline")){
-        if(overdueTasks.length===0) reply="No overdue tasks. You are ahead. ✅";
+        if(overdueTasks.length===0) reply="No overdue tasks. You're ahead. ✅";
         else reply=overdueTasks.length+" overdue: "+overdueTasks.map(t=>t.title).join(", ")+".";
-      } else if(has("list tasks","show tasks","all tasks","my tasks","show my tasks","what are my tasks","what tasks")){
+      } else if(has("list tasks","show tasks","all tasks","my tasks","show my tasks","what are my tasks","what tasks do i have")){
         if(openTasks.length===0) reply="No open tasks right now.";
         else reply="Your tasks:\n"+openTasks.map((t,i)=>(i+1)+". "+t.title+" ["+t.priority+"]").join("\n");
-      } else if(has("what should i do","next task","where do i start","what to do","suggest a task","recommend")){
+      } else if(has("what should i do","next task","where do i start","what to do","suggest","recommend","what's first")){
         if(overdueTasks.length>0) reply="Start with: "+overdueTasks[0].title+" — overdue.";
         else if(highPri.length>0) reply="Next: "+highPri[0].title+" — high priority.";
         else if(openTasks.length>0) reply="Work on: "+openTasks[0].title+".";
         else reply="No open tasks. All clear! ✅";
-      } else if(has("how many tasks","task count","tasks open","open tasks")){
-        reply=openTasks.length+" open: "+overdueTasks.length+" overdue, "+highPri.length+" high priority. "+doneTasks.length+" completed total.";
-      } else if(has("high priority","urgent tasks","important tasks","priority tasks")){
+      } else if(has("how many tasks","task count","tasks open")){
+        reply=openTasks.length+" open: "+overdueTasks.length+" overdue, "+highPri.length+" high priority. "+doneTasks.length+" completed.";
+      } else if(has("high priority","urgent tasks","important tasks")){
         if(highPri.length===0) reply="No high priority tasks right now.";
         else reply=highPri.length+" high priority: "+highPri.map(t=>t.title).join(", ")+".";
-      } else if(has("completed tasks","finished tasks","done tasks","how many done","tasks done")){
+      } else if(has("completed tasks","finished tasks","done tasks","how many done")){
         reply=doneTasks.length+" completed. This week: "+thisWeek+", last week: "+lastWeek+".";
+
+      // ── TEAM (all open tasks) — manager view ──────────────────────────────
+      } else if(isMgr&&has("all tasks","team tasks","everyone's tasks","what's open","what tasks are open","all open")){
+        if(allOpenTasks.length===0) reply="No open tasks across the team. All clear!";
+        else reply="Team — "+allOpenTasks.length+" open tasks:\n"+allOpenTasks.slice(0,8).map((t,i)=>{
+          const a=t.assignedTo==="all"?"Everyone":emps.find(e=>e.id===t.assignedTo)?.name||"Unknown";
+          return (i+1)+". "+t.title+" ["+t.priority+"] → "+a;
+        }).join("\n")+(allOpenTasks.length>8?" +"+(allOpenTasks.length-8)+" more":"");
 
       // ── INVENTORY INFO ────────────────────────────────────────────────────
       } else if(has("low stock","running low","what's low","low inventory")){
-        if(lowInv.length===0) reply="All items well stocked. 👍";
+        if(lowInv.length===0) reply="All items stocked. 👍";
         else reply=lowInv.length+" low: "+lowInv.map(i=>i.name+" ("+i.stock+")").join(", ")+".";
       } else if(has("out of stock","what's out","empty stock")){
         if(outInv.length===0) reply="Nothing out of stock.";
         else reply="Out of stock: "+outInv.map(i=>i.name).join(", ")+".";
-      } else if(has("inventory","stock summary","what's in stock","items we have")){
-        reply=inv.length+" items tracked. "+outInv.length+" out, "+lowInv.length+" low.";
+      } else if(has("what should we order","what to restock","restock list","order list")){
+        const restock=[...outInv,...lowInv.filter(i=>!outInv.find(o=>o.id===i.id))];
+        if(restock.length===0) reply="Nothing needs restocking right now.";
+        else reply="Restock list ("+restock.length+" items):\n"+restock.map((i,idx)=>(idx+1)+". "+i.name+" — "+i.stock+" left"+(i.stock===0?" (OUT)":"")).join("\n");
+      } else if(has("inventory","stock summary","items we have","what do we have")){
+        reply=inv.length+" items tracked. "+outInv.length+" out of stock, "+lowInv.length+" low (under 5).";
 
-      // ── MESSAGES INFO ─────────────────────────────────────────────────────
+      // ── MESSAGES ──────────────────────────────────────────────────────────
       } else if(has("unread messages","unread dms","new messages","do i have messages")){
         reply=unreadDMs===0?"No unread messages.":unreadDMs+" unread message"+(unreadDMs>1?"s":"")+".";
       } else if(has("messages sent","how many messages","dms sent")){
-        reply="You have sent "+sentDMs+" message"+(sentDMs!==1?"s":"")+"."+( sentDMs===0?" Each DM earns 5 XP!":"");
+        reply="You've sent "+sentDMs+" message"+(sentDMs>1?"s":"")+"."+( sentDMs===0?" Each DM earns 5 XP!":"");
 
       // ── XP & LEVELS ───────────────────────────────────────────────────────
-      } else if(has("my xp","my level","my rank","my title","my progress","how much xp","what level","what's my level")){
-        if(!isXP) reply="Your role does not earn XP.";
-        else reply="Level "+myProg.level+" — "+myProg.title+". "+myProg.xp+" XP. "+myLvInfo.xpToNext+" XP to "+( myLvInfo.next?.title||"max")+".";
-      } else if(has("my streak","login streak","how long streak","day streak")){
-        if(!isXP) reply="Streaks are not tracked for your role.";
-        else if(myProg.streak===0) reply="No streak yet. Log in daily to build one — 10 XP per day.";
+      } else if(has("my xp","my level","my rank","my title","my progress","how much xp","what level","what's my level","xp stats")){
+        if(!isXP) reply="Your role doesn't earn XP.";
+        else reply="Level "+myProg.level+" — "+myProg.title+". "+myProg.xp+" XP total. "+myLvInfo.xpToNext+" to "+(myLvInfo.next?.title||"max")+".";
+      } else if(has("my streak","login streak","day streak")){
+        if(!isXP) reply="Streaks aren't tracked for your role.";
+        else if(myProg.streak===0) reply="No streak yet. Log in daily — earns 10 XP/day.";
         else reply=myProg.streak+"-day streak! 🔥 Keep logging in daily.";
       } else if(has("earn xp","how to earn","get xp","gain xp","xp tips","ways to level")){
-        reply="XP: Login daily=10, Task done=25, High priority task=50, DM sent=5.";
+        reply="XP breakdown: Login daily=10, Task done=25, High priority task=50, DM sent=5.";
       } else if(has("next level","level up","how close","how far","xp to next")){
-        if(!isXP) reply="XP not tracked for your role.";
+        if(!isXP) reply="XP isn't tracked for your role.";
         else if(!myLvInfo.next) reply="Max level — Top Contributor. 🏆";
         else reply=myLvInfo.xpToNext+" XP to "+myLvInfo.next.title+" ("+myLvInfo.pct+"% there). Complete a high priority task for 50 XP.";
-      } else if(has("leaderboard","top xp","who has most xp","xp ranking","who is winning")){
+      } else if(has("leaderboard","top xp","who has most xp","xp ranking","who's winning","who is winning")){
         const ranked=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role)).map(e=>({name:e.name,xp:(progress[e.id]||{}).xp||0})).sort((a,b)=>b.xp-a.xp).slice(0,5);
         reply=ranked.length===0?"No XP data yet.":ranked.map((e,i)=>(i+1)+". "+e.name+" — "+e.xp+" XP").join("\n");
 
+      // ── EMPLOYEE OF MONTH ─────────────────────────────────────────────────
+      } else if(has("employee of the month","eotm","top employee","best employee","who's leading","who is leading","who's on top")){
+        const eligible=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role));
+        const top=eligible.map(e=>({...e,xp:(progress[e.id]||{}).xp||0})).sort((a,b)=>b.xp-a.xp)[0];
+        if(!top) reply="No XP data yet.";
+        else { const lv=getLevelInfo(top.xp); reply="⭐ "+top.name+" — "+lv.title+", "+top.xp+" XP, Level "+lv.level+"."; }
+
       // ── PERFORMANCE ───────────────────────────────────────────────────────
-      } else if(has("activity drop","why did my activity","less active","dropped off","doing less")){
+      } else if(has("activity drop","why did my activity","less active","dropped off")){
         if(thisWeek>=lastWeek) reply="No drop — "+thisWeek+" done this week vs "+lastWeek+" last. Trending "+(thisWeek>lastWeek?"up ↑":"steady →")+".";
-        else reply="This week: "+thisWeek+" vs last week: "+lastWeek+". Down "+(lastWeek-thisWeek)+". "+(overdueTasks.length>0?overdueTasks.length+" overdue tasks pulling focus.":"Try blocking time for focused work.");
+        else reply="This week: "+thisWeek+" vs last week: "+lastWeek+". Down "+(lastWeek-thisWeek)+". "+(overdueTasks.length>0?"You have "+overdueTasks.length+" overdue.":"Try blocking focus time.");
       } else if(has("my week","this week","weekly summary","how did i do","recap","weekly report")){
         const p=[];
         p.push(thisWeek+" task"+(thisWeek!==1?"s":"")+" completed");
@@ -2350,16 +2560,16 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
         if(isXP) p.push(myProg.xp+" XP");
         if(unreadDMs>0) p.push(unreadDMs+" unread messages");
         reply="This week: "+p.join(", ")+".";
-      } else if(has("what should i improve","how to improve","tips","advice","how to get better","boost my")){
+      } else if(has("what should i improve","improve","tips","advice","how to get better","boost")){
         const tips=[];
         if(overdueTasks.length>0) tips.push("Clear "+overdueTasks.length+" overdue task"+(overdueTasks.length>1?"s":""));
         if(highPri.length>0) tips.push("Finish "+highPri.length+" high priority task"+(highPri.length>1?"s":""));
         if(sentDMs===0) tips.push("Send a DM — earns 5 XP");
-        if(isXP&&myProg.streak<3) tips.push("Log in daily to build streak");
+        if(isXP&&myProg.streak<3) tips.push("Log in daily to build your streak");
         if(lowInv.length>0) tips.push("Restock "+lowInv.length+" item"+(lowInv.length>1?"s":""));
-        if(tips.length===0) tips.push("Looking solid — keep completing tasks");
+        if(tips.length===0) tips.push("Looking solid — keep it up");
         reply=tips.map((t,i)=>(i+1)+". "+t).join("\n");
-      } else if(has("what's left","unfinished","pending tasks","remind me","not done yet")){
+      } else if(has("what's left","unfinished","pending tasks","remind me","not done")){
         if(openTasks.length===0) reply="All clear — nothing unfinished! ✅";
         else reply="Still open: "+openTasks.slice(0,5).map(t=>t.title).join(", ")+(openTasks.length>5?" +"+(openTasks.length-5)+" more":"")+".";
 
@@ -2367,58 +2577,49 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,onClose,setPage,toast
       } else if(has("who's online","who is online","online now","who's on","who's working")){
         const online=emps.filter(e=>e.status==="online"&&e.id!==user?.id);
         reply=online.length===0?"No one else online.":"Online: "+online.map(e=>e.name).join(", ")+".";
-      } else if(has("how many people","team size","staff count","how many employees","how many members")){
+      } else if(has("how many people","team size","staff count","how many employees")){
         reply=emps.length+" team members total.";
 
       // ── ANNOUNCEMENTS ─────────────────────────────────────────────────────
-      } else if(has("any announcements","what's new","any news","announcements","latest update","recent updates")){
+      } else if(has("any announcements","what's new","any news","announcements","latest update")){
         const active=anns.filter(a=>!(a.dismissed||[]).includes(user?.id));
         if(active.length===0) reply="No active announcements.";
         else reply=active.length+" announcement"+(active.length>1?"s":"")+": "+active.slice(0,2).map(a=>a.msg.slice(0,70)).join(" | ")+".";
 
-      // ── WHO AM I / WHO IS FINN ────────────────────────────────────────────
+      // ── ABOUT ─────────────────────────────────────────────────────────────
       } else if(has("who are you","what are you","about finn","your name","what is finn","introduce yourself")){
-        reply="I am Finn — Fusion Integrated Neural Navigator v"+FINN_VERSION+". I help with tasks, inventory, XP, messages, and more. Just talk naturally.";
+        reply="I'm Finn — Fusion Integrated Neural Navigator v"+FINN_VERSION+" for MNU Neer Locker. Tasks, inventory, XP, messages, navigation — just ask.";
       } else if(has("who am i","my name","my role","about me","my account")){
-        reply="You are "+user?.name+", "+ROLES[user?.role]?.label+" at MNU Neer Locker."+(isXP?" Level "+myProg.level+" ("+myProg.title+"), "+myProg.xp+" XP.":"");
+        reply="You're "+user?.name+", "+ROLES[user?.role]?.label+" at MNU Neer Locker."+(isXP?" Level "+myProg.level+" ("+myProg.title+"), "+myProg.xp+" XP.":"");
 
       // ── HELP ──────────────────────────────────────────────────────────────
       } else if(has("help","what can you do","commands","capabilities")){
-        reply="Here is what I can do:\n1. Tasks — view, create, prioritize\n2. Inventory — stock, add items\n3. Messages — unread, send DM\n4. Announcements — view, create\n5. XP — stats, streak, leaderboard\n6. Performance — weekly summary, tips\n7. Settings — dark mode, status, layout\n8. Navigate — say: take me to tasks\n\nJust say what you need — I will figure it out.";
+        reply="Here's what I can do:\n1. Tasks — view, create, complete, assign\n2. Inventory — stock, add items, restock list\n3. Messages — unread, send DM\n4. Announcements — view, create\n5. XP — stats, streak, leaderboard\n6. Performance — weekly summary, tips\n7. Settings — dark mode, status, layout\n8. Navigate — say: take me to tasks\n9. Shift summary — managers: ask what happened today\n\nJust talk naturally — I'll figure it out.";
 
-      // ── AGREED / OK ───────────────────────────────────────────────────────
-      } else if(q==="ok"||q==="okay"||q==="cool"||q==="got it"||q==="sounds good"||q==="alright"||q==="noted"||q==="perfect"||has("sounds good","that works","makes sense","understood")){
-        reply=openTasks.length>0?"Got it! "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" still open if you need a starting point.":"Got it! Anything else?";
-
-      } else if(has("nice","awesome","great","amazing","love it","fire ","that's fire","lit ")||q==="fire"||q==="lit"){
-        reply="Let's go! 🎉 "+(openTasks.length>0?"Back to it — "+openTasks.length+" task"+(openTasks.length>1?"s":"")+" waiting.":"All clear!");
+      // ── DIRECT NAME MENTION → DM offer ────────────────────────────────────
+      } else if(empMatch(q)&&q.split(" ").length<=3){
+        const em=empMatch(q);
+        reply=em.name+" is "+(em.status==="online"?"online right now":"currently offline")+". Want to send them a message?";
 
       // ── UNKNOWN ───────────────────────────────────────────────────────────
       } else {
-        // Check if a team member name is explicitly mentioned (exact first or last name word)
-        const namedEmp=emps.find(e=>e.id!==user?.id&&e.name.toLowerCase().split(" ").some(namePart=>namePart.length>3&&words.includes(namePart)));
-        if(namedEmp){
-          setPendingAction({type:"send_dm",data:{to:namedEmp.id,toName:namedEmp.name,msg:null}});
-          reply="Want to message "+namedEmp.name+"? What do you want to say?";
-        } else {
-          const hints=[];
-          if(overdueTasks.length>0) hints.push(overdueTasks.length+" overdue");
-          if(unreadDMs>0) hints.push(unreadDMs+" unread");
-          if(lowInv.length>0) hints.push(lowInv.length+" low stock");
-          const fallbacks=[
-            "Not sure I caught that, "+nick+". Try: tasks, inventory, XP, or just chat!",
-            "Could you rephrase? I can help with tasks, messages, XP, inventory, and more.",
-            "Hmm, not quite sure about that one. Say help for a full list.",
-          ];
-          reply=fallbacks[Math.floor(Math.random()*fallbacks.length)]+(hints.length>0?" Heads up: "+hints.join(", ")+".":"");
-        }
+        const hints=[];
+        if(overdueTasks.length>0) hints.push(overdueTasks.length+" overdue");
+        if(unreadDMs>0) hints.push(unreadDMs+" unread");
+        if(lowInv.length>0) hints.push(lowInv.length+" low stock");
+        const fallbacks=[
+          "Not sure I caught that, "+nick+". Try: tasks, inventory, XP, or just chat!",
+          "Could you rephrase that? I can help with tasks, messages, XP, inventory, and more.",
+          "Hmm, not quite. Say help for a full list.",
+        ];
+        reply=fallbacks[Math.floor(Math.random()*fallbacks.length)]+(hints.length>0?" Heads up: "+hints.join(", ")+".":"");
       }
 
     } catch(err){
       reply="Something went wrong on my end. Try again!";
     }
 
-    if(!reply) reply="I am here, "+nick+"! What do you need?";
+    if(!reply) reply="I'm here, "+nick+"! What do you need?";
     setTimeout(()=>{
       setMsgs(prev=>[...prev,{role:"assistant",content:reply}]);
       setLoading(false);
@@ -2876,6 +3077,8 @@ export default function App() {
   const [progress,setProgress]=useState({}); // {userId: {xp,level,title,streak,last_login}}
   const notifEnabledRef=useRef(false);
   const [notifPerms,setNotifPerms]=useState(NOTIF.supported()?NOTIF.permission():"unsupported");
+  // Refresh permission state on focus
+  useEffect(()=>{ const h=()=>setNotifPerms(NOTIF.supported()?NOTIF.permission():"unsupported"); window.addEventListener("focus",h); return()=>window.removeEventListener("focus",h); },[]);
 
   useEffect(()=>{
     const saved=LS.get("nl3-notif-enabled");
@@ -3537,24 +3740,27 @@ export default function App() {
     if(hoursSincePush<4) return;
     const hour=new Date().getHours();
     let title=null; let body=null;
+    const lv=getLevelInfo(pg.xp);
     if(overdue.length>0){
       title="Finn — Action Needed";
-      body=`${overdue.length} task${overdue.length>1?"s are":" is"} overdue. Top: "${overdue[0].title}" — handle this now?`;
+      body=overdue.length+" task"+(overdue.length>1?"s":"")+" overdue. Start with: "+overdue[0].title;
     } else if(highPri.length>=2){
       title="Finn — Priority Queue";
-      body=`${highPri.length} high-priority tasks open. Next: "${highPri[0].title}" — ready to start?`;
-    } else if(pg.streak>0 && pg.streak%7===0){
-      title="Finn — Streak Milestone";
-      body=`${pg.streak}-day streak! You're a ${pg.title}. One more login keeps it alive.`;
-    } else if(pg.xp>0 && getLevelInfo(pg.xp).xpToNext<=50){
-      title="Finn — Level Up Close";
-      body=`You're ${getLevelInfo(pg.xp).xpToNext} XP from ${getLevelInfo(pg.xp).next?.title||"max"}. One task away!`;
-    } else if(myOpenTasks.length===0){
-      title="Finn — All Clear";
-      body="No open tasks. Nice work — check announcements or message a teammate.";
+      body=highPri.length+" high-priority tasks open. Next: "+highPri[0].title;
+    } else if(pg.xp>0&&lv.xpToNext>0&&lv.xpToNext<=50){
+      title="Finn — So close!";
+      body="You're "+lv.xpToNext+" XP from "+lv.next?.title+". Complete one task to level up!";
+    } else if(pg.streak>0&&pg.streak%7===0){
+      title="Finn — Streak Milestone 🔥";
+      body=pg.streak+"-day streak! You're a "+pg.title+". Keep it going.";
     } else if(pg.streak>0){
-      const streakHours=24-((Date.now()-Date.parse(new Date().toDateString()))/3600000);
-      if(streakHours<3) { title="Finn — Streak Alert"; body=`Your ${pg.streak}-day streak ends soon. Log a task to keep it going!`; }
+      const msTonight=new Date(); msTonight.setHours(23,59,59,999);
+      const hoursLeft=(msTonight-Date.now())/3600000;
+      if(hoursLeft<3){ title="Finn — Streak ending soon"; body="Your "+pg.streak+"-day streak ends in "+Math.round(hoursLeft)+" hour"+(Math.round(hoursLeft)!==1?"s":"")+". Log in and complete something!"; }
+    }
+    if(!title&&myOpenTasks.length===0){
+      title="Finn — All Clear ✅";
+      body="No open tasks. Nice work today.";
     }
     if(title&&body){
       LS.set(lastPushKey, now);
@@ -4247,10 +4453,6 @@ export default function App() {
                                 {/* Toggle */}
                                 <button onClick={async()=>{
                                   if(!notifEnabled){
-                                    if(!NOTIF.isPWA()){
-                                      toast("Add app to home screen first — then enable notifications","err");
-                                      return;
-                                    }
                                     const sub=await NOTIF.subscribe(user.id);
                                     setNotifPerms(NOTIF.permission());
                                     if(sub){
@@ -4275,12 +4477,27 @@ export default function App() {
                                 </button>
                               </div>
                               {notifEnabled&&(
-                                <div style={{fontSize:11,color:T.ok,fontWeight:600}}>✓ Notifications active — you&apos;ll be alerted when the app is in the background</div>
+                                <div style={{fontSize:11,color:T.ok,fontWeight:600}}>✓ Notifications enabled.</div>
                               )}
                               <div style={{fontSize:11,color:T.sub,lineHeight:1.6,background:T.bg,borderRadius:8,padding:"8px 12px"}}>
-                                {!NOTIF.isPWA()&&<div style={{color:T.warn,fontWeight:700,marginBottom:4}}>⚠️ You must open this app from your home screen for notifications to work.</div>}
-                                <strong>iPhone:</strong> Add to home screen from Safari · <strong>Android:</strong> Add to home screen from Chrome
+                                <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Status:</div>
+                                Permission: <span style={{color:notifPerms==="granted"?T.ok:T.err,fontWeight:700}}>{notifPerms}</span>
+                                {" · "}PWA mode: <span style={{color:NOTIF.isPWA()?T.ok:T.warn,fontWeight:700}}>{NOTIF.isPWA()?"Yes":"No (browser tab)"}</span>
+                                <div style={{marginTop:6}}><strong>iPhone:</strong> Open from Safari → Share → Add to Home Screen, then enable here.</div>
+                                <div><strong>Android/Desktop:</strong> Works in Chrome — just enable above.</div>
                               </div>
+                              {notifEnabled&&(
+                                <button onClick={async()=>{
+                                  try{
+                                    const r=await fetch("https://neer-locker.vercel.app/api/send-push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:user.id,title:"Finn — Test Notification",body:"Push notifications are working! Check this off.",tag:"test"})});
+                                    const d=await r.json();
+                                    if(d.sent>0) toast("Test notification sent! ✅");
+                                    else toast("Sent but 0 delivered — re-enable notifications","err");
+                                  }catch(e){ toast("Send failed: "+e.message,"err"); }
+                                }} style={{background:T.bG,border:`1px solid ${T.blue}44`,borderRadius:8,padding:"7px 14px",fontSize:12,fontWeight:700,color:T.blue,cursor:"pointer",fontFamily:"inherit",marginTop:8}}>
+                                  🔔 Send Test Notification
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
@@ -4624,7 +4841,7 @@ export default function App() {
           )}
 
           {/* Finn chat panel */}
-          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} onClose={()=>setShowFinn(false)} setPage={p=>{setShowFinn(false);setPrevPage(page);setPage(p);}} toast={toast} saveTask={upsertTask} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact}/>}
+          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} act={act} onClose={()=>setShowFinn(false)} setPage={p=>{setShowFinn(false);setPrevPage(page);setPage(p);}} toast={toast} saveTask={upsertTask} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact}/>}
 
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
 
@@ -5045,7 +5262,7 @@ export default function App() {
             {/* Patch Notes */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <div style={{fontWeight:700,color:T.txt}}>📋 Patch Notes — v{VERSION}</div>
+                <div style={{fontWeight:700,color:T.txt}}>📋 App Patch Notes — v{VERSION}</div>
                 <Btn T={T} sm onClick={()=>{
                   const notes=PATCH_NOTES[VERSION]||[];
                   if(!notes.length){toast("No patch notes for this version","warn");return;}
@@ -5068,6 +5285,83 @@ export default function App() {
                     {notes.map((note,i)=>(
                       <div key={i} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:i<notes.length-1?`1px solid ${T.bor}33`:"none",alignItems:"flex-start"}}>
                         <span style={{color:T.ok,fontWeight:800,fontSize:12,flexShrink:0,marginTop:1}}>✓</span>
+                        <span style={{fontSize:12,color:T.sub,lineHeight:1.5}}>{note}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+
+            {/* Finn Patch Notes */}
+            <div style={{background:T.card,border:`1px solid #1e7fa844`,borderRadius:14,padding:16,marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <svg width="18" height="18" viewBox="0 0 22 22" style={{flexShrink:0}}>
+                    <rect width="22" height="22" rx="6" fill="#0f2744"/>
+                    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
+                    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
+                    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+                    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
+                    <circle cx="11" cy="11" r="1" fill="#fff"/>
+                  </svg>
+                  <div style={{fontWeight:700,color:T.txt}}>Finn Patch Notes — v{FINN_VERSION}</div>
+                </div>
+                <Btn T={T} sm onClick={()=>{
+                  const notes=FINN_PATCH_NOTES[FINN_VERSION]||[];
+                  if(!notes.length){toast("No Finn patch notes for this version","warn");return;}
+                  const ann={id:uid(),msg:`🤖 Finn v${FINN_VERSION} — AI Assistant Update`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:notes,patchVersion:"Finn v"+FINN_VERSION,patchBuild:"FR"};
+                  saveAnns([ann,...anns]);
+                  toast("Finn update announced to all staff! ✅");
+                }}>📢 Announce Finn Update</Btn>
+              </div>
+              {/* Compose new Finn update */}
+              <div style={{background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:14,marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",marginBottom:8}}>COMPOSE FINN UPDATE NOTE</div>
+                <div style={{display:"flex",gap:8,marginBottom:8}}>
+                  <input
+                    placeholder="New Finn update note… (e.g. Finn can now complete tasks)"
+                    value={form.finnNote||""}
+                    onChange={e=>setForm(p=>({...p,finnNote:e.target.value}))}
+                    style={{flex:1,background:T.surf,border:`1px solid ${T.bor}`,borderRadius:8,color:T.txt,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}
+                    onKeyDown={e=>{
+                      if(e.key==="Enter"&&(form.finnNote||"").trim()){
+                        const note=(form.finnNote||"").trim();
+                        // Add to current version's notes in local state — actual update happens in code
+                        // but we announce it to staff right away
+                        const ann={id:uid(),msg:`🤖 Finn Update: ${note}`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:[note],patchVersion:"Finn v"+FINN_VERSION,patchBuild:"FR"};
+                        saveAnns([ann,...anns]);
+                        toast("Finn update note announced! ✅");
+                        setForm(p=>({...p,finnNote:""}));
+                      }
+                    }}
+                  />
+                  <Btn T={T} sm onClick={()=>{
+                    const note=(form.finnNote||"").trim();
+                    if(!note){toast("Enter a note first","err");return;}
+                    const ann={id:uid(),msg:`🤖 Finn Update: ${note}`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:[note],patchVersion:"Finn v"+FINN_VERSION,patchBuild:"FR"};
+                    saveAnns([ann,...anns]);
+                    toast("Finn update note announced! ✅");
+                    setForm(p=>({...p,finnNote:""}));
+                  }}>Send</Btn>
+                </div>
+                <div style={{fontSize:11,color:T.sub}}>Press Enter or Send to announce a Finn update note to all staff.</div>
+              </div>
+              {/* Existing Finn patch notes */}
+              {Object.entries(FINN_PATCH_NOTES).map(([ver,notes])=>(
+                <details key={ver} style={{background:T.bg,borderRadius:10,marginBottom:6,overflow:"hidden"}} open={ver===FINN_VERSION}>
+                  <summary style={{padding:"10px 14px",cursor:"pointer",fontWeight:700,fontSize:13,color:ver===FINN_VERSION?"#1e7fa8":T.sub,display:"flex",alignItems:"center",gap:8,listStyle:"none",userSelect:"none"}}
+                    onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}
+                  >
+                    <span style={{fontSize:16}}>{ver===FINN_VERSION?"🤖":"📦"}</span>
+                    <span>Finn v{ver}</span>
+                    {ver===FINN_VERSION&&<span style={{background:"#1e7fa8",color:"#fff",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:800}}>CURRENT</span>}
+                  </summary>
+                  <div style={{padding:"6px 14px 12px",borderTop:`1px solid ${T.bor}`}}>
+                    {notes.map((note,i)=>(
+                      <div key={i} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:i<notes.length-1?`1px solid ${T.bor}33`:"none",alignItems:"flex-start"}}>
+                        <span style={{color:"#1e7fa8",fontWeight:800,fontSize:12,flexShrink:0,marginTop:1}}>✓</span>
                         <span style={{fontSize:12,color:T.sub,lineHeight:1.5}}>{note}</span>
                       </div>
                     ))}
