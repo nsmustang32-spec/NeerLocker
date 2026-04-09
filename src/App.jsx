@@ -2792,16 +2792,16 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
     if(!q.trim()) return [];
     const lq=q.toLowerCase();
     const out=[];
-    tasks.filter(t=>t.title?.toLowerCase().includes(lq)).slice(0,3).forEach(t=>
+    if(filter==="all"||filter==="tasks") tasks.filter(t=>t.title?.toLowerCase().includes(lq)).slice(0,3).forEach(t=>
       out.push({type:"task",icon:"✅",label:t.title,sub:t.priority+" · "+(t.done?"Done":"Open"),page:"tasks",color:"#1e7fa8"}));
-    inv.filter(i=>i.name?.toLowerCase().includes(lq)).slice(0,3).forEach(i=>
+    if(filter==="all"||filter==="inv") inv.filter(i=>i.name?.toLowerCase().includes(lq)).slice(0,3).forEach(i=>
       out.push({type:"inv",icon:"📦",label:i.name,sub:"Stock: "+i.stock,page:"inv",color:"#7c3aed"}));
-    emps.filter(e=>e.name?.toLowerCase().includes(lq)&&can(user,"emp")).slice(0,3).forEach(e=>
+    if(filter==="all"||filter==="staff") emps.filter(e=>e.name?.toLowerCase().includes(lq)&&can(user,"emp")).slice(0,3).forEach(e=>
       out.push({type:"emp",icon:"👤",label:e.name,sub:ROLES[e.role]?.label||"",page:"set",color:ROLES[e.role]?.color||"#6b7280"}));
-    anns.filter(a=>a.msg?.toLowerCase().includes(lq)).slice(0,2).forEach(a=>
+    if(filter==="all"||filter==="anns") anns.filter(a=>a.msg?.toLowerCase().includes(lq)).slice(0,2).forEach(a=>
       out.push({type:"ann",icon:"🔔",label:a.msg.slice(0,50)+(a.msg.length>50?"…":""),sub:"Announcement",page:"anns",color:"#C8102E"}));
     return out;
-  },[q,tasks,inv,emps,anns]);
+  },[q,filter,tasks,inv,emps,anns]);
 
   return (
     <div style={{position:"fixed",inset:0,zIndex:9997,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:80,animation:"fadeUp .15s ease both"}}
@@ -3338,8 +3338,9 @@ export default function App() {
       const d=dk??false; const c=cp??false; const av=accentVal||"";
       setDk(d); setCompact(c); setAccent(av); setT(mkTheme(d,c,av));
       if(offlineVal) setSiteOffline(offlineVal);
-      setDataLoaded(true);
+      setTimeout(()=>setDataLoaded(true), 600); // min 600ms so skeleton is visible
       // Sound prefs loaded separately
+      window._hapticsOff=LS.get("nl3-haptics-off")===true;
       const sOn=LS.get("nl3-sound-on"); if(sOn!==null)setSoundOn(sOn);
       const sVol=LS.get("nl3-sound-vol"); if(sVol!==null)setSoundVol(sVol);
       const dMode=LS.get("nl3-device-mode"); if(dMode)setDeviceMode(dMode);
@@ -3426,7 +3427,7 @@ export default function App() {
     return()=>{window.removeEventListener("offline",goOffline);window.removeEventListener("online",goOnline);};
   },[]);
 
-  // Shake to report bug
+  // Shake to report bug — requests iOS permission if needed
   useEffect(()=>{
     let lastX=0,lastY=0,lastZ=0,lastT=0;
     const handleMotion=(e)=>{
@@ -3437,13 +3438,25 @@ export default function App() {
       lastT=now;
       const delta=Math.abs(x-lastX)+Math.abs(y-lastY)+Math.abs(z-lastZ);
       lastX=x;lastY=y;lastZ=z;
-      if(delta>30){
+      if(delta>25){
         playSound("notify");
         haptic("medium");
         setShowFeedback(true);
       }
     };
-    window.addEventListener("devicemotion",handleMotion);
+    const start=async()=>{
+      if(typeof DeviceMotionEvent!=="undefined"&&typeof DeviceMotionEvent.requestPermission==="function"){
+        try{
+          const perm=await DeviceMotionEvent.requestPermission();
+          if(perm==="granted") window.addEventListener("devicemotion",handleMotion);
+        }catch(e){}
+      } else {
+        window.addEventListener("devicemotion",handleMotion);
+      }
+    };
+    // Delay to let app finish loading, then request on first user tap
+    const onFirstTap=()=>{ start(); document.removeEventListener("touchend",onFirstTap); };
+    document.addEventListener("touchend",onFirstTap,{once:true});
     return()=>window.removeEventListener("devicemotion",handleMotion);
   },[]);
 
@@ -3673,6 +3686,7 @@ export default function App() {
   };
 
   const finishLogin=(emp)=>{
+    haptic("success");
     // Cancel any previous pending login transition
     clearTimeout(loginTimerRef.current);
     setWelData({name:emp.name,role:emp.role});
@@ -3803,6 +3817,7 @@ export default function App() {
     if(!window.confirm("Remove this task? This can't be undone.")) return;
     await SB.delete("tasks",{id});
     setTasks(prev=>prev.filter(t=>t.id!==id));
+    haptic("error");
     toast("Task removed","warn");
   };
 
@@ -4214,17 +4229,27 @@ export default function App() {
               style={{flex:1,padding:T.compact?"12px 14px 60px":"18px 20px 80px",overflowY:"auto",overflowX:"hidden",position:"relative"}}
               ref={ptrRef}
               onTouchStart={e=>{
-                if(ptrRef.current?.scrollTop===0) window._ptrStartY=e.touches[0].clientY;
+                window._ptrStartY=e.touches[0].clientY;
+                window._ptrScrollTop=ptrRef.current?.scrollTop||0;
               }}
               onTouchMove={e=>{
                 if(window._ptrStartY===undefined) return;
+                if(window._ptrScrollTop>0){ window._ptrStartY=undefined; return; }
                 const dy=e.touches[0].clientY-window._ptrStartY;
-                if(dy>0&&ptrRef.current?.scrollTop===0) setPtrY(Math.min(dy*0.4,60));
+                if(dy>8) setPtrY(Math.min(dy*0.45,70));
+                else if(dy<0) { window._ptrStartY=undefined; setPtrY(0); }
               }}
               onTouchEnd={async()=>{
-                if(ptrY>45){ setPtrActive(true); haptic("medium"); await refreshData(); setTimeout(()=>{setPtrActive(false);setPtrY(0);haptic("light");},600); }
-                else setPtrY(0);
+                if(ptrY>50){
+                  setPtrActive(true);
+                  haptic("medium");
+                  await refreshData();
+                  setTimeout(()=>{setPtrActive(false);setPtrY(0);haptic("light");},800);
+                } else {
+                  setPtrY(0);
+                }
                 window._ptrStartY=undefined;
+                window._ptrScrollTop=0;
               }}
               onTouchStart={e=>{
                 if(document.documentElement.getAttribute("data-device")==="mobile"){
@@ -4782,17 +4807,23 @@ export default function App() {
                         <div style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                           <div>
                             <div style={{fontWeight:700,color:T.txt}}>📳 Haptic Feedback</div>
-                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Vibration on taps and actions</div>
+                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Android only — iOS does not support web vibration</div>
                           </div>
-                          <button onClick={()=>{
-                            const next=!window._hapticsOff;
-                            window._hapticsOff=next;
-                            LS.set("nl3-haptics-off",next);
-                            if(!next){ setTimeout(()=>haptic("success"),50); }
-                            setForm(p=>({...p}));
-                          }} style={{width:50,height:27,borderRadius:14,background:!window._hapticsOff?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                            <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:!window._hapticsOff?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
-                          </button>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <button onClick={()=>{
+                              haptic("success");
+                              toast("Haptic test! If you felt a buzz, it works. ✅");
+                            }} style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,color:T.sub,cursor:"pointer",fontFamily:"inherit"}}>Test</button>
+                            <button onClick={()=>{
+                              const next=!window._hapticsOff;
+                              window._hapticsOff=next;
+                              LS.set("nl3-haptics-off",next);
+                              if(!next) setTimeout(()=>haptic("success"),50);
+                              setForm(p=>({...p,_h:Date.now()}));
+                            }} style={{width:50,height:27,borderRadius:14,background:!window._hapticsOff?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                              <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:!window._hapticsOff?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                            </button>
+                          </div>
                         </div>
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16,display:"grid",gap:12}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:2}}>🔊 Sound & Audio</div>
