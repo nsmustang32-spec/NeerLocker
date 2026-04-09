@@ -201,6 +201,7 @@ window._soundVol = 0.22;
 // Haptic feedback — works on iOS and Android
 function haptic(type="light") {
   try {
+    if(window._hapticsOff) return;
     if(navigator.vibrate) {
       const patterns={light:10,medium:20,heavy:40,success:[10,50,10],error:[20,30,20,30,20]};
       navigator.vibrate(patterns[type]||10);
@@ -1685,139 +1686,117 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
   const overdue=task.dueDate&&!task.done&&new Date(task.dueDate)<new Date();
   const pc={Low:T.mut,Medium:T.blue,High:T.scarlet};
   const dl=daysLeft(task.dueDate);
+  const _anim="fadeUp .25s "+(delay||0)+"ms ease both";
+  const _sw={transform:"translateX("+swipeX+"px)",transition:swiping?"none":"transform .25s cubic-bezier(.23,1,.32,1)"};
   return (
-    <div style={{position:"relative",overflow:"hidden",borderRadius:T.sp.r+4,animation:"fadeUp .25s "+(delay||0)+"ms ease both"}}>
-      {/* Swipe action backgrounds */}
-      <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"space-between",borderRadius:T.sp.r+4,pointerEvents:"none"}}>
-        <div style={{background:"#16a34a",width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX>20?Math.min((swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:(T.sp.r+4)+"px 0 0 "+(T.sp.r+4)+"px"}}>
-          <span style={{fontSize:22,color:"#fff"}}>✓</span>
-        </div>
-        {canManage&&<div style={{background:T.err,width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX<-20?Math.min((-swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:"0 "+(T.sp.r+4)+"px "+(T.sp.r+4)+"px 0"}}>
-          <span style={{fontSize:22,color:"#fff"}}>🗑️</span>
-        </div>}
-      </div>
-      <div
-        onTouchStart={handleSwipeStart} onTouchMove={handleSwipeMove} onTouchEnd={handleSwipeEnd}
-        style={{transform:"translateX("+swipeX+"px)",transition:swiping?"none":"transform .25s cubic-bezier(.23,1,.32,1)"}}
-      >
-    {/* Long press context menu */}
-    {showCtx&&(
-      <div onClick={()=>setShowCtx(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-        <div style={{background:T.surf,borderRadius:16,padding:8,minWidth:200,boxShadow:"0 12px 40px rgba(0,0,0,.25)",animation:"bounceIn .3s cubic-bezier(.34,1.56,.64,1)"}}>
-          <div style={{padding:"8px 14px",fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em"}}>{task.title.slice(0,30)}</div>
-          {!isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.ok,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}} onMouseEnter={e=>e.currentTarget.style.background=T.surfH} onMouseLeave={e=>e.currentTarget.style.background="none"}>✅ Mark Complete</button>}
-          {isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.sub,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}} onMouseEnter={e=>e.currentTarget.style.background=T.surfH} onMouseLeave={e=>e.currentTarget.style.background="none"}>↩ Mark Incomplete</button>}
-          <button onClick={()=>{setShowCtx(false);setExpanded(e=>!e);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.txt,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}} onMouseEnter={e=>e.currentTarget.style.background=T.surfH} onMouseLeave={e=>e.currentTarget.style.background="none"}>📋 {expanded?"Hide":"View"} Details</button>
-          {canManage&&<button onClick={()=>{setShowCtx(false);onDelete(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.err,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}} onMouseEnter={e=>e.currentTarget.style.background="#fee2e288"} onMouseLeave={e=>e.currentTarget.style.background="none"}>🗑️ Delete Task</button>}
-        </div>
-      </div>
-    )}
-    <div className="card" onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      onTouchStart={startLongPress} onTouchEnd={cancelLongPress} onTouchMove={cancelLongPress}
-      onContextMenu={e=>{e.preventDefault();setShowCtx(true);}}
-      style={{background:isDone?T.bg:T.card,border:"1px solid "+(expanded?T.scarlet+"66":overdue?T.scarlet+"55":hov?T.borH:T.bor),borderRadius:T.sp.r+4,opacity:isDone?0.55:1,overflow:"hidden",transition:"border-color .2s"}}>
-      {/* Main row */}
-      <div style={{padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"flex-start",gap:12}}>
-        <button onClick={e=>{e.stopPropagation();onToggle(task.id);}} style={{width:22,height:22,borderRadius:6,border:"2px solid "+(isDone?T.blue:hov?T.blue:T.bor),background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
-          onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
-          onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
-        >{isDone?"✓":""}</button>
-        <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setExpanded(e=>!e)}>
-          <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
-            <span style={{fontWeight:700,fontSize:T.fs.lg,textDecoration:isDone?"line-through":"none",color:isDone?T.mut:T.txt,transition:"color .18s"}}>{task.title}</span>
-            <Tag label={task.priority} color={pc[task.priority]||T.mut}/>
-            {overdue&&<Tag label="OVERDUE" color={T.scarlet}/>}
-            {task.repeat&&<Tag label="🔁" color={T.blue}/>}
+    <>
+      {showCtx&&(
+        <div onClick={()=>setShowCtx(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{background:T.surf,borderRadius:16,padding:8,minWidth:200,boxShadow:"0 12px 40px rgba(0,0,0,.25)"}}>
+            <div style={{padding:"8px 14px",fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em"}}>{task.title.slice(0,30)}</div>
+            {!isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.ok,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>✅ Mark Complete</button>}
+            {isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.sub,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>↩ Mark Incomplete</button>}
+            <button onClick={()=>{setShowCtx(false);setExpanded(e=>!e);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.txt,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>📋 {expanded?"Hide":"View"} Details</button>
+            {canManage&&<button onClick={()=>{setShowCtx(false);onDelete(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.err,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>🗑️ Delete Task</button>}
           </div>
-          <div style={{display:"flex",gap:10,marginTop:4,fontSize:T.fs.xs+1,color:T.mut,flexWrap:"wrap",alignItems:"center"}}>
-            <span>👤 {assignee?assignee.name:"Everyone"}</span>
-            {task.dueDate&&<span style={{color:overdue?T.scarlet:dl!==null&&dl<=2?T.warn:T.mut}}>📅 {fmtD(task.dueDate)}</span>}
-          </div>
-        </div>
-        {/* Expand toggle */}
-        <button onClick={()=>setExpanded(e=>!e)} title="View details"
-        style={{background:expanded?T.scarlet+"18":"none",border:"1px solid "+(expanded?T.scarlet+"55":T.bor),borderRadius:10,padding:"8px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,width:"100%",textAlign:"left",fontFamily:"inherit",color:T.txt,transition:"background .15s"}}>
-          onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"88";e.currentTarget.style.color=T.scarlet;}}
-          onMouseLeave={e=>{if(!expanded){e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}}
-        >{expanded?"▲":"▼ Details"}</button>
-        {canManage&&<button onClick={e=>{e.stopPropagation();onDelete(task.id);}} style={{background:"none",border:"none",color:T.faint,cursor:"pointer",fontSize:16,padding:"2px 4px",transition:"color .15s,transform .15s",flexShrink:0}}
-          onMouseEnter={e=>{e.currentTarget.style.color=T.scarlet;e.currentTarget.style.transform="scale(1.3) rotate(8deg)";}}
-          onMouseLeave={e=>{e.currentTarget.style.color=T.faint;e.currentTarget.style.transform="scale(1)";}}
-        >✕</button>}
-      </div>
-      {/* Expanded detail panel */}
-      {expanded&&(
-          <div style={{borderTop:"1px solid "+T.bor,padding:"12px 16px",background:T.bg,display:"grid",gap:10,animation:"fadeUp .2s ease both"}}>
-          {task.description?(
-            <div>
-              <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4,display:"flex",alignItems:"center",gap:6}}>DESCRIPTION <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
-  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
-    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
-    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-    <circle cx="11" cy="11" r="1" fill="#fff"/>
-  </svg>
-  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
-</span></div>
-              <div style={{fontSize:T.fs.md,color:T.txt,lineHeight:1.6,background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor,whiteSpace:"pre-wrap"}}>
-            </div>
-          ):(
-            <div style={{fontSize:13,color:T.sub,fontStyle:"italic"}}>No description added.</div>
-          )}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
-              <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>ASSIGNED TO</div>
-              <div style={{fontSize:13,fontWeight:600,color:T.txt}}>👤 {assignee?assignee.name:"Everyone"}</div>
-            </div>
-              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
-              <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>PRIORITY</div>
-              <div style={{fontSize:13,fontWeight:600,color:pc[task.priority]||T.mut}}>{task.priority||"Medium"}</div>
-            </div>
-            {task.dueDate&&(
-              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+(overdue?T.scarlet+"55":T.bor)}}>
-                <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>DUE DATE</div>
-                <div style={{fontSize:13,fontWeight:600,color:overdue?T.scarlet:T.txt}}>📅 {fmtD(task.dueDate)} {overdue?"(Overdue)":dl===0?"(Today)":dl===1?"(Tomorrow)":""}</div>
-              </div>
-            )}
-            {creator&&(
-              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
-                <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>CREATED BY</div>
-                <div style={{fontSize:13,fontWeight:600,color:T.txt}}>{creator.name}</div>
-              </div>
-            )}
-          </div>
-          {task.repeat&&(
-            <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:T.blue,fontWeight:600}}>
-              🔁 This task repeats automatically when completed
-            </div>
-          )}
         </div>
       )}
+      <div style={{position:"relative",overflow:"hidden",animation:_anim}}>
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"space-between",pointerEvents:"none"}}>
+          <div style={{background:"#16a34a",width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX>20?Math.min((swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:"16px 0 0 16px"}}>
+            <span style={{fontSize:22,color:"#fff"}}>✓</span>
+          </div>
+          {canManage&&(
+            <div style={{background:T.err,width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX<-20?Math.min((-swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:"0 16px 16px 0"}}>
+              <span style={{fontSize:22,color:"#fff"}}>🗑</span>
+            </div>
+          )}
+        </div>
+        <div style={_sw}>
+          <div className="card"
+            onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+            onTouchStart={startLongPress} onTouchEnd={cancelLongPress} onTouchMove={cancelLongPress}
+            onContextMenu={e=>{e.preventDefault();setShowCtx(true);}}
+            style={{background:isDone?T.bg:T.card,border:"1px solid "+(expanded?T.scarlet+"66":overdue?T.scarlet+"55":hov?T.borH:T.bor),borderRadius:14,opacity:isDone?0.55:1,overflow:"hidden",transition:"border-color .2s"}}>
+            <div style={{padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"flex-start",gap:12}}>
+              <button onClick={e=>{e.stopPropagation();onToggle(task.id);}}
+                style={{width:22,height:22,borderRadius:6,border:"2px solid "+(isDone?T.blue:hov?T.blue:T.bor),background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
+                onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
+                onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
+              >{isDone?"✓":""}</button>
+              <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setExpanded(e=>!e)}>
+                <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
+                  <span style={{fontWeight:700,fontSize:T.fs.lg,textDecoration:isDone?"line-through":"none",color:isDone?T.mut:T.txt,transition:"color .18s"}}>{task.title}</span>
+                  <Tag label={task.priority} color={pc[task.priority]||T.mut}/>
+                  {overdue&&<Tag label="OVERDUE" color={T.scarlet}/>}
+                  {task.repeat&&<Tag label="🔁" color={T.blue}/>}
+                </div>
+                <div style={{display:"flex",gap:10,marginTop:4,fontSize:11,color:T.mut,flexWrap:"wrap",alignItems:"center"}}>
+                  <span>👤 {assignee?assignee.name:"Everyone"}</span>
+                  {task.dueDate&&<span style={{color:overdue?T.scarlet:dl!==null&&dl<=2?T.warn:T.mut}}>📅 {fmtD(task.dueDate)}</span>}
+                </div>
+              </div>
+              <button onClick={()=>setExpanded(e=>!e)}
+                style={{background:expanded?T.scarlet+"18":"none",border:"1px solid "+(expanded?T.scarlet+"55":T.bor),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:expanded?T.scarlet:T.sub,fontFamily:"inherit",flexShrink:0,transition:"all .15s"}}
+              >{expanded?"▲":"▼"}</button>
+              {canManage&&<button onClick={e=>{e.stopPropagation();onDelete(task.id);}}
+                style={{background:"none",border:"none",color:T.faint,cursor:"pointer",fontSize:16,padding:"2px 4px",transition:"color .15s",flexShrink:0}}
+                onMouseEnter={e=>e.currentTarget.style.color=T.scarlet}
+                onMouseLeave={e=>e.currentTarget.style.color=T.faint}
+              >✕</button>}
+            </div>
+            {expanded&&(
+              <div style={{borderTop:"1px solid "+T.bor,padding:"12px 16px",background:T.bg,display:"grid",gap:10}}>
+                {task.description&&(
+                  <div style={{fontSize:13,color:T.txt,lineHeight:1.6,background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>{task.description}</div>
+                )}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
+                    <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>ASSIGNED TO</div>
+                    <div style={{fontSize:13,fontWeight:600,color:T.txt}}>👤 {assignee?assignee.name:"Everyone"}</div>
+                  </div>
+                  <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
+                    <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>PRIORITY</div>
+                    <div style={{fontSize:13,fontWeight:600,color:pc[task.priority]||T.mut}}>{task.priority||"Medium"}</div>
+                  </div>
+                  {task.dueDate&&(
+                    <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+(overdue?T.scarlet+"55":T.bor)}}>
+                      <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>DUE DATE</div>
+                      <div style={{fontSize:13,fontWeight:600,color:overdue?T.scarlet:T.txt}}>📅 {fmtD(task.dueDate)}</div>
+                    </div>
+                  )}
+                  {creator&&(
+                    <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
+                      <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>CREATED BY</div>
+                      <div style={{fontSize:13,fontWeight:600,color:T.txt}}>{creator.name}</div>
+                    </div>
+                  )}
+                </div>
+                {task.repeat&&(
+                  <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:T.blue,fontWeight:600}}>
+                    🔁 Repeats automatically when completed
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
 // ─── SEARCH BAR ──────────────────────────────────────────────────────────────
 function SearchBar({T,value,onChange,placeholder}) {
   const [f,setF]=useState(false);
-  return <input value={value} onChange={e=>onChange(e.target.value)} placeholder={`🔍  ${placeholder}`}
-    style={{flex:1,minWidth:140,background:T.surf,border:`1px solid ${f?T.blue:T.bor}`,borderRadius:10,color:T.txt,padding:"9px 14px",fontSize:T.fs.md,fontFamily:"inherit",outline:"none",boxShadow:f?`0 0 0 3px ${T.bG}`:"none",transition:"border-color .18s,box-shadow .18s"}}
+  return <input value={value} onChange={e=>onChange(e.target.value)} placeholder={"🔍  "+placeholder}
+    style={{flex:1,minWidth:140,background:T.surf,border:"1px solid "+(f?T.blue:T.bor),borderRadius:10,color:T.txt,padding:"9px 14px",fontSize:T.fs.md,fontFamily:"inherit",outline:"none",boxShadow:f?"0 0 0 3px "+T.bG:"none",transition:"border-color .18s,box-shadow .18s"}}
     onFocus={()=>setF(true)} onBlur={()=>setF(false)}/>;
 }
 
 const SLabel=({children,dim,T})=><div style={{fontSize:10,fontWeight:800,letterSpacing:"0.07em",marginBottom:6,color:dim?T.faint:T.mut}}>{children}</div>;
 const Empty=({icon,msg,T})=><div style={{textAlign:"center",padding:"44px 0",color:T.mut}}><div style={{fontSize:34}}>{icon}</div><div style={{marginTop:9,fontSize:13,fontWeight:600,color:T.sub}}>{msg}</div></div>;
-const Hr=({T})=><div style={{height:1,background:T.bor,margin:`${T.sp.md}px 0`}}/>;
+const Hr=({T})=><div style={{height:1,background:T.bor,margin:T.sp.md+"px 0"}}/>;
 
 // ─── TECH METRICS (simulated) ─────────────────────────────────────────────────
 function TechMetrics({T}) {
@@ -1834,16 +1813,16 @@ function TechMetrics({T}) {
   },[]);
   const Bar=({val,color})=>(
     <div style={{height:8,background:T.bor,borderRadius:4,overflow:"hidden",flex:1}}>
-      <div style={{height:"100%",width:`${val}%`,background:val>80?T.err:val>60?T.warn:color,borderRadius:4,transition:"width .8s ease"}}/>
+              <div style={{height:"100%",width:val+"%",background:val>80?T.err:val>60?T.warn:color,borderRadius:2,transition:"width .6s"}}/>
     </div>
   );
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}} className="two-col">
       {[{label:"CPU Usage",val:cpu,color:T.blue,icon:"💻"},{label:"Memory",val:mem,color:"#7c3aed",icon:"🧠"},{label:"API Response",val:Math.round(ping/2),raw:`${ping}ms`,color:T.ok,icon:"📡"}].map(m=>(
-        <div key={m.label} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
+          <div key={m.label} style={{background:T.card,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:6}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <span style={{fontSize:12,color:T.sub,fontWeight:700}}>{m.icon} {m.label}</span>
-            <span style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:m.val>80?T.err:m.raw?T.ok:m.color}}>{m.raw||`${m.val}%`}</span>
+              <span style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:m.val>80?T.err:m.val>60?T.warn:T.txt}}>{m.val}%</span>
           </div>
           {!m.raw&&<Bar val={m.val} color={m.color}/>}
         </div>
@@ -2146,6 +2125,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     setInput("");
     addMsg("user",text);
     setLoading(true);
+    haptic("light");
 
     let reply="";
     try {
@@ -3893,9 +3873,9 @@ export default function App() {
     await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login,created_at:Date.now()});
     // XP pop-up toast
     const xpId=uid();
-    setXpToasts(p=>[...p,{id:xpId,amount,label}]);
+    setXpToasts(p=>[...p,{id:xpId,amount,label}]); haptic("light");
     setTimeout(()=>setXpToasts(p=>p.filter(t=>t.id!==xpId)),2200);
-    if(leveledUp){ toast("🎉 Level up! You are now a "+info.title+"!","ok"); playSound("success"); }
+    if(leveledUp){ toast("🎉 Level up! You are now a "+info.title+"!","ok"); playSound("success"); haptic("heavy"); }
   };
 
   // Handle login streak + XP
@@ -4235,7 +4215,7 @@ export default function App() {
                 if(dy>0&&ptrRef.current?.scrollTop===0) setPtrY(Math.min(dy*0.4,60));
               }}
               onTouchEnd={async()=>{
-                if(ptrY>45){ setPtrActive(true); await refreshData(); setTimeout(()=>{setPtrActive(false);setPtrY(0);},600); }
+                if(ptrY>45){ setPtrActive(true); haptic("medium"); await refreshData(); setTimeout(()=>{setPtrActive(false);setPtrY(0);haptic("light");},600); }
                 else setPtrY(0);
                 window._ptrStartY=undefined;
               }}
