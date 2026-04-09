@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.6.0";
+const VERSION   = "1.7.0";
 const FINN_VERSION = "1.1.0";
 const FINN_PATCH_NOTES = {
   "1.1.0": [
@@ -29,6 +29,19 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.7.0": [
+    "UI: Dark mode follows system by default — System/Light/Dark selector in Settings",
+    "UI: Pull to refresh on all pages",
+    "UI: Swipe right to complete tasks, left to delete",
+    "UI: Long press (or right-click) tasks for context menu",
+    "UI: Notification bell in header with notification center",
+    "UI: Skeleton loading cards while data loads",
+    "UI: Typing indicator in DMs",
+    "UI: Shake phone to open feedback form",
+    "Search: Filter pills — Tasks, Inventory, Staff, Announcements",
+    "Haptics: Vibration on task complete and DM send",
+    "Notifications: Weekly digest every Monday morning",
+  ],
   "1.6.0": [
     "Leaderboard: Full staff XP leaderboard page accessible from nav",
     "Boss: Can now earn XP and participate in progression",
@@ -1673,19 +1686,19 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
   const pc={Low:T.mut,Medium:T.blue,High:T.scarlet};
   const dl=daysLeft(task.dueDate);
   return (
-    <div style={{position:"relative",overflow:"hidden",borderRadius:T.sp.r+4,animation:`fadeUp .25s ${delay||0}ms ease both`}}>
+    <div style={{position:"relative",overflow:"hidden",borderRadius:T.sp.r+4,animation:"fadeUp .25s "+(delay||0)+"ms ease both"}}>
       {/* Swipe action backgrounds */}
       <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"space-between",borderRadius:T.sp.r+4,pointerEvents:"none"}}>
-        <div style={{background:"#16a34a",width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX>20?Math.min((swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:`${T.sp.r+4}px 0 0 ${T.sp.r+4}px`}}>
+        <div style={{background:"#16a34a",width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX>20?Math.min((swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:(T.sp.r+4)+"px 0 0 "+(T.sp.r+4)+"px"}}>
           <span style={{fontSize:22,color:"#fff"}}>✓</span>
         </div>
-        {canManage&&<div style={{background:T.err,width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX<-20?Math.min((-swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:`0 ${T.sp.r+4}px ${T.sp.r+4}px 0`}}>
+        {canManage&&<div style={{background:T.err,width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX<-20?Math.min((-swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:"0 "+(T.sp.r+4)+"px "+(T.sp.r+4)+"px 0"}}>
           <span style={{fontSize:22,color:"#fff"}}>🗑️</span>
         </div>}
       </div>
       <div
         onTouchStart={handleSwipeStart} onTouchMove={handleSwipeMove} onTouchEnd={handleSwipeEnd}
-        style={{transform:`translateX(${swipeX}px)`,transition:swiping?"none":"transform .25s cubic-bezier(.23,1,.32,1)"}}
+        style={{transform:"translateX("+swipeX+"px)",transition:swiping?"none":"transform .25s cubic-bezier(.23,1,.32,1)"}}
       >
     {/* Long press context menu */}
     {showCtx&&(
@@ -1702,10 +1715,10 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
     <div className="card" onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       onTouchStart={startLongPress} onTouchEnd={cancelLongPress} onTouchMove={cancelLongPress}
       onContextMenu={e=>{e.preventDefault();setShowCtx(true);}}
-      style={{background:isDone?T.bg:T.card,border:`1px solid ${expanded?T.scarlet+"66":overdue?T.scarlet+"55":hov?T.borH:T.bor}`,borderRadius:T.sp.r+4,opacity:isDone?0.55:1,overflow:"hidden",transition:"border-color .2s"}}>
+      style={{background:isDone?T.bg:T.card,border:"1px solid "+(expanded?T.scarlet+"66":overdue?T.scarlet+"55":hov?T.borH:T.bor),borderRadius:T.sp.r+4,opacity:isDone?0.55:1,overflow:"hidden",transition:"border-color .2s"}}>
       {/* Main row */}
       <div style={{padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"flex-start",gap:12}}>
-        <button onClick={e=>{e.stopPropagation();onToggle(task.id);}} style={{width:22,height:22,borderRadius:6,border:`2px solid ${isDone?T.blue:hov?T.blue:T.bor}`,background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
+        <button onClick={e=>{e.stopPropagation();onToggle(task.id);}} style={{width:22,height:22,borderRadius:6,border:"2px solid "+(isDone?T.blue:hov?T.blue:T.bor),background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
           onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
           onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
         >{isDone?"✓":""}</button>
@@ -1723,7 +1736,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
         </div>
         {/* Expand toggle */}
         <button onClick={()=>setExpanded(e=>!e)} title="View details"
-          style={{background:expanded?T.scarlet+"18":"none",border:`1px solid ${expanded?T.scarlet+"55":T.bor}`,borderRadius:8,padding:"4px 8px",cursor:"pointer",fontSize:12,color:expanded?T.scarlet:T.sub,fontWeight:700,flexShrink:0,transition:"all .18s",fontFamily:"inherit"}}
+        style={{background:expanded?T.scarlet+"18":"none",border:"1px solid "+(expanded?T.scarlet+"55":T.bor),borderRadius:10,padding:"8px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,width:"100%",textAlign:"left",fontFamily:"inherit",color:T.txt,transition:"background .15s"}}>
           onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"88";e.currentTarget.style.color=T.scarlet;}}
           onMouseLeave={e=>{if(!expanded){e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}}
         >{expanded?"▲":"▼ Details"}</button>
@@ -1734,7 +1747,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
       </div>
       {/* Expanded detail panel */}
       {expanded&&(
-        <div style={{borderTop:`1px solid ${T.bor}`,padding:"12px 16px",background:T.bg,display:"grid",gap:10,animation:"fadeUp .2s ease both"}}>
+          <div style={{borderTop:"1px solid "+T.bor,padding:"12px 16px",background:T.bg,display:"grid",gap:10,animation:"fadeUp .2s ease both"}}>
           {task.description?(
             <div>
               <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4,display:"flex",alignItems:"center",gap:6}}>DESCRIPTION <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
@@ -1755,28 +1768,28 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
 </span></div>
-              <div style={{fontSize:T.fs.md,color:T.txt,lineHeight:1.6,background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>{task.description}</div>
+              <div style={{fontSize:T.fs.md,color:T.txt,lineHeight:1.6,background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor,whiteSpace:"pre-wrap"}}>
             </div>
           ):(
             <div style={{fontSize:13,color:T.sub,fontStyle:"italic"}}>No description added.</div>
           )}
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>
+              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
               <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>ASSIGNED TO</div>
               <div style={{fontSize:13,fontWeight:600,color:T.txt}}>👤 {assignee?assignee.name:"Everyone"}</div>
             </div>
-            <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>
+              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
               <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>PRIORITY</div>
               <div style={{fontSize:13,fontWeight:600,color:pc[task.priority]||T.mut}}>{task.priority||"Medium"}</div>
             </div>
             {task.dueDate&&(
-              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${overdue?T.scarlet+"55":T.bor}`}}>
+              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+(overdue?T.scarlet+"55":T.bor)}}>
                 <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>DUE DATE</div>
                 <div style={{fontSize:13,fontWeight:600,color:overdue?T.scarlet:T.txt}}>📅 {fmtD(task.dueDate)} {overdue?"(Overdue)":dl===0?"(Today)":dl===1?"(Tomorrow)":""}</div>
               </div>
             )}
             {creator&&(
-              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>
+              <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
                 <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>CREATED BY</div>
                 <div style={{fontSize:13,fontWeight:600,color:T.txt}}>{creator.name}</div>
               </div>
@@ -1789,6 +1802,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
