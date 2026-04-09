@@ -5307,11 +5307,12 @@ export default function App() {
                   </svg>
                   <div style={{fontWeight:700,color:T.txt}}>Finn Patch Notes — v{FINN_VERSION}</div>
                 </div>
-                <Btn T={T} sm onClick={()=>{
+                <Btn T={T} sm onClick={async()=>{
                   const notes=FINN_PATCH_NOTES[FINN_VERSION]||[];
                   if(!notes.length){toast("No Finn patch notes for this version","warn");return;}
                   const ann={id:uid(),msg:`🤖 Finn v${FINN_VERSION} — AI Assistant Update`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:notes,patchVersion:"Finn v"+FINN_VERSION,patchBuild:"FR"};
-                  saveAnns([ann,...anns]);
+                  await SB.upsert("announcements",{id:ann.id,msg:ann.msg,level:ann.level,by_name:ann.by,at:ann.at,dismissed:[],patch_notes:ann.patchNotes,patch_version:ann.patchVersion,patch_build:ann.patchBuild});
+                  setAnns(prev=>[ann,...prev]);
                   toast("Finn update announced to all staff! ✅");
                 }}>📢 Announce Finn Update</Btn>
               </div>
@@ -5324,23 +5325,25 @@ export default function App() {
                     value={form.finnNote||""}
                     onChange={e=>setForm(p=>({...p,finnNote:e.target.value}))}
                     style={{flex:1,background:T.surf,border:`1px solid ${T.bor}`,borderRadius:8,color:T.txt,padding:"8px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}
-                    onKeyDown={e=>{
+                    onKeyDown={async e=>{
                       if(e.key==="Enter"&&(form.finnNote||"").trim()){
                         const note=(form.finnNote||"").trim();
                         // Add to current version's notes in local state — actual update happens in code
                         // but we announce it to staff right away
                         const ann={id:uid(),msg:`🤖 Finn Update: ${note}`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:[note],patchVersion:"Finn v"+FINN_VERSION,patchBuild:"FR"};
-                        saveAnns([ann,...anns]);
+                        await SB.upsert("announcements",{id:ann.id,msg:ann.msg,level:ann.level,by_name:ann.by,at:ann.at,dismissed:[],patch_notes:ann.patchNotes,patch_version:ann.patchVersion,patch_build:ann.patchBuild});
+                        setAnns(prev=>[ann,...prev]);
                         toast("Finn update note announced! ✅");
                         setForm(p=>({...p,finnNote:""}));
                       }
                     }}
                   />
-                  <Btn T={T} sm onClick={()=>{
+                  <Btn T={T} sm onClick={async()=>{
                     const note=(form.finnNote||"").trim();
                     if(!note){toast("Enter a note first","err");return;}
                     const ann={id:uid(),msg:`🤖 Finn Update: ${note}`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:[note],patchVersion:"Finn v"+FINN_VERSION,patchBuild:"FR"};
-                    saveAnns([ann,...anns]);
+                    await SB.upsert("announcements",{id:ann.id,msg:ann.msg,level:ann.level,by_name:ann.by,at:ann.at,dismissed:[],patch_notes:ann.patchNotes,patch_version:ann.patchVersion,patch_build:ann.patchBuild});
+                    setAnns(prev=>[ann,...prev]);
                     toast("Finn update note announced! ✅");
                     setForm(p=>({...p,finnNote:""}));
                   }}>Send</Btn>
