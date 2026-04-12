@@ -4120,13 +4120,39 @@ export default function App() {
       playSound("error");
       return;
     }
-    if(locked>Date.now()){setEmailErr(`Too many attempts. Try again in ${Math.ceil((locked-Date.now())/60000)} min.`);return;}
+    // Vigil: check client-side lockout (server-side check happens in doPin)
+    const lockMins=VIGIL.isLockedOut(email);
+    if(lockMins){
+      setEmailErr("Account locked — too many failed attempts. Try again in "+lockMins+" min.");
+      playSound("error");
+      VIGIL.logEvent("lockout_blocked",email);
+      return;
+    }
+    if(locked>Date.now()){setEmailErr("Too many attempts. Try again in "+Math.ceil((locked-Date.now())/60000)+" min.");return;}
     const match=emps.find(e=>e.email.toLowerCase()===email);
     if(!match){
       const a=tries+1;setTries(a);
-      if(a>=MAX_TRIES){setLocked(Date.now()+LOCK_MS);addErr("warn",`Lockout triggered — ${a} failed attempts for ${email}`);}
-      else addErr("warn",`Failed login attempt (${a}/${MAX_TRIES}) for ${email}`);
-      setEmailErr("Invalid email. Check your spelling or ask Professor Sinclair to add you.");return;
+      // Vigil: log failed email attempt
+      VIGIL.recordAttempt(email);
+      VIGIL.logEvent("failed_email",email);
+      if(a>=MAX_TRIES){
+        setLocked(Date.now()+LOCK_MS);
+        VIGIL.logEvent("account_locked",email);
+        addErr("warn","Lockout triggered — "+a+" failed attempts for "+email);
+      } else {
+        addErr("warn","Failed login attempt ("+a+"/"+MAX_TRIES+") for "+email);
+      }
+      playSound("error");
+      setEmailErr("Email not found. Check your spelling or ask your manager to add you.");
+      return;
+    }
+    // Vigil: check if this account is locked
+    const empLockMins=VIGIL.isLockedOut(match.email);
+    if(empLockMins){
+      setEmailErr("Account locked — try again in "+empLockMins+" min.");
+      playSound("error");
+      VIGIL.logEvent("lockout_blocked",match.email,match.id);
+      return;
     }
     setTries(0);
     if(match.pin){setPending(match);setShowPin(true);setEmailErr("");return;}
