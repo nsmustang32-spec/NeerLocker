@@ -2,8 +2,15 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const VERSION   = "1.7.1";
-const FINN_VERSION = "1.2.0";
+const FINN_VERSION = "1.3.0";
 const FINN_PATCH_NOTES = {
+  "1.3.0": [
+    "Cloud Finn: Finn now powered by Llama 3.1 via Groq — understands anything naturally",
+    "Action tags: Finn can complete tasks, adjust inventory, navigate, send DMs through AI",
+    "Automatic fallback to On-Device Finn if Cloud Finn is unavailable",
+    "Full conversation context sent to AI — Finn remembers the thread",
+    "Real-time data injected into every prompt — Finn always knows current state",
+  ],
   "1.2.0": [
     "Edit tasks through Finn — change priority, due date, or assignment",
     "Adjust inventory counts — set, add, or subtract stock directly",
@@ -2097,6 +2104,65 @@ function WelcomePortal({T, onDone}) {
 function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact,upsertTask,dismissAnn}) {
   const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
   const setNick=(n)=>{ try{ localStorage.setItem("nl3-nickname",n); }catch(e){} };
+  const useGroq=true; // Set to false to use On-Device Finn engine
+
+  const callGroqFinn=async(userMsg,history)=>{
+    const context={user,tasks,inv,anns,emps,progress,dms};
+    const messages=[...history.filter(m=>m.role!=="assistant"||history.indexOf(m)>history.length-8).map(m=>({role:m.role,content:m.content})),{role:"user",content:userMsg}];
+    try {
+      const r=await fetch("https://neer-locker.vercel.app/api/finn",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({messages,context})
+      });
+      if(!r.ok) return null;
+      const d=await r.json();
+      return d.reply||null;
+    } catch(e){ return null; }
+  };
+
+  const parseAndExecuteActions=async(reply)=>{
+    // Parse action tags from Cloud Finn reply and execute them
+    let clean=reply;
+    const navMatch=reply.match(/\[NAV:(\w+)\]/);
+    if(navMatch){ clean=clean.replace(navMatch[0],"").trim(); setTimeout(()=>setPage&&setPage(navMatch[1]),400); }
+    const completeMatch=reply.match(/\[COMPLETE_TASK:([^\]]+)\]/);
+    if(completeMatch){
+      clean=clean.replace(completeMatch[0],"").trim();
+      const title=completeMatch[1].toLowerCase();
+      const t=tasks.find(t=>t.title.toLowerCase().includes(title)||title.includes(t.title.toLowerCase()));
+      if(t&&saveTask){ saveTask({...t,done:true}); if(grantXP) grantXP(t.priority==="High"?50:25,"task"); haptic("success"); }
+    }
+    const createMatch=reply.match(/\[CREATE_TASK:([^|]+)\|([^|]+)\|([^\]]+)\]/);
+    if(createMatch){
+      clean=clean.replace(createMatch[0],"").trim();
+      const newTask={id:Math.random().toString(36).slice(2,9),title:createMatch[1],priority:createMatch[2],assignedTo:createMatch[3]==="Everyone"?"all":emps.find(e=>e.name.includes(createMatch[3]))?.id||"all",createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:"",repeat:false,repeatDays:[]};
+      if(saveTask) saveTask(newTask);
+      if(grantXP) grantXP(25,"finn task");
+      haptic("success");
+    }
+    const invMatch2=reply.match(/\[ADJ_INV:([^|]+)\|(\d+)\]/);
+    if(invMatch2){
+      clean=clean.replace(invMatch2[0],"").trim();
+      const name=invMatch2[1].toLowerCase(); const stock=parseInt(invMatch2[2]);
+      const item=inv.find(i=>i.name.toLowerCase().includes(name)||name.includes(i.name.toLowerCase()));
+      if(item&&saveInv) saveInv(inv.map(i=>i.id===item.id?{...i,stock}:i));
+    }
+    const dmMatch=reply.match(/\[SEND_DM:([^|]+)\|([^\]]+)\]/);
+    if(dmMatch){
+      clean=clean.replace(dmMatch[0],"").trim();
+      const emp=emps.find(e=>e.name.toLowerCase().includes(dmMatch[1].toLowerCase()));
+      if(emp&&saveDms){ const dm={id:Math.random().toString(36).slice(2,9),from:user?.id||"",to:emp.id,text:dmMatch[2],at:Date.now(),read:false,system:false}; saveDms([...dms,dm]); if(grantXP) grantXP(5,"finn dm"); }
+    }
+    const statusMatch=reply.match(/\[SET_STATUS:(\w+)\]/);
+    if(statusMatch){ clean=clean.replace(statusMatch[0],"").trim(); if(saveStatus) saveStatus(statusMatch[1]); }
+    if(reply.includes("[DISMISS_ANN]")){
+      clean=clean.replace("[DISMISS_ANN]","").trim();
+      const active=anns.filter(a=>!(a.dismissed||[]).includes(user?.id));
+      if(active[0]&&dismissAnn) dismissAnn(active[0].id);
+    }
+    return clean.trim();
+  };
   const getIntro=()=>{
     const pg=progress[user?.id]||{xp:0,streak:0,title:"Pioneer"};
     const openT=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id));
@@ -2170,7 +2236,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
 
   const addMsg=(role,content)=>setMsgs(prev=>[...prev,{role,content}]);
 
-  function send(){
+  async function send(){
     const text=input.trim();
     if(!text||loading) return;
     setInput("");
@@ -2178,6 +2244,28 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     setLoading(true);
     haptic("light");
 
+    // ── Try Cloud Finn first (5s timeout), fall back to On-Device Finn ────────
+    if(useGroq){
+      try {
+        const groqPromise=callGroqFinn(text,msgs);
+        const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),5000));
+        const groqReply=await Promise.race([groqPromise,timeoutPromise]);
+        if(groqReply){
+          const clean=await parseAndExecuteActions(groqReply);
+          setMsgs(prev=>[...prev,{role:"assistant",content:clean}]);
+          setLoading(false);
+          return;
+        }
+      } catch(e){
+        const isTimeout=e.message==="timeout";
+        console.warn(isTimeout?"Cloud Finn timed out after 5s, switching to On-Device Finn":"Cloud Finn failed:",e);
+        // Show a subtle notice — don't block the response
+        setMsgs(prev=>[...prev,{role:"assistant",content:"⚡ "+( isTimeout?"Cloud Finn took too long — switching to On-Device Finn.":"Cloud Finn unavailable — switching to On-Device Finn.")+" Response coming..."}]);
+        await new Promise(r=>setTimeout(r,300));
+      }
+    }
+
+    // ── Local engine fallback ──────────────────────────────────────────────
     let reply="";
     try {
       const q=text.toLowerCase().trim().replace(/[\u2018\u2019\u201A\u201B']/g,"'");
