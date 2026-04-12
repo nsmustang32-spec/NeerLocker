@@ -5,9 +5,9 @@ const VERSION   = "1.7.1";
 const FINN_VERSION = "1.3.0";
 const FINN_PATCH_NOTES = {
   "1.3.0": [
-    "Cloud Finn: Finn now powered by Llama 3.1 via Groq — understands anything naturally",
+    "Finn Aether: Cloud-powered Finn by Llama 3.1 via Groq — understands anything naturally",
     "Action tags: Finn can complete tasks, adjust inventory, navigate, send DMs through AI",
-    "Automatic fallback to On-Device Finn if Cloud Finn is unavailable",
+    "Finn Atlas: On-device fallback — always works, no internet needed",
     "Full conversation context sent to AI — Finn remembers the thread",
     "Real-time data injected into every prompt — Finn always knows current state",
   ],
@@ -2104,7 +2104,7 @@ function WelcomePortal({T, onDone}) {
 function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact,upsertTask,dismissAnn}) {
   const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
   const setNick=(n)=>{ try{ localStorage.setItem("nl3-nickname",n); }catch(e){} };
-  const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")!=="local");
+  const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")!=="atlas");
 
   const callGroqFinn=async(userMsg,history)=>{
     const context={user,tasks,inv,anns,emps,progress,dms};
@@ -2122,7 +2122,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   };
 
   const parseAndExecuteActions=async(reply)=>{
-    // Parse action tags from Cloud Finn reply and execute them
+    // Parse action tags from Finn Aether reply and execute them
     let clean=reply;
     const navMatch=reply.match(/\[NAV:(\w+)\]/);
     if(navMatch){ clean=clean.replace(navMatch[0],"").trim(); setTimeout(()=>setPage&&setPage(navMatch[1]),400); }
@@ -2244,7 +2244,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     setLoading(true);
     haptic("light");
 
-    // ── Try Cloud Finn first (5s timeout), fall back to On-Device Finn ────────
+    // ── Try Finn Aether first (5s timeout), fall back to Finn Atlas ───────────
     if(useGroq){
       try {
         const groqPromise=callGroqFinn(text,msgs);
@@ -2258,9 +2258,9 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         }
       } catch(e){
         const isTimeout=e.message==="timeout";
-        console.warn(isTimeout?"Cloud Finn timed out after 5s, switching to On-Device Finn":"Cloud Finn failed:",e);
+        console.warn(isTimeout?"Finn Aether timed out after 5s, switching to Finn Atlas":"Finn Aether failed:",e);
         // Show a subtle notice — don't block the response
-        setMsgs(prev=>[...prev,{role:"assistant",content:"⚡ "+( isTimeout?"Cloud Finn took too long — switching to On-Device Finn.":"Cloud Finn unavailable — switching to On-Device Finn.")+" Response coming..."}]);
+        setMsgs(prev=>[...prev,{role:"assistant",content:"⚡ "+( isTimeout?"Finn Aether took too long — switching to Finn Atlas.":"Finn Aether unavailable — switching to Finn Atlas.")+" Response coming..."}]);
         await new Promise(r=>setTimeout(r,300));
       }
     }
@@ -3010,15 +3010,15 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         <FinnLogo/>
         <div style={{flex:1,position:"relative",zIndex:1,minWidth:0}}>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-0.3px"}}>Finn</div>
-          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>{useGroq?"☁️ Cloud · Llama 3.3 70B":"📱 On-Device Engine"}</div>
+          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>{useGroq?"✦ Finn Aether · Llama 3.3 70B":"◈ Finn Atlas · On-Device"}</div>
         </div>
         {/* Mode toggle */}
         <div style={{display:"flex",background:"rgba(0,0,0,0.3)",borderRadius:10,padding:2,border:"1px solid #1e7fa833",gap:2,flexShrink:0,position:"relative",zIndex:1}}>
-          <button onClick={()=>{setUseGroq(true);LS.set("nl3-finn-mode","cloud");haptic("light");toast("Switched to Cloud Finn ☁️");}} style={{background:useGroq?"#1e7fa8":"none",color:useGroq?"#fff":"#1e7fa888",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",whiteSpace:"nowrap"}}>
-            ☁️ Cloud
+          <button onClick={()=>{setUseGroq(true);LS.set("nl3-finn-mode","aether");haptic("light");toast("Switched to Finn Aether ✦");}} style={{background:useGroq?"#1e7fa8":"none",color:useGroq?"#fff":"#1e7fa888",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",whiteSpace:"nowrap"}}>
+            ✦ Aether
           </button>
-          <button onClick={()=>{setUseGroq(false);LS.set("nl3-finn-mode","local");haptic("light");toast("Switched to On-Device Finn 📱");}} style={{background:!useGroq?"#C8102E":"none",color:!useGroq?"#fff":"#C8102E88",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",whiteSpace:"nowrap"}}>
-            📱 Device
+          <button onClick={()=>{setUseGroq(false);LS.set("nl3-finn-mode","atlas");haptic("light");toast("Switched to Finn Atlas ◈");}} style={{background:!useGroq?"#C8102E":"none",color:!useGroq?"#fff":"#C8102E88",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",whiteSpace:"nowrap"}}>
+            ◈ Atlas
           </button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,position:"relative",zIndex:1}}>
@@ -5006,7 +5006,7 @@ export default function App() {
 
                         {/* Device / UI Scaling */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
-                          <div style={{fontWeight:700,color:T.txt,marginBottom:2}}>📱 Device & UI Scaling</div>
+                          <div style={{fontWeight:700,color:T.txt,marginBottom:2}}>◈ Atlas & UI Scaling</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12,lineHeight:1.5}}>Choose how the app scales to your device. This adjusts font sizes and tap target sizes across the whole app.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                             {[
