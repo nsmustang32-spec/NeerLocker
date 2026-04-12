@@ -2160,8 +2160,9 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     if(navMatch){
       clean=clean.replace(navMatch[0],"").trim();
       const navPage=navMatch[1];
-      // Don't navigate to home — it closes Finn. Only navigate if it's a real page request.
-      if(navPage!=="home") setTimeout(()=>setPage&&setPage(navPage),400);
+      // Only navigate when user explicitly asks — block auto-nav to home/act
+      const blockedPages=["home","act","leaderboard"];
+      if(!blockedPages.includes(navPage)) setTimeout(()=>setPage&&setPage(navPage),400);
     }
     const completeMatch=reply.match(/\[COMPLETE_TASK:([^\]]+)\]/);
     if(completeMatch){
@@ -2280,21 +2281,14 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   // ── Voice: speak Finn's reply ──────────────────────────────────────────────
   function speakReply(text){
     if(!voiceOn||!window.speechSynthesis) return;
-    const clean=text.replace(/\[[A-Z_:a-z|0-9]+\]/g,"").replace(/[⚡📱☁️🛡✦◈]/g,"").trim();
+    const clean=text.replace(/\[[A-Z_:a-z|0-9]+\]/g,"").replace(/[⚡📱☁️🛡✦◈🔴🟠🟡🟢]/g,"").trim();
     if(!clean) return;
     window.speechSynthesis.cancel();
     const utt=new SpeechSynthesisUtterance(clean);
-    // Use cached voices — no async delay
-    const voices=window.speechSynthesis.getVoices();
-    const preferred=voices.find(v=>v.name.includes("Samantha")||v.name.includes("Google US English")||v.name.includes("Aaron")||v.name.includes("Daniel")||v.name.includes("Alex"))||voices.find(v=>v.lang==="en-US")||voices[0];
-    if(preferred) utt.voice=preferred;
-    utt.rate=1.1;
-    utt.pitch=1.0;
-    utt.volume=1.0;
-    utt.onstart=()=>setSpeaking(true);
-    utt.onend=()=>{ setSpeaking(false); };
-    utt.onerror=()=>setSpeaking(false);
-    window.speechSynthesis.speak(utt);
+    const pickVoice=(voices)=>voices.find(v=>v.name==="Aaron")||voices.find(v=>v.name==="Daniel")||voices.find(v=>v.name==="Alex")||voices.find(v=>v.name==="Fred")||voices.find(v=>/google uk english male/i.test(v.name))||voices.find(v=>/google us english male/i.test(v.name))||voices.find(v=>/male/i.test(v.name)&&v.lang.startsWith("en"))||voices.find(v=>v.lang==="en-US"&&!/samantha|karen|victoria|moira|tessa|fiona/i.test(v.name))||voices.find(v=>v.lang==="en-US")||voices[0];
+    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>setSpeaking(true); utt.onend=()=>setSpeaking(false); utt.onerror=()=>setSpeaking(false); synthRef.current=window.speechSynthesis; synthRef.current.speak(utt); };
+    const v=window.speechSynthesis.getVoices();
+    if(v.length){ doSpeak(v); } else { window.speechSynthesis.onvoiceschanged=()=>{ window.speechSynthesis.onvoiceschanged=null; doSpeak(window.speechSynthesis.getVoices()); }; setTimeout(()=>doSpeak(window.speechSynthesis.getVoices()),600); }
   }
 
   // ── Voice: start listening ──────────────────────────────────────────────────
