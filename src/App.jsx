@@ -3004,7 +3004,9 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
 
       // ── ABOUT ─────────────────────────────────────────────────────────────
       } else if(has("who are you","what are you","about finn","what is finn","introduce yourself")){
-        reply="I'm Finn — Fusion Integrated Neural Navigator v"+FINN_VERSION+". Tasks, inventory, XP, messages, navigation — just talk naturally.";
+        reply="I'm Finn Atlas v"+FINN_VERSION+" — your on-device assistant for MNU Neer Locker. I run entirely in your browser with no internet needed. I handle tasks, inventory, XP, messages, announcements, and navigation. For smarter AI conversations switch to Finn Aether (☁️ Cloud) in the header above.";
+      } else if(has("what model","which model","what ai","what engine","how do you work","what powers you","are you ai","are you gpt","are you claude","are you chatgpt","what are you running")){
+        reply="I'm Finn Atlas — the on-device engine built directly into the Neer Locker app. No AI model, no internet needed. I use keyword matching and rule-based logic to respond instantly. For real AI powered by Llama 3.3 70B, switch to Finn Aether (☁️ Cloud) in the Finn header.";
       } else if(has("who am i","my name","my role","about me","my account")){
         reply="You're "+user?.name+", "+ROLES[user?.role]?.label+" at MNU Neer Locker."+(isXP?" Level "+myProg.level+" ("+myProg.title+"), "+myProg.xp+" XP.":"");
 
