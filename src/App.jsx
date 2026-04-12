@@ -2142,7 +2142,12 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     // Parse action tags from Finn Aether reply and execute them
     let clean=reply;
     const navMatch=reply.match(/\[NAV:(\w+)\]/);
-    if(navMatch){ clean=clean.replace(navMatch[0],"").trim(); setTimeout(()=>setPage&&setPage(navMatch[1]),400); }
+    if(navMatch){
+      clean=clean.replace(navMatch[0],"").trim();
+      const navPage=navMatch[1];
+      // Don't navigate to home — it closes Finn. Only navigate if it's a real page request.
+      if(navPage!=="home") setTimeout(()=>setPage&&setPage(navPage),400);
+    }
     const completeMatch=reply.match(/\[COMPLETE_TASK:([^\]]+)\]/);
     if(completeMatch){
       clean=clean.replace(completeMatch[0],"").trim();
