@@ -3010,15 +3010,25 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         <FinnLogo/>
         <div style={{flex:1,position:"relative",zIndex:1,minWidth:0}}>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-0.3px"}}>Finn</div>
-          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>{useGroq?"✦ Finn Aether · Llama 3.3 70B":"◈ Finn Atlas · On-Device"}</div>
+          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",display:"flex",alignItems:"center",gap:3}}>
+              {useGroq?(<><svg width="11" height="9" viewBox="0 0 20 14" fill="#1e7fa8"><path d="M16.5 6.5a3.5 3.5 0 0 0-3.4-3.5A5 5 0 0 0 4 6a3 3 0 0 0 .5 5.9h11.5a3 3 0 0 0 .5-5.4z"/></svg><span>Finn Aether · Llama 3.3 70B</span></>):(<><svg width="11" height="11" viewBox="0 0 16 16" fill="#1e7fa8"><rect x="4" y="4" width="8" height="8" rx="1.5"/><rect x="6.5" y="1" width="1.5" height="3"/><rect x="9" y="1" width="1.5" height="3"/><rect x="6.5" y="12" width="1.5" height="3"/><rect x="9" y="12" width="1.5" height="3"/><rect x="1" y="6.5" width="3" height="1.5"/><rect x="1" y="9" width="3" height="1.5"/><rect x="12" y="6.5" width="3" height="1.5"/><rect x="12" y="9" width="3" height="1.5"/></svg><span>Finn Atlas · On-Device</span></>)}
+            </div>
         </div>
         {/* Mode toggle */}
         <div style={{display:"flex",background:"rgba(0,0,0,0.3)",borderRadius:10,padding:2,border:"1px solid #1e7fa833",gap:2,flexShrink:0,position:"relative",zIndex:1}}>
           <button onClick={()=>{setUseGroq(true);LS.set("nl3-finn-mode","aether");haptic("light");toast("Switched to Finn Aether ✦");}} style={{background:useGroq?"#1e7fa8":"none",color:useGroq?"#fff":"#1e7fa888",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",whiteSpace:"nowrap"}}>
-            ✦ Aether
+            <svg width="13" height="10" viewBox="0 0 20 14" fill="currentColor" style={{marginRight:3,verticalAlign:"middle",flexShrink:0}}>
+                <path d="M16.5 6.5a3.5 3.5 0 0 0-3.4-3.5A5 5 0 0 0 4 6a3 3 0 0 0 .5 5.9h11.5a3 3 0 0 0 .5-5.4z"/>
+              </svg>Aether
           </button>
           <button onClick={()=>{setUseGroq(false);LS.set("nl3-finn-mode","atlas");haptic("light");toast("Switched to Finn Atlas ◈");}} style={{background:!useGroq?"#C8102E":"none",color:!useGroq?"#fff":"#C8102E88",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",whiteSpace:"nowrap"}}>
-            ◈ Atlas
+            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor" style={{marginRight:3,verticalAlign:"middle",flexShrink:0}}>
+                <rect x="4" y="4" width="8" height="8" rx="1.5"/>
+                <rect x="6.5" y="1" width="1.5" height="3"/><rect x="9" y="1" width="1.5" height="3"/>
+                <rect x="6.5" y="12" width="1.5" height="3"/><rect x="9" y="12" width="1.5" height="3"/>
+                <rect x="1" y="6.5" width="3" height="1.5"/><rect x="1" y="9" width="3" height="1.5"/>
+                <rect x="12" y="6.5" width="3" height="1.5"/><rect x="12" y="9" width="3" height="1.5"/>
+              </svg>Atlas
           </button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,position:"relative",zIndex:1}}>
