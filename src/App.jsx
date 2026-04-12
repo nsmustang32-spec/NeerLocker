@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.7.2";
+const VERSION   = "1.7.3";
 const FINN_VERSION = "1.3.0";
-const VIGIL_VERSION = "1.0.0";
+const VIGIL_VERSION = "2.0.0";
 const FINN_PATCH_NOTES = {
   "1.3.0": [
     "Finn Aether: Cloud-powered Finn by Llama 3.1 via Groq — understands anything naturally",
@@ -51,8 +51,8 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
-  "1.7.2": [
-    "Vigil Security Engine v1.0.0 — PIN hashing with SHA-256",
+  "1.7.3": [
+    "Vigil HyperCore v2.0.0 — PIN hashing with SHA-256",
     "Vigil: Account lockout after 5 failed PIN attempts (15 min)",
     "Vigil: Session timeout by role — employees 30min, managers 2hr, boss 4hr",
     "Vigil: Prompt injection detection on Finn messages",
@@ -660,7 +660,7 @@ function ClaudeTag({T}) {
     <div style={{position:"fixed",bottom:32,left:12,fontSize:11,color:T.faint,fontWeight:500,letterSpacing:"0.01em",userSelect:"none",zIndex:9997,opacity:0.75,lineHeight:1.65}}>
       Built using Claude<br/>Created by Nate Smith<br/>
       <span style={{color:"#1e7fa8",fontWeight:700}}>Powered by Finn v{FINN_VERSION}</span><br/>
-      <span style={{color:"#16a34a",fontWeight:700}}>🛡 Vigil Security Engine v{VIGIL_VERSION}</span>
+      <span style={{color:"#16a34a",fontWeight:700}}>🛡 Secured by Vigil HyperCore v{VIGIL_VERSION}</span>
     </div>
   );
 }
@@ -3554,7 +3554,7 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════════
-// ─── VIGIL SECURITY ENGINE v1.0.0 ────────────────────────────────────────────
+// ─── VIGIL HYPERCORE v2.0.0 ────────────────────────────────────────────
 const VIGIL = {
   hashPIN: async(pin)=>{
     if(!pin) return "";
@@ -4498,22 +4498,27 @@ export default function App() {
     if(!form.pinNew||form.pinNew.length<4){toast("PIN must be 4+ chars","err");return;}
     if(form.pinNew!==form.pinCon){toast("PINs don't match","err");return;}
     const newPin=form.pinNew;
-    // Clear form immediately so inputs reset
     setForm(p=>({...p,pinNew:"",pinCon:""}));
-    // Show checkmark in next frame to avoid batching with form clear
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       setPinSaved(true);
       setTimeout(()=>setPinSaved(false),3500);
     }));
-    // Save in background
-    const next=emps.map(e=>e.id===user?.id?{...e,pin:newPin}:e);
-    saveEmps(next);
-    setUser(u=>({...u,pin:newPin}));
+    // Vigil HyperCore: hash PIN with SHA-256 before saving
+    const pinHash=await VIGIL.hashPIN(newPin);
+    // Save hash to Supabase directly (bypasses saveEmps which saves plain pin field)
+    await SB.upsert("employees",{id:user?.id,pin_hash:pinHash,pin:""});
+    // Update local state with hash so verification works
+    const next=emps.map(e=>e.id===user?.id?{...e,pin:pinHash}:e);
+    setEmps(next);
+    setUser(u=>({...u,pin:pinHash}));
+    VIGIL.logEvent("pin_set","PIN updated",user?.id);
     playSound("success");
+    toast("PIN saved securely 🛡");
   };
   const removePin=async()=>{
+    await SB.upsert("employees",{id:user?.id,pin_hash:"",pin:""});
     const next=emps.map(e=>e.id===user?.id?{...e,pin:""}:e);
-    await saveEmps(next);setUser(u=>({...u,pin:""}));toast("PIN removed");
+    await setEmps(next);setUser(u=>({...u,pin:""}));toast("PIN removed");
   };
 
   // TECH
@@ -6155,8 +6160,8 @@ export default function App() {
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
                 <div style={{width:32,height:32,borderRadius:8,background:"#16a34a22",border:"1px solid #16a34a44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🛡</div>
                 <div>
-                  <div style={{fontWeight:800,color:T.txt,fontSize:15}}>Vigil Security Engine</div>
-                  <div style={{fontSize:10,color:"#16a34a",fontWeight:700,letterSpacing:"0.06em"}}>v{VIGIL_VERSION} · ACTIVE</div>
+                  <div style={{fontWeight:800,color:T.txt,fontSize:15}}>Vigil HyperCore</div>
+                  <div style={{fontSize:10,color:"#16a34a",fontWeight:700,letterSpacing:"0.06em"}}>v{VIGIL_VERSION} · HYPERCORE · ACTIVE</div>
                 </div>
                 <div style={{marginLeft:"auto",display:"flex",gap:6}}>
                   <Btn T={T} sm onClick={()=>{VIGIL.clearLog();toast("Vigil log cleared ✅");setForm(p=>({...p,_v:Date.now()}));}}>🗑 Clear Log</Btn>
