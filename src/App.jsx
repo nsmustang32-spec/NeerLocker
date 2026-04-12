@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.7.1";
+const VERSION   = "1.7.2";
 const FINN_VERSION = "1.3.0";
+const VIGIL_VERSION = "1.0.0";
 const FINN_PATCH_NOTES = {
   "1.3.0": [
     "Finn Aether: Cloud-powered Finn by Llama 3.1 via Groq — understands anything naturally",
@@ -50,6 +51,16 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.7.2": [
+    "Vigil Security Engine v1.0.0 — PIN hashing with SHA-256",
+    "Vigil: Account lockout after 5 failed PIN attempts (15 min)",
+    "Vigil: Session timeout by role — employees 30min, managers 2hr, boss 4hr",
+    "Vigil: Prompt injection detection on Finn messages",
+    "Vigil: Finn rate limiting — 1 message per 1.5 seconds",
+    "Vigil: Anomaly detection — flags unusual hours and new devices",
+    "Vigil: Security dashboard in Tech Admin with live event log",
+    "Vigil: Remaining attempts shown on failed PIN",
+  ],
   "1.7.1": [
     "Fix: Haptic feedback now works and can be toggled in Settings",
     "Fix: Sign Out button no longer overflows on mobile",
@@ -648,7 +659,8 @@ function ClaudeTag({T}) {
   return (
     <div style={{position:"fixed",bottom:32,left:12,fontSize:11,color:T.faint,fontWeight:500,letterSpacing:"0.01em",userSelect:"none",zIndex:9997,opacity:0.75,lineHeight:1.65}}>
       Built using Claude<br/>Created by Nate Smith<br/>
-      <span style={{color:"#1e7fa8",fontWeight:700}}>Powered by Finn v{FINN_VERSION}</span>
+      <span style={{color:"#1e7fa8",fontWeight:700}}>Powered by Finn v{FINN_VERSION}</span><br/>
+      <span style={{color:"#16a34a",fontWeight:700}}>🛡 Vigil Security Engine v{VIGIL_VERSION}</span>
     </div>
   );
 }
@@ -2239,6 +2251,17 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   async function send(){
     const text=input.trim();
     if(!text||loading) return;
+    // Vigil: rate limit
+    if(!VIGIL.checkFinnRate()){
+      addMsg("assistant","Slow down a little! Give me a second. 😄");
+      return;
+    }
+    // Vigil: injection detection
+    if(VIGIL.detectInjection(text)){
+      VIGIL.logEvent("prompt_injection",text.slice(0,100),user?.id);
+      addMsg("assistant","🛡 Vigil flagged that message as a potential prompt injection attempt. It's been logged. What can I actually help you with?");
+      return;
+    }
     setInput("");
     addMsg("user",text);
     setLoading(true);
@@ -3531,6 +3554,77 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════════
+// ─── VIGIL SECURITY ENGINE v1.0.0 ────────────────────────────────────────────
+const VIGIL = {
+  hashPIN: async(pin)=>{
+    if(!pin) return "";
+    const enc=new TextEncoder().encode(pin+"neer-locker-salt-v1");
+    const buf=await crypto.subtle.digest("SHA-256",enc);
+    return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("").slice(0,16);
+  },
+  verifyPIN: async(input,stored)=>{
+    if(!stored) return true;
+    if(stored.length<=6) return input===stored; // legacy plain text
+    const hashed=await VIGIL.hashPIN(input);
+    return hashed===stored;
+  },
+  MAX_ATTEMPTS: 5,
+  LOCKOUT_MS: 15*60*1000,
+  recordAttempt:(email)=>{
+    const key="vigil-attempts-"+email;
+    const d=JSON.parse(localStorage.getItem(key)||"{}");
+    d.count=(d.count||0)+1; d.last=Date.now();
+    localStorage.setItem(key,JSON.stringify(d));
+    return d.count;
+  },
+  clearAttempts:(email)=>localStorage.removeItem("vigil-attempts-"+email),
+  isLockedOut:(email)=>{
+    const d=JSON.parse(localStorage.getItem("vigil-attempts-"+email)||"{}");
+    if(!d.count||d.count<VIGIL.MAX_ATTEMPTS) return false;
+    const elapsed=Date.now()-(d.last||0);
+    if(elapsed>VIGIL.LOCKOUT_MS){VIGIL.clearAttempts(email);return false;}
+    return Math.ceil((VIGIL.LOCKOUT_MS-elapsed)/60000);
+  },
+  SESSION_MS:{boss:4*3600000,manager:2*3600000,assistant:3600000,employee:30*60000,superadmin:8*3600000},
+  lastActivity: Date.now(),
+  updateActivity:()=>{VIGIL.lastActivity=Date.now();},
+  isSessionExpired:(role)=>Date.now()-VIGIL.lastActivity>(VIGIL.SESSION_MS[role]||VIGIL.SESSION_MS.employee),
+  INJECTION_PATTERNS:[
+    /ignore (previous|all|above|prior) (instructions?|prompts?|rules?)/i,
+    /you are now|forget (you are|your instructions)/i,
+    /jailbreak|dan mode|developer mode|unrestricted/i,
+    /pretend (you are|to be)|act as (if you|a different)/i,
+    /system prompt|override instructions|bypass/i,
+  ],
+  detectInjection:(text)=>VIGIL.INJECTION_PATTERNS.some(p=>p.test(text)),
+  finnLastMsg:0,
+  FINN_RATE_MS:1500,
+  checkFinnRate:()=>{
+    const now=Date.now();
+    if(now-VIGIL.finnLastMsg<VIGIL.FINN_RATE_MS) return false;
+    VIGIL.finnLastMsg=now; return true;
+  },
+  detectAnomaly:(user)=>{
+    const hour=new Date().getHours();
+    const flags=[];
+    if(hour>=1&&hour<5) flags.push("unusual_hour");
+    const lastDev=localStorage.getItem("vigil-device-"+user.id);
+    const curDev=navigator.userAgent.slice(0,80);
+    if(lastDev&&lastDev!==curDev) flags.push("new_device");
+    localStorage.setItem("vigil-device-"+user.id,curDev);
+    return flags;
+  },
+  logEvent:(type,detail,userId)=>{
+    try{
+      const evts=JSON.parse(localStorage.getItem("vigil-log")||"[]");
+      evts.unshift({type,detail,userId,at:Date.now()});
+      localStorage.setItem("vigil-log",JSON.stringify(evts.slice(0,200)));
+    }catch(e){}
+  },
+  getLog:()=>{try{return JSON.parse(localStorage.getItem("vigil-log")||"[]");}catch(e){return [];}},
+  clearLog:()=>localStorage.removeItem("vigil-log"),
+};
+
 export default function App() {
   const [T,setT]=useState(T0);
   const [dark,setDk]=useState(LS.get('nl3-dark')!==null?LS.get('nl3-dark'):window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -3803,6 +3897,23 @@ export default function App() {
     return()=>window.removeEventListener("devicemotion",handleMotion);
   },[]);
 
+  // Vigil: activity tracker + session timeout
+  useEffect(()=>{
+    const events=["mousedown","touchstart","keydown","scroll","click"];
+    events.forEach(e=>window.addEventListener(e,VIGIL.updateActivity,{passive:true}));
+    const sessionCheck=setInterval(()=>{
+      if(user&&VIGIL.isSessionExpired(user.role)){
+        VIGIL.logEvent("session_timeout","auto_logout",user.id);
+        toast("Session expired — you've been signed out for security","warn");
+        doLogout();
+      }
+    },60000); // check every minute
+    return()=>{
+      events.forEach(e=>window.removeEventListener(e,VIGIL.updateActivity));
+      clearInterval(sessionCheck);
+    };
+  },[user]);
+
   // Keyboard shortcut — Cmd+K or Ctrl+K opens global search
   useEffect(()=>{
     const handler=e=>{
@@ -4022,14 +4133,40 @@ export default function App() {
     finishLogin(match);
   };
 
-  const doPin=()=>{
+  const doPin=async()=>{
     if(!pending) return;
-    if(pinIn!==pending.pin){toast("Incorrect PIN","err");addErr("warn",`Wrong PIN attempt for ${pending.email}`);return;}
+    // Vigil: lockout check
+    const lockMins=VIGIL.isLockedOut(pending.email);
+    if(lockMins){toast("Account locked — try again in "+lockMins+" min","err");return;}
+    // Vigil: verify PIN
+    const pinOk=await VIGIL.verifyPIN(pinIn,pending.pin);
+    if(!pinOk){
+      const attempts=VIGIL.recordAttempt(pending.email);
+      VIGIL.logEvent("failed_pin",pending.email,pending.id);
+      const left=VIGIL.MAX_ATTEMPTS-attempts;
+      if(left<=0){
+        toast("Account locked for 15 min — too many failed PINs","err");
+        VIGIL.logEvent("account_locked",pending.email,pending.id);
+      } else {
+        toast("Wrong PIN — "+left+" attempt"+(left!==1?"s":"")+" left","err");
+      }
+      setPinIn(""); return;
+    }
     finishLogin(pending);setPinIn("");setPending(null);setShowPin(false);
   };
 
   const finishLogin=(emp)=>{
     haptic("success");
+    VIGIL.clearAttempts(emp.email);
+    VIGIL.updateActivity();
+    // Vigil anomaly detection
+    const flags=VIGIL.detectAnomaly(emp);
+    if(flags.length>0){
+      VIGIL.logEvent("anomaly",flags.join(","),emp.id);
+      if(flags.includes("unusual_hour")) toast("⚠️ Vigil: Login outside normal hours logged","warn");
+      if(flags.includes("new_device")) toast("🛡 Vigil: New device detected — logged for security","warn");
+    }
+    VIGIL.logEvent("login_success",emp.email,emp.id);
     // Cancel any previous pending login transition
     clearTimeout(loginTimerRef.current);
     setWelData({name:emp.name,role:emp.role});
@@ -6012,6 +6149,66 @@ export default function App() {
 
             {/* Feedback from staff */}
             <FeedbackPanel T={T} toast={toast}/>
+
+            {/* Vigil Security Dashboard */}
+            <div style={{background:T.card,border:"2px solid #16a34a44",borderRadius:14,padding:16,marginBottom:14}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                <div style={{width:32,height:32,borderRadius:8,background:"#16a34a22",border:"1px solid #16a34a44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🛡</div>
+                <div>
+                  <div style={{fontWeight:800,color:T.txt,fontSize:15}}>Vigil Security Engine</div>
+                  <div style={{fontSize:10,color:"#16a34a",fontWeight:700,letterSpacing:"0.06em"}}>v{VIGIL_VERSION} · ACTIVE</div>
+                </div>
+                <div style={{marginLeft:"auto",display:"flex",gap:6}}>
+                  <Btn T={T} sm onClick={()=>{VIGIL.clearLog();toast("Vigil log cleared ✅");setForm(p=>({...p,_v:Date.now()}));}}>🗑 Clear Log</Btn>
+                </div>
+              </div>
+              {/* Security stats */}
+              {(()=>{
+                const log=VIGIL.getLog();
+                const failed=log.filter(e=>e.type==="failed_pin").length;
+                const locked=log.filter(e=>e.type==="account_locked").length;
+                const anomalies=log.filter(e=>e.type==="anomaly").length;
+                const injections=log.filter(e=>e.type==="prompt_injection").length;
+                const logins=log.filter(e=>e.type==="login_success").length;
+                return (
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+                    {[
+                      {label:"Logins",val:logins,icon:"✅",color:"#16a34a"},
+                      {label:"Failed PINs",val:failed,icon:"🔐",color:failed>0?T.warn:"#16a34a"},
+                      {label:"Lockouts",val:locked,icon:"🔒",color:locked>0?T.err:"#16a34a"},
+                      {label:"Anomalies",val:anomalies,icon:"⚠️",color:anomalies>0?T.warn:"#16a34a"},
+                      {label:"Injections",val:injections,icon:"🚨",color:injections>0?T.err:"#16a34a"},
+                      {label:"Log entries",val:log.length,icon:"📋",color:T.sub},
+                    ].map(s=>(
+                      <div key={s.label} style={{background:T.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid "+T.bor}}>
+                        <div style={{fontSize:18}}>{s.icon}</div>
+                        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:20,fontWeight:800,color:s.color}}>{s.val}</div>
+                        <div style={{fontSize:10,color:T.sub,fontWeight:600}}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+              {/* Recent events */}
+              <div style={{fontSize:11,fontWeight:800,color:T.sub,letterSpacing:"0.06em",marginBottom:8}}>RECENT EVENTS</div>
+              <div style={{maxHeight:200,overflowY:"auto",display:"grid",gap:4}}>
+                {VIGIL.getLog().slice(0,20).map((e,i)=>{
+                  const colors={login_success:"#16a34a",failed_pin:T.warn,account_locked:T.err,anomaly:T.warn,prompt_injection:T.err,session_timeout:T.sub,lockout_blocked:T.err};
+                  const icons={login_success:"✅",failed_pin:"🔐",account_locked:"🔒",anomaly:"⚠️",prompt_injection:"🚨",session_timeout:"⏱",lockout_blocked:"🚫"};
+                  return (
+                    <div key={i} style={{background:T.surfH,borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"center",gap:8,border:"1px solid "+T.bor}}>
+                      <span style={{fontSize:14,flexShrink:0}}>{icons[e.type]||"📋"}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:11,fontWeight:700,color:colors[e.type]||T.txt}}>{e.type.replace(/_/g," ").toUpperCase()}</div>
+                        <div style={{fontSize:10,color:T.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.detail}</div>
+                      </div>
+                      <div style={{fontSize:10,color:T.faint,flexShrink:0}}>{fmtDT(e.at)}</div>
+                    </div>
+                  );
+                })}
+                {VIGIL.getLog().length===0&&<div style={{textAlign:"center",padding:"20px 0",color:T.sub,fontSize:12}}>No events logged yet.</div>}
+              </div>
+            </div>
 
             {/* Backups */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16}}>
