@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.7.3";
+const VERSION   = "1.7.4";
 const FINN_VERSION = "1.3.0";
-const VIGIL_VERSION = "2.0.0";
+const VIGIL_VERSION = "2.0.1";
 const FINN_PATCH_NOTES = {
   "1.3.0": [
     "Finn Aether: Cloud-powered Finn by Llama 3.1 via Groq — understands anything naturally",
@@ -51,6 +51,12 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.7.4": [
+    "Vigil HyperCore v2.0.1 — Failed email login now tracked and locked",
+    "Vigil: New PIN creation now hashed automatically via VIGIL.hashPIN()",
+    "Vigil: Lockout check runs on email submit before PIN screen",
+    "Vigil: All failed login events logged to Vigil dashboard",
+  ],
   "1.7.3": [
     "Vigil HyperCore v2.0.0 — PIN hashing with SHA-256",
     "Vigil: Account lockout after 5 failed PIN attempts (15 min)",
