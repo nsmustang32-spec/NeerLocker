@@ -1,4 +1,4 @@
-// Finn Aether v1.3.0 — Cloud backend (Groq)
+// v2 // Finn Aether v1.3.0 — Cloud backend (Groq)
 // Free tier: console.groq.com
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
