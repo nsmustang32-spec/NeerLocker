@@ -2286,7 +2286,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     window.speechSynthesis.cancel();
     const utt=new SpeechSynthesisUtterance(clean);
     const pickVoice=(voices)=>voices.find(v=>v.name==="Aaron")||voices.find(v=>v.name==="Daniel")||voices.find(v=>v.name==="Alex")||voices.find(v=>v.name==="Fred")||voices.find(v=>/google uk english male/i.test(v.name))||voices.find(v=>/google us english male/i.test(v.name))||voices.find(v=>/male/i.test(v.name)&&v.lang.startsWith("en"))||voices.find(v=>v.lang==="en-US"&&!/samantha|karen|victoria|moira|tessa|fiona/i.test(v.name))||voices.find(v=>v.lang==="en-US")||voices[0];
-    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>setSpeaking(true); utt.onend=()=>setSpeaking(false); utt.onerror=()=>setSpeaking(false); synthRef.current=window.speechSynthesis; synthRef.current.speak(utt); };
+    const doSpeak=(voices)=>{ const v=pickVoice(voices); console.log("🎤 Finn voice selected:",v?.name,"| All en voices:",voices.filter(x=>x.lang.startsWith("en")).map(x=>x.name).join(", ")); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>setSpeaking(true); utt.onend=()=>setSpeaking(false); utt.onerror=()=>setSpeaking(false); synthRef.current=window.speechSynthesis; synthRef.current.speak(utt); };
     const v=window.speechSynthesis.getVoices();
     if(v.length){ doSpeak(v); } else { window.speechSynthesis.onvoiceschanged=()=>{ window.speechSynthesis.onvoiceschanged=null; doSpeak(window.speechSynthesis.getVoices()); }; setTimeout(()=>doSpeak(window.speechSynthesis.getVoices()),600); }
   }
