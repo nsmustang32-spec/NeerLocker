@@ -1,4 +1,4 @@
-// Finn v1.3.0 — Cloud Finn backend (Groq)
+// Finn Aether v1.3.0 — Cloud backend (Groq)
 // Free tier: console.groq.com
 
 const GROQ_MODEL = "llama-3.3-70b-versatile"; // Best free Groq model — 70B params
@@ -171,7 +171,7 @@ module.exports = async function handler(req, res) {
     if (!response.ok) {
       const err = await response.text();
       console.error("Groq error:", err);
-      return res.status(500).json({ error: "Groq API error", detail: err });
+      return res.status(500).json({ error: "Finn Aether API error", detail: err });
     }
 
     const data = await response.json();
@@ -179,7 +179,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ reply, model: GROQ_MODEL });
 
   } catch (err) {
-    console.error("Finn Cloud error:", err);
+    console.error("Finn Aether error:", err);
     return res.status(500).json({ error: err.message });
   }
 };
