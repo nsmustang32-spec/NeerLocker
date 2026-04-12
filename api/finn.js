@@ -96,16 +96,8 @@ module.exports = async function handler(req, res) {
   const { messages, context } = req.body || {};
   if (!messages || !context) return res.status(400).json({ error: "messages and context required" });
 
-  // Debug: log all env var keys so we can see what Vercel actually has
-  const envKeys = Object.keys(process.env).filter(k => k.includes("GROQ") || k.includes("groq")).join(", ");
-  console.log("Available GROQ env vars:", envKeys || "NONE FOUND");
-  console.log("All env keys:", Object.keys(process.env).join(", "));
-
-  const apiKey = process.env.GROQ_API_KEY || process.env.GROQ_KEY || process.env.groq_api_key;
-  if (!apiKey) return res.status(500).json({ 
-    error: "GROQ_API_KEY not configured", 
-    availableKeys: Object.keys(process.env).filter(k => !k.includes("SECRET") && !k.includes("KEY")).join(", ")
-  });
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: "GROQ_API_KEY not configured in Vercel environment variables" });
 
   try {
     const systemPrompt = buildSystemPrompt(context);
