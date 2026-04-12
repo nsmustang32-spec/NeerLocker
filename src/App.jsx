@@ -2,9 +2,16 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const VERSION   = "1.7.4";
-const FINN_VERSION = "1.3.0";
+const FINN_VERSION = "1.3.1";
 const VIGIL_VERSION = "2.0.1";
 const FINN_PATCH_NOTES = {
+  "1.3.1": [
+    "Voice mode: Finn now speaks replies aloud using male voice",
+    "Voice mode: Tap mic button to talk to Finn hands-free",
+    "Voice mode: iOS PWA warning shown when mic unavailable",
+    "Voice mode: Settings now save correctly across sessions",
+    "Voice mode: Male voice prioritized (Aaron, Daniel, Alex)",
+  ],
   "1.3.0": [
     "Finn Aether: Cloud-powered Finn by Llama 3.1 via Groq — understands anything naturally",
     "Action tags: Finn can complete tasks, adjust inventory, navigate, send DMs through AI",
@@ -2238,7 +2245,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const [pendingAction,setPendingAction]=useState(null);
   const [listening,setListening]=useState(false);
   const [speaking,setSpeaking]=useState(false);
-  const [voiceOn,setVoiceOn]=useState(LS.get("nl3-finn-voice")===true);
+  const [voiceOn,setVoiceOn]=useState(LS.get("nl3-finn-voice")!==false);
   const recognitionRef=useRef(null);
   const endRef=useRef(null);
   const inputRef=useRef(null);
@@ -2293,7 +2300,14 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   // ── Voice: start listening ──────────────────────────────────────────────────
   function startListening(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-    if(!SR){ toast("Voice not supported on this browser","err"); return; }
+    if(!SR){
+      // Check if iOS PWA
+      const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
+      if(isIOS&&isPWA) toast("Microphone isn't available in iOS home screen apps — open in Safari instead 🎤","warn");
+      else toast("Voice not supported on this browser — try Chrome","warn");
+      return;
+    }
     if(listening){ recognitionRef.current?.stop(); setListening(false); return; }
     // Stop Finn speaking if he is
     window.speechSynthesis.cancel(); setSpeaking(false);
@@ -2314,8 +2328,14 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     };
     rec.onerror=(e)=>{
       setListening(false);
-      if(e.error==="not-allowed") toast("Microphone permission denied — check browser settings","err");
-      else if(e.error!=="aborted") toast("Voice error: "+e.error,"err");
+      if(e.error==="not-allowed"||e.error==="permission-denied") toast("Microphone access denied — allow mic in browser settings and reload","err");
+      else if(e.error==="not-supported"||e.error==="service-not-allowed"){
+        const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
+        if(isIOS&&isPWA) toast("Mic isn't available in iOS home screen mode — open in Safari browser instead","warn");
+        else toast("Voice recognition not available on this device","warn");
+      }
+      else if(e.error!=="aborted"&&e.error!=="no-speech") toast("Voice error: "+e.error,"warn");
     };
     rec.onend=()=>setListening(false);
     recognitionRef.current=rec;
@@ -3261,7 +3281,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
           style={{background:listening?"#ef4444":voiceOn?"#1e7fa822":"none",border:"1px solid "+(listening?"#ef4444":voiceOn?"#1e7fa844":T.bor),borderRadius:10,padding:"8px 10px",cursor:"pointer",color:listening?"#fff":voiceOn?"#1e7fa8":T.mut,fontSize:16,transition:"all .2s",flexShrink:0}}
         >{listening?"⏹":"🎤"}</button>
         {/* Voice on/off */}
-        <button onClick={()=>{const next=!voiceOn;setVoiceOn(next);LS.set("nl3-finn-voice",next);if(!next){window.speechSynthesis.cancel();setSpeaking(false);}haptic("light");}}
+        <button onClick={()=>{const next=!voiceOn;setVoiceOn(next);LS.set("nl3-finn-voice",next);if(next){const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;if(isIOS&&isPWA)toast("Voice output will work but mic may not in iOS home screen apps","warn");}if(!next){window.speechSynthesis.cancel();setSpeaking(false);}haptic("light");}}
           title={voiceOn?"Voice on":"Voice off"}
           style={{background:voiceOn?"#1e7fa822":"none",border:"1px solid "+(voiceOn?"#1e7fa844":T.bor),borderRadius:10,padding:"8px 10px",cursor:"pointer",color:voiceOn?"#1e7fa8":T.faint,fontSize:14,transition:"all .2s",flexShrink:0}}
         >{voiceOn?"🔊":"🔇"}</button>
