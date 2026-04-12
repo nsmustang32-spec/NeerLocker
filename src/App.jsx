@@ -2122,7 +2122,7 @@ function WelcomePortal({T, onDone}) {
 function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact,upsertTask,dismissAnn}) {
   const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
   const setNick=(n)=>{ try{ localStorage.setItem("nl3-nickname",n); }catch(e){} };
-  const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")!=="atlas");
+  const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")==="atlas"?false:true);
 
   const callGroqFinn=async(userMsg,history)=>{
     const context={user,tasks,inv,anns,emps,progress,dms};
@@ -3004,9 +3004,9 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
 
       // ── ABOUT ─────────────────────────────────────────────────────────────
       } else if(has("who are you","what are you","about finn","what is finn","introduce yourself")){
-        reply="I'm Finn Atlas v"+FINN_VERSION+" — your on-device assistant for MNU Neer Locker. I run entirely in your browser with no internet needed. I handle tasks, inventory, XP, messages, announcements, and navigation. For smarter AI conversations switch to Finn Aether (☁️ Cloud) in the header above.";
+        reply="Finn Atlas — on-device, no internet needed. I run directly on your device and handle everything: tasks, inventory, XP, messages, and navigation. Switch to ☁️ Aether for full AI.";
       } else if(has("what model","which model","what ai","what engine","how do you work","what powers you","are you ai","are you gpt","are you claude","are you chatgpt","what are you running")){
-        reply="I'm Finn Atlas — the on-device engine built directly into the Neer Locker app. No AI model, no internet needed. I use keyword matching and rule-based logic to respond instantly. For real AI powered by Llama 3.3 70B, switch to Finn Aether (☁️ Cloud) in the Finn header.";
+        reply="Finn Atlas — built-in, always available, zero internet required. I run on-device, not in the cloud. For Llama 3.3 70B AI, tap ☁️ Aether.";
       } else if(has("who am i","my name","my role","about me","my account")){
         reply="You're "+user?.name+", "+ROLES[user?.role]?.label+" at MNU Neer Locker."+(isXP?" Level "+myProg.level+" ("+myProg.title+"), "+myProg.xp+" XP.":"");
 
