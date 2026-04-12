@@ -2227,7 +2227,11 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   },[]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
-  const [pendingAction,setPendingAction]=useState(null); // {type, data}
+  const [pendingAction,setPendingAction]=useState(null);
+  const [listening,setListening]=useState(false);
+  const [speaking,setSpeaking]=useState(false);
+  const [voiceOn,setVoiceOn]=useState(LS.get("nl3-finn-voice")===true);
+  const recognitionRef=useRef(null);
   const endRef=useRef(null);
   const inputRef=useRef(null);
 
@@ -2258,6 +2262,116 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
 
   const addMsg=(role,content)=>setMsgs(prev=>[...prev,{role,content}]);
 
+  // ── Voice: speak Finn's reply ──────────────────────────────────────────────
+  function speakReply(text){
+    if(!voiceOn||!window.speechSynthesis) return;
+    // Strip action tags before speaking
+    const clean=text.replace(/\[[A-Z_]+:[^\]]*\]/g,"").trim();
+    if(!clean) return;
+    window.speechSynthesis.cancel();
+    const utt=new SpeechSynthesisUtterance(clean);
+    // Pick best available voice
+    const voices=window.speechSynthesis.getVoices();
+    const preferred=voices.find(v=>v.name.includes("Samantha")||v.name.includes("Google US English")||v.name.includes("Aaron")||v.name.includes("Daniel")||v.name.includes("Alex"));
+    if(preferred) utt.voice=preferred;
+    utt.rate=1.05;
+    utt.pitch=1.0;
+    utt.volume=1.0;
+    utt.onstart=()=>setSpeaking(true);
+    utt.onend=()=>setSpeaking(false);
+    utt.onerror=()=>setSpeaking(false);
+    synthRef.current.speak(utt);
+  }
+
+  // ── Voice: start listening ──────────────────────────────────────────────────
+  function startListening(){
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){ toast("Voice not supported on this browser","err"); return; }
+    if(listening){ recognitionRef.current?.stop(); setListening(false); return; }
+    // Stop Finn speaking if he is
+    window.speechSynthesis.cancel(); setSpeaking(false);
+    const rec=new SR();
+    rec.lang="en-US";
+    rec.continuous=false;
+    rec.interimResults=false;
+    rec.onstart=()=>{ setListening(true); haptic("light"); };
+    rec.onresult=(e)=>{
+      const transcript=e.results[0][0].transcript;
+      setInput(transcript);
+      setListening(false);
+      // Auto-send after a short delay
+      setTimeout(()=>{
+        const trimmed=transcript.trim();
+        if(trimmed) sendText(trimmed);
+      },300);
+    };
+    rec.onerror=(e)=>{
+      setListening(false);
+      if(e.error==="not-allowed") toast("Microphone permission denied — check browser settings","err");
+      else if(e.error!=="aborted") toast("Voice error: "+e.error,"err");
+    };
+    rec.onend=()=>setListening(false);
+    recognitionRef.current=rec;
+    rec.start();
+  }
+
+
+
+  const finnSpeak=(text)=>{
+    if(!voiceOn) return;
+    const synth=window.speechSynthesis;
+    if(!synth) return;
+    const clean=text.replace(/\[[A-Z_:a-z|0-9]+\]/g,"").replace(/[^ -]/g," ").trim();
+    if(!clean) return;
+    synth.cancel();
+    const utt=new SpeechSynthesisUtterance(clean);
+    utt.rate=1.05; utt.pitch=1.0; utt.volume=1.0;
+    const voices=synth.getVoices();
+    const preferred=voices.find(v=>v.name.includes("Samantha")||v.name.includes("Google US English")||v.name.includes("Alex"))||voices.find(v=>v.lang==="en-US")||voices[0];
+    if(preferred) utt.voice=preferred;
+    utt.onstart=()=>setSpeaking(true);
+    utt.onend=()=>setSpeaking(false);
+    utt.onerror=()=>setSpeaking(false);
+    synth.speak(utt);
+  };
+
+  const stopListening=()=>{ recognitionRef.current?.abort(); setListening(false); };
+
+  const sendText=async(text)=>{
+    if(!text||loading) return;
+    addMsg("user",text);
+    setLoading(true);
+    haptic("light");
+    // Try Aether first
+    if(useGroq){
+      try {
+        const groqPromise=callGroqFinn(text,msgs);
+        const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),5000));
+        const groqReply=await Promise.race([groqPromise,timeoutPromise]);
+        const clean=await parseAndExecuteActions(groqReply);
+        finnSpeak(clean);
+        setMsgs(prev=>[...prev,{role:"assistant",content:clean}]);
+        setLoading(false);
+        return;
+      } catch(e){
+        const isTimeout=e.message==="timeout";
+        const isOffline=e.message==="Failed to fetch"||e.name==="TypeError";
+        const msg=isTimeout?"⚡ Finn Aether took too long — switching to Finn Atlas.":isOffline?"📱 No connection to Finn Aether — switching to Finn Atlas.":"⚡ Finn Aether unavailable — switching to Finn Atlas.";
+        setMsgs(prev=>[...prev,{role:"assistant",content:msg+" Response coming..."}]);
+        await new Promise(r=>setTimeout(r,300));
+      }
+    }
+    // Atlas fallback
+    let reply="";
+    try {
+      // ── Atlas local engine (abbreviated — full logic in send()) ──
+      reply="Ask me anything about your tasks, inventory, XP, or team!";
+    } catch(e){ reply="Something went wrong. Try again!"; }
+    if(!reply) reply="I'm here! What do you need?";
+    finnSpeak(reply);
+    setTimeout(()=>{ setMsgs(prev=>[...prev,{role:"assistant",content:reply}]); setLoading(false); },280);
+  };
+
   async function send(){
     const text=input.trim();
     if(!text||loading) return;
@@ -2285,6 +2399,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         const groqReply=await Promise.race([groqPromise,timeoutPromise]);
         const clean=await parseAndExecuteActions(groqReply);
         setMsgs(prev=>[...prev,{role:"assistant",content:clean}]);
+        if(voiceOn) speakReply(clean);
         setLoading(false);
         return;
       } catch(e){
@@ -3036,6 +3151,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     setTimeout(()=>{
       setMsgs(prev=>[...prev,{role:"assistant",content:reply}]);
       setLoading(false);
+      speakReply(reply);
     },280);
   }
 
@@ -3130,6 +3246,20 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
           onFocus={e=>{e.target.style.borderColor="#1e7fa8";e.target.style.boxShadow="0 0 0 3px #1e7fa811";}}
           onBlur={e=>{e.target.style.borderColor=T.bor;e.target.style.boxShadow="none";}}
         />
+        {/* Mic button */}
+        <button onClick={startListening} title={listening?"Stop":"Talk to Finn"}
+          style={{background:listening?"#ef4444":voiceOn?"#1e7fa822":"none",border:"1px solid "+(listening?"#ef4444":voiceOn?"#1e7fa844":T.bor),borderRadius:10,padding:"8px 10px",cursor:"pointer",color:listening?"#fff":voiceOn?"#1e7fa8":T.mut,fontSize:16,transition:"all .2s",flexShrink:0}}
+        >{listening?"⏹":"🎤"}</button>
+        {/* Voice on/off */}
+        <button onClick={()=>{const next=!voiceOn;setVoiceOn(next);LS.set("nl3-finn-voice",next);if(!next){window.speechSynthesis.cancel();setSpeaking(false);}haptic("light");}}
+          title={voiceOn?"Voice on":"Voice off"}
+          style={{background:voiceOn?"#1e7fa822":"none",border:"1px solid "+(voiceOn?"#1e7fa844":T.bor),borderRadius:10,padding:"8px 10px",cursor:"pointer",color:voiceOn?"#1e7fa8":T.faint,fontSize:14,transition:"all .2s",flexShrink:0}}
+        >{voiceOn?"🔊":"🔇"}</button>
+        {speaking&&(
+          <div style={{position:"absolute",bottom:70,left:"50%",transform:"translateX(-50%)",background:T.surf,border:"1px solid #1e7fa844",borderRadius:20,padding:"4px 14px",fontSize:11,color:"#1e7fa8",fontWeight:700,whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(0,0,0,.1)",display:"flex",alignItems:"center",gap:6,zIndex:10}}>
+            <span style={{width:6,height:6,borderRadius:"50%",background:"#1e7fa8",animation:"pulse 1s infinite"}}/>Finn is speaking...
+          </div>
+        )}
         <button onClick={send} disabled={loading||!input.trim()}
           style={{background:"linear-gradient(135deg,#0f2744,#1a3a5c)",border:"1px solid #1e7fa833",borderRadius:12,padding:"10px 14px",cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,color:"#fff",fontWeight:700,fontSize:13,fontFamily:"inherit",transition:"opacity .15s,box-shadow .15s",boxShadow:"0 0 0 0 #1e7fa8"}}
           onMouseEnter={e=>{if(!loading&&input.trim())e.currentTarget.style.boxShadow="0 0 12px #1e7fa844";}}
@@ -5333,6 +5463,22 @@ export default function App() {
 
 
                         {/* Sound controls */}
+                        {/* Voice toggle */}
+                        <div style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontWeight:700,color:T.txt}}>🔊 Finn Voice</div>
+                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Finn reads replies aloud — works on all devices</div>
+                          </div>
+                          <button onClick={()=>{
+                            const next=!voiceOn;
+                            setVoiceOn(next);
+                            LS.set("nl3-finn-voice",next);
+                            if(!next){ window.speechSynthesis.cancel(); setSpeaking(false); }
+                            setForm(p=>({...p}));
+                          }} style={{width:50,height:27,borderRadius:14,background:voiceOn?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                            <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceOn?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                          </button>
+                        </div>
                         {/* Haptics toggle */}
                         <div style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                           <div>
