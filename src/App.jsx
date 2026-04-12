@@ -2127,16 +2127,16 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const callGroqFinn=async(userMsg,history)=>{
     const context={user,tasks,inv,anns,emps,progress,dms};
     const messages=[...history.filter(m=>m.role!=="assistant"||history.indexOf(m)>history.length-8).map(m=>({role:m.role,content:m.content})),{role:"user",content:userMsg}];
-    try {
-      const r=await fetch("https://neer-locker.vercel.app/api/finn",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({messages,context})
-      });
-      if(!r.ok) return null;
-      const d=await r.json();
-      return d.reply||null;
-    } catch(e){ return null; }
+    if(!navigator.onLine) throw new Error("offline");
+    const r=await fetch("https://neer-locker.vercel.app/api/finn",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({messages,context})
+    });
+    if(!r.ok) throw new Error("api_error_"+r.status);
+    const d=await r.json();
+    if(!d.reply) throw new Error("no_response");
+    return d.reply;
   };
 
   const parseAndExecuteActions=async(reply)=>{
@@ -2275,22 +2275,36 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
 
     // ── Try Finn Aether first (5s timeout), fall back to Finn Atlas ───────────
     if(useGroq){
-      try {
-        const groqPromise=callGroqFinn(text,msgs);
-        const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),5000));
-        const groqReply=await Promise.race([groqPromise,timeoutPromise]);
-        if(groqReply){
-          const clean=await parseAndExecuteActions(groqReply);
-          setMsgs(prev=>[...prev,{role:"assistant",content:clean}]);
-          setLoading(false);
-          return;
-        }
-      } catch(e){
-        const isTimeout=e.message==="timeout";
-        console.warn(isTimeout?"Finn Aether timed out after 5s, switching to Finn Atlas":"Finn Aether failed:",e);
-        // Show a subtle notice — don't block the response
-        setMsgs(prev=>[...prev,{role:"assistant",content:"⚡ "+( isTimeout?"Finn Aether took too long — switching to Finn Atlas.":"Finn Aether unavailable — switching to Finn Atlas.")+" Response coming..."}]);
+      // Check if offline immediately — skip Aether entirely
+      if(!navigator.onLine){
+        setMsgs(prev=>[...prev,{role:"assistant",content:"📱 You're offline — switching to Finn Atlas automatically."}]);
         await new Promise(r=>setTimeout(r,300));
+      } else {
+        try {
+          const groqPromise=callGroqFinn(text,msgs);
+          const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),5000));
+          const groqReply=await Promise.race([groqPromise,timeoutPromise]);
+          if(groqReply){
+            const clean=await parseAndExecuteActions(groqReply);
+            setMsgs(prev=>[...prev,{role:"assistant",content:clean}]);
+            setLoading(false);
+            return;
+          } else {
+            // null returned — network error inside callGroqFinn
+            throw new Error("no_response");
+          }
+        } catch(e){
+          const isTimeout=e.message==="timeout";
+          const isOffline=e.message==="no_response"||e.message==="Failed to fetch"||!navigator.onLine;
+          const msg=isTimeout
+            ?"⚡ Finn Aether took too long — switching to Finn Atlas."
+            :isOffline
+            ?"📱 No connection to Finn Aether — switching to Finn Atlas."
+            :"⚡ Finn Aether unavailable — switching to Finn Atlas.";
+          console.warn("Finn Aether fell back to Atlas:",e.message);
+          setMsgs(prev=>[...prev,{role:"assistant",content:msg+" Response coming..."}]);
+          await new Promise(r=>setTimeout(r,300));
+        }
       }
     }
 
