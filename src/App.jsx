@@ -2122,6 +2122,14 @@ function WelcomePortal({T, onDone}) {
 function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact,upsertTask,dismissAnn}) {
   const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
   const setNick=(n)=>{ try{ localStorage.setItem("nl3-nickname",n); }catch(e){} };
+
+  // Preload voices so speakReply has no delay on first call
+  useEffect(()=>{
+    if(window.speechSynthesis){
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
+    }
+  },[]);
   const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")==="atlas"?false:true);
 
   const callGroqFinn=async(userMsg,history)=>{
@@ -2265,22 +2273,21 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   // ── Voice: speak Finn's reply ──────────────────────────────────────────────
   function speakReply(text){
     if(!voiceOn||!window.speechSynthesis) return;
-    // Strip action tags before speaking
-    const clean=text.replace(/\[[A-Z_]+:[^\]]*\]/g,"").trim();
+    const clean=text.replace(/\[[A-Z_:a-z|0-9]+\]/g,"").replace(/[⚡📱☁️🛡✦◈]/g,"").trim();
     if(!clean) return;
     window.speechSynthesis.cancel();
     const utt=new SpeechSynthesisUtterance(clean);
-    // Pick best available voice
+    // Use cached voices — no async delay
     const voices=window.speechSynthesis.getVoices();
-    const preferred=voices.find(v=>v.name.includes("Samantha")||v.name.includes("Google US English")||v.name.includes("Aaron")||v.name.includes("Daniel")||v.name.includes("Alex"));
+    const preferred=voices.find(v=>v.name.includes("Samantha")||v.name.includes("Google US English")||v.name.includes("Aaron")||v.name.includes("Daniel")||v.name.includes("Alex"))||voices.find(v=>v.lang==="en-US")||voices[0];
     if(preferred) utt.voice=preferred;
-    utt.rate=1.05;
+    utt.rate=1.1;
     utt.pitch=1.0;
     utt.volume=1.0;
     utt.onstart=()=>setSpeaking(true);
-    utt.onend=()=>setSpeaking(false);
+    utt.onend=()=>{ setSpeaking(false); };
     utt.onerror=()=>setSpeaking(false);
-    synthRef.current.speak(utt);
+    window.speechSynthesis.speak(utt);
   }
 
   // ── Voice: start listening ──────────────────────────────────────────────────
@@ -3247,7 +3254,10 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
           onBlur={e=>{e.target.style.borderColor=T.bor;e.target.style.boxShadow="none";}}
         />
         {/* Mic button */}
-        <button onClick={startListening} title={listening?"Stop":"Talk to Finn"}
+        <button onClick={()=>{
+            LS.set("nl3-mic-used",true);
+            startListening();
+          }} title={listening?"Stop":"Talk to Finn"}
           style={{background:listening?"#ef4444":voiceOn?"#1e7fa822":"none",border:"1px solid "+(listening?"#ef4444":voiceOn?"#1e7fa844":T.bor),borderRadius:10,padding:"8px 10px",cursor:"pointer",color:listening?"#fff":voiceOn?"#1e7fa8":T.mut,fontSize:16,transition:"all .2s",flexShrink:0}}
         >{listening?"⏹":"🎤"}</button>
         {/* Voice on/off */}
@@ -4034,14 +4044,28 @@ export default function App() {
       if(typeof DeviceMotionEvent!=="undefined"&&typeof DeviceMotionEvent.requestPermission==="function"){
         try{
           const perm=await DeviceMotionEvent.requestPermission();
-          if(perm==="granted") window.addEventListener("devicemotion",handleMotion);
+          if(perm==="granted"){
+            window.addEventListener("devicemotion",handleMotion);
+            LS.set("nl3-motion-perm","granted");
+          }
         }catch(e){}
       } else {
+        // Non-iOS — no permission needed, just add listener
         window.addEventListener("devicemotion",handleMotion);
+        LS.set("nl3-motion-perm","granted");
       }
     };
     // Delay to let app finish loading, then request on first user tap
-    const onFirstTap=()=>{ start(); document.removeEventListener("touchend",onFirstTap); };
+    const onFirstTap=()=>{
+      // Only request if not already granted
+      const motionPerm=LS.get("nl3-motion-perm");
+      if(motionPerm==="granted"){
+        window.addEventListener("devicemotion",handleMotion);
+      } else {
+        start().then(()=>LS.set("nl3-motion-perm","granted")).catch(()=>{});
+      }
+      document.removeEventListener("touchend",onFirstTap);
+    };
     document.addEventListener("touchend",onFirstTap,{once:true});
     return()=>window.removeEventListener("devicemotion",handleMotion);
   },[]);
