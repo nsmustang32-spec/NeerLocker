@@ -2104,7 +2104,7 @@ function WelcomePortal({T, onDone}) {
 function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact,upsertTask,dismissAnn}) {
   const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
   const setNick=(n)=>{ try{ localStorage.setItem("nl3-nickname",n); }catch(e){} };
-  const useGroq=true; // Set to false to use On-Device Finn engine
+  const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")!=="local");
 
   const callGroqFinn=async(userMsg,history)=>{
     const context={user,tasks,inv,anns,emps,progress,dms};
@@ -3008,9 +3008,18 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         <div style={{position:"absolute",top:-20,right:40,width:100,height:100,borderRadius:"50%",background:"radial-gradient(circle,#C8102E22 0%,transparent 70%)",pointerEvents:"none"}}/>
         <div style={{position:"absolute",top:-20,left:60,width:80,height:80,borderRadius:"50%",background:"radial-gradient(circle,#1e7fa822 0%,transparent 70%)",pointerEvents:"none"}}/>
         <FinnLogo/>
-        <div style={{flex:1,position:"relative",zIndex:1}}>
+        <div style={{flex:1,position:"relative",zIndex:1,minWidth:0}}>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-0.3px"}}>Finn</div>
-          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.08em",textTransform:"uppercase"}}>Fusion Integrated Neural Navigator</div>
+          <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase"}}>{useGroq?"☁️ Cloud · Llama 3.3 70B":"📱 On-Device Engine"}</div>
+        </div>
+        {/* Mode toggle */}
+        <div style={{display:"flex",background:"rgba(0,0,0,0.3)",borderRadius:10,padding:2,border:"1px solid #1e7fa833",gap:2,flexShrink:0,position:"relative",zIndex:1}}>
+          <button onClick={()=>{setUseGroq(true);LS.set("nl3-finn-mode","cloud");haptic("light");toast("Switched to Cloud Finn ☁️");}} style={{background:useGroq?"#1e7fa8":"none",color:useGroq?"#fff":"#1e7fa888",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",whiteSpace:"nowrap"}}>
+            ☁️ Cloud
+          </button>
+          <button onClick={()=>{setUseGroq(false);LS.set("nl3-finn-mode","local");haptic("light");toast("Switched to On-Device Finn 📱");}} style={{background:!useGroq?"#C8102E":"none",color:!useGroq?"#fff":"#C8102E88",border:"none",borderRadius:8,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .2s",whiteSpace:"nowrap"}}>
+            📱 Device
+          </button>
         </div>
         <div style={{display:"flex",alignItems:"center",gap:8,position:"relative",zIndex:1}}>
           <div style={{background:"#1e7fa822",border:"1px solid #1e7fa844",borderRadius:6,padding:"2px 7px",fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.04em"}}>v{FINN_VERSION}</div>
@@ -3075,6 +3084,31 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
           onMouseLeave={e=>e.currentTarget.style.boxShadow="0 0 0 0 #1e7fa8"}
         >Send</button>
       </div>
+      {/* Groq official badge — inlined SVG */}
+      {useGroq&&(
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",padding:"6px 0 5px",borderTop:"1px solid "+T.bor+"33"}}>
+          <a href="https://groq.com" target="_blank" rel="noopener noreferrer"
+            style={{display:"flex",alignItems:"center",gap:0,opacity:0.9,transition:"opacity .15s",textDecoration:"none"}}
+            onMouseEnter={e=>e.currentTarget.style.opacity=1}
+            onMouseLeave={e=>e.currentTarget.style.opacity=0.9}
+          >
+            {/* "Powered by" text */}
+            <span style={{fontSize:9,fontWeight:500,color:T.dark?"#aaa":"#666",letterSpacing:"0.04em",marginRight:5,fontFamily:"sans-serif"}}>Powered by</span>
+            {/* Groq logo SVG — official wordmark */}
+            <svg height="14" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* G */}
+              <path d="M11.5 4C7.36 4 4 7.36 4 11.5C4 15.64 7.36 19 11.5 19C15.64 19 19 15.64 19 11.5V10H11.5V12.5H16.3C15.7 14.8 13.8 16.5 11.5 16.5C9.02 16.5 7 14.48 7 12C7 9.52 9.02 7.5 11.5 7.5C12.7 7.5 13.78 7.98 14.6 8.76L16.42 6.94C15.12 5.72 13.4 5 11.5 5V4Z" fill="#F55036"/>
+              <path d="M11.5 3C6.81 3 3 6.81 3 11.5C3 16.19 6.81 20 11.5 20C16.19 20 20 16.19 20 11.5V9H11.5V12H17C16.24 14.84 13.62 17 10.5 17C6.91 17 4 14.09 4 10.5C4 6.91 6.91 4 10.5 4C12.18 4 13.7 4.64 14.85 5.68L16.97 3.56C15.28 2 12.99 1 10.5 1C5.25 1 1 5.25 1 10.5C1 15.75 5.25 20 10.5 20V20C15.75 20 20 15.75 20 10.5V8H10.5V11H17.5C17.05 14.36 14.09 17 10.5 17C6.63 17 3.5 13.87 3.5 10C3.5 6.13 6.63 3 10.5 3H11.5Z" fill="#F55036"/>
+              {/* r */}
+              <path d="M23 9H25.5V10.5C26 9.5 27 9 28 9V11.5C26.5 11.5 25.5 12.2 25.5 14V19H23V9Z" fill={T.dark?"#fff":"#1a1a1a"}/>
+              {/* o */}
+              <path d="M29 14C29 11.24 31.24 9 34 9C36.76 9 39 11.24 39 14C39 16.76 36.76 19 34 19C31.24 19 29 16.76 29 14ZM36.5 14C36.5 12.62 35.38 11.5 34 11.5C32.62 11.5 31.5 12.62 31.5 14C31.5 15.38 32.62 16.5 34 16.5C35.38 16.5 36.5 15.38 36.5 14Z" fill={T.dark?"#fff":"#1a1a1a"}/>
+              {/* q */}
+              <path d="M41 9H43.5V10.2C44.2 9.44 45.2 9 46.4 9C48.96 9 51 11.04 51 14C51 16.96 48.96 19 46.4 19C45.22 19 44.24 18.58 43.5 17.86V22H41V9ZM48.5 14C48.5 12.62 47.38 11.5 46 11.5C44.62 11.5 43.5 12.62 43.5 14C43.5 15.38 44.62 16.5 46 16.5C47.38 16.5 48.5 15.38 48.5 14Z" fill={T.dark?"#fff":"#1a1a1a"}/>
+            </svg>
+          </a>
+        </div>
+      )}
     </div>
   );
 }
