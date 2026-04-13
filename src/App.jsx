@@ -2140,7 +2140,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")==="atlas"?false:true);
 
   const callGroqFinn=async(userMsg,history)=>{
-    const context={user,tasks,inv,anns,emps,progress,dms};
+    const context={user,tasks,inv,anns,emps,progress,dms,clientTime:Date.now()};
     const messages=[...history.filter(m=>m.role!=="assistant"||history.indexOf(m)>history.length-8).map(m=>({role:m.role,content:m.content})),{role:"user",content:userMsg}];
     const r=await fetch("https://neer-locker.vercel.app/api/finn",{
       method:"POST",
@@ -2296,45 +2296,47 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   function startListening(){
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR){
-      // Check if iOS PWA
       const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
       const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
-      if(isIOS&&isPWA) toast("Microphone isn't available in iOS home screen apps — open in Safari instead 🎤","warn");
-      else toast("Voice not supported on this browser — try Chrome","warn");
+      if(isIOS&&isPWA) toast("Mic isn't available in iOS home screen — open in Safari 🎤","warn");
+      else toast("Voice not supported — try Chrome","warn");
       return;
     }
-    if(listening){ recognitionRef.current?.stop(); setListening(false); return; }
-    // Stop Finn speaking if he is
-    window.speechSynthesis.cancel(); setSpeaking(false);
+    if(listening){ stopListening(); return; }
+    window.speechSynthesis.cancel();
     const rec=new SR();
     rec.lang="en-US";
-    rec.continuous=false;
-    rec.interimResults=false;
+    rec.continuous=true;
+    rec.interimResults=true;
     rec.onstart=()=>{ setListening(true); haptic("light"); };
     rec.onresult=(e)=>{
-      const transcript=e.results[0][0].transcript;
-      setInput(transcript);
-      setListening(false);
-      // Auto-send after a short delay
-      setTimeout(()=>{
-        const trimmed=transcript.trim();
-        if(trimmed) sendText(trimmed);
-      },300);
+      let final="";
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        if(e.results[i].isFinal) final+=e.results[i][0].transcript;
+      }
+      if(!final.trim()) return;
+      setInput(final.trim());
+      setTimeout(()=>{ if(final.trim()) sendText(final.trim()); },300);
     };
     rec.onerror=(e)=>{
-      setListening(false);
-      if(e.error==="not-allowed"||e.error==="permission-denied") toast("Microphone access denied — allow mic in browser settings and reload","err");
-      else if(e.error==="not-supported"||e.error==="service-not-allowed"){
-        const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;
-        if(isIOS&&isPWA) toast("Mic isn't available in iOS home screen mode — open in Safari browser instead","warn");
-        else toast("Voice recognition not available on this device","warn");
-      }
-      else if(e.error!=="aborted"&&e.error!=="no-speech") toast("Voice error: "+e.error,"warn");
+      if(e.error==="not-allowed"||e.error==="permission-denied"){ setListening(false); toast("Mic denied — allow in browser settings","err"); }
+      else if(e.error==="no-speech"){ /* ignore — keep listening */ }
+      else if(e.error!=="aborted"){ setListening(false); toast("Voice error: "+e.error,"warn"); }
     };
-    rec.onend=()=>setListening(false);
+    rec.onend=()=>{
+      // Auto-restart if still listening (Chrome stops after silence)
+      if(recognitionRef.current===rec&&listening){
+        try{ rec.start(); }catch(_){}
+      } else { setListening(false); }
+    };
     recognitionRef.current=rec;
     rec.start();
+  }
+  function stopListening(){
+    const r=recognitionRef.current;
+    recognitionRef.current=null;
+    setListening(false);
+    try{ r?.stop(); }catch(_){}
   }
 
 
@@ -2357,7 +2359,6 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     synth.speak(utt);
   };
 
-  const stopListening=()=>{ recognitionRef.current?.abort(); setListening(false); };
 
   const sendText=async(text)=>{
     if(!text||loading) return;
