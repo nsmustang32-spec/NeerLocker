@@ -2126,7 +2126,7 @@ function WelcomePortal({T, onDone}) {
 }
 
 // ─── FINN AI CHAT ─────────────────────────────────────────────────────────────
-function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact,upsertTask,dismissAnn}) {
+function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,toast,saveTask,saveInv,saveAnns,saveDms,uid,addAct,grantXP,saveStatus,applyTheme,dark,compact,upsertTask,dismissAnn,voiceOnGlobal,setVoiceOnGlobal}) {
   const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
   const setNick=(n)=>{ try{ localStorage.setItem("nl3-nickname",n); }catch(e){} };
 
@@ -2246,7 +2246,8 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const [pendingAction,setPendingAction]=useState(null);
   const [listening,setListening]=useState(false);
   const [speaking,setSpeaking]=useState(false);
-  const [voiceOn,setVoiceOn]=useState(LS.get("nl3-finn-voice")!==false);
+  const voiceOn=voiceOnGlobal!==undefined?voiceOnGlobal:LS.get("nl3-finn-voice")!==false;
+  const setVoiceOn=(v)=>{ if(setVoiceOnGlobal) setVoiceOnGlobal(v); LS.set("nl3-finn-voice",v); };
   const recognitionRef=useRef(null);
   const endRef=useRef(null);
   const inputRef=useRef(null);
@@ -2285,8 +2286,8 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     if(!clean) return;
     window.speechSynthesis.cancel();
     const utt=new SpeechSynthesisUtterance(clean);
-    const pickVoice=(voices)=>voices.find(v=>v.name==="Aaron")||voices.find(v=>v.name==="Daniel")||voices.find(v=>v.name==="Alex")||voices.find(v=>v.name==="Fred")||voices.find(v=>/google uk english male/i.test(v.name))||voices.find(v=>/google us english male/i.test(v.name))||voices.find(v=>/male/i.test(v.name)&&v.lang.startsWith("en"))||voices.find(v=>v.lang==="en-US"&&!/samantha|karen|victoria|moira|tessa|fiona/i.test(v.name))||voices.find(v=>v.lang==="en-US")||voices[0];
-    const doSpeak=(voices)=>{ const v=pickVoice(voices); console.log("🎤 Finn voice selected:",v?.name,"| All en voices:",voices.filter(x=>x.lang.startsWith("en")).map(x=>x.name).join(", ")); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>setSpeaking(true); utt.onend=()=>setSpeaking(false); utt.onerror=()=>setSpeaking(false); synthRef.current=window.speechSynthesis; synthRef.current.speak(utt); };
+    const pickVoice=(voices)=>voices.find(v=>v.name==="Microsoft David - English (United States)")||voices.find(v=>v.name==="Microsoft Mark - English (United States)")||voices.find(v=>v.name==="Google UK English Male")||voices.find(v=>v.name==="Aaron")||voices.find(v=>v.name==="Daniel")||voices.find(v=>v.name==="Alex")||voices.find(v=>/microsoft david/i.test(v.name))||voices.find(v=>/microsoft mark/i.test(v.name))||voices.find(v=>/google uk english male/i.test(v.name))||voices.find(v=>/male/i.test(v.name)&&v.lang.startsWith("en"))||voices.find(v=>v.lang==="en-US"&&!/zira|helena|laura|hortense|julie|samantha|karen|victoria|female/i.test(v.name))||voices.find(v=>v.lang==="en-US")||voices[0];
+    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>setSpeaking(true); utt.onend=()=>setSpeaking(false); utt.onerror=()=>setSpeaking(false); synthRef.current=window.speechSynthesis; synthRef.current.speak(utt); };
     const v=window.speechSynthesis.getVoices();
     if(v.length){ doSpeak(v); } else { window.speechSynthesis.onvoiceschanged=()=>{ window.speechSynthesis.onvoiceschanged=null; doSpeak(window.speechSynthesis.getVoices()); }; setTimeout(()=>doSpeak(window.speechSynthesis.getVoices()),600); }
   }
@@ -3802,6 +3803,7 @@ export default function App() {
   const [T,setT]=useState(T0);
   const [dark,setDk]=useState(LS.get('nl3-dark')!==null?LS.get('nl3-dark'):window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [compact,setCompact]=useState(false);
+  const [voiceOnGlobal,setVoiceOnGlobal]=useState(()=>LS.get("nl3-finn-voice")!==false);
   const [accent,setAccent]=useState("");
   const [soundOn,setSoundOn]=useState(true);
   const [soundVol,setSoundVol]=useState(0.22);
@@ -5508,13 +5510,13 @@ export default function App() {
                             <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Finn reads replies aloud — works on all devices</div>
                           </div>
                           <button onClick={()=>{
-                            const next=!voiceOn;
-                            setVoiceOn(next);
+                            const next=!voiceOnGlobal;
+                            setVoiceOnGlobal(next);
                             LS.set("nl3-finn-voice",next);
-                            if(!next){ window.speechSynthesis.cancel(); setSpeaking(false); }
+                            if(!next){ window.speechSynthesis.cancel(); }
                             setForm(p=>({...p}));
-                          }} style={{width:50,height:27,borderRadius:14,background:voiceOn?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                            <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceOn?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                          }} style={{width:50,height:27,borderRadius:14,background:voiceOnGlobal?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                            <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceOnGlobal?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
                           </button>
                         </div>
                         {/* Haptics toggle */}
@@ -5849,7 +5851,7 @@ export default function App() {
           )}
 
           {/* Finn chat panel */}
-          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} act={act} onClose={()=>setShowFinn(false)} setPage={p=>{setShowFinn(false);setPrevPage(page);setPage(p);}} toast={toast} saveTask={upsertTask} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact} upsertTask={upsertTask} dismissAnn={dismissAnn}/>}
+          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} act={act} onClose={()=>setShowFinn(false)} setPage={p=>{setPrevPage(page);setPage(p);}} toast={toast} saveTask={upsertTask} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact} upsertTask={upsertTask} dismissAnn={dismissAnn} voiceOnGlobal={voiceOnGlobal} setVoiceOnGlobal={setVoiceOnGlobal}/>}
 
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
 
