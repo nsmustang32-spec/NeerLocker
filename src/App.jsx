@@ -2140,7 +2140,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")==="atlas"?false:true);
 
   const callGroqFinn=async(userMsg,history)=>{
-    const context={user,tasks,inv,anns,emps,progress,dms,clientTime:Date.now()};
+    const context={user,tasks,inv,anns,emps,progress,dms,clientTime:Date.now(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
     const messages=[...history.filter(m=>m.role!=="assistant"||history.indexOf(m)>history.length-8).map(m=>({role:m.role,content:m.content})),{role:"user",content:userMsg}];
     const r=await fetch("https://neer-locker.vercel.app/api/finn",{
       method:"POST",
@@ -2309,12 +2309,21 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     rec.continuous=true;
     rec.interimResults=true;
     rec.onstart=()=>{ setListening(true); haptic("light"); };
+    const STOP_PHRASES=["stop","done","cancel","stop listening","that's it","thats it","never mind","nevermind","end","quit","stop recording","stop dictation","be quiet","enough","goodbye finn","bye finn","stop finn","ok stop","okay stop","cut it","that'll do","finish"];
     rec.onresult=(e)=>{
       let final="";
       for(let i=e.resultIndex;i<e.results.length;i++){
         if(e.results[i].isFinal) final+=e.results[i][0].transcript;
       }
       if(!final.trim()) return;
+      const q=final.trim().toLowerCase().replace(/[.,!?]/g,"");
+      // Check for stop command
+      if(STOP_PHRASES.includes(q)||STOP_PHRASES.some(p=>q===p||q.endsWith(" "+p)||q.startsWith(p+" "))){
+        stopListening();
+        toast("Stopped listening 🎤","ok");
+        haptic("light");
+        return;
+      }
       setInput(final.trim());
       setTimeout(()=>{ if(final.trim()) sendText(final.trim()); },300);
     };
