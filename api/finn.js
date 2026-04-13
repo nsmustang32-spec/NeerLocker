@@ -15,11 +15,11 @@ function buildSystemPrompt(context) {
   const unread = dms.filter(d => d.to === user.id && !d.read).length;
   const myProg = progress[user.id] || { xp: 0, level: 1, title: "Pioneer", streak: 0 };
   const isMgr = ["boss", "manager"].includes(user.role);
-  // Use client time from context (Vercel runs UTC — client sends local time)
-  const clientTime = context.clientTime || Date.now();
-  const now = new Date(clientTime);
-  const todayStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  // Use client timezone (Vercel runs UTC — must use client timezone for correct local time)
+  const tz = context.timezone || "America/Chicago";
+  const now = new Date(context.clientTime || Date.now());
+  const todayStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: tz });
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: tz });
   const firstName = user.name.split(" ")[0];
   const weekAgo = Date.now() - 7 * 86400000;
   const doneTasks = tasks.filter(t => t.done);
