@@ -15,7 +15,9 @@ function buildSystemPrompt(context) {
   const unread = dms.filter(d => d.to === user.id && !d.read).length;
   const myProg = progress[user.id] || { xp: 0, level: 1, title: "Pioneer", streak: 0 };
   const isMgr = ["boss", "manager"].includes(user.role);
-  const now = new Date();
+  // Use client time from context (Vercel runs UTC — client sends local time)
+  const clientTime = context.clientTime || Date.now();
+  const now = new Date(clientTime);
   const todayStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
   const firstName = user.name.split(" ")[0];
