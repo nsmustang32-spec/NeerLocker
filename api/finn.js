@@ -70,6 +70,11 @@ ${anns.filter(a => !(a.dismissed || []).includes(user.id)).map(a => `• ${a.msg
 ## MESSAGES
 ${unread === 0 ? "No unread messages." : `${unread} unread.`}
 
+## FINN MEMORY (facts you've been told to remember)
+${context.finnMemory || "Nothing stored yet."}
+If the user asks you to remember something, acknowledge it and include [REMEMBER:key|value] at the end of your response.
+If the user asks what you remember, tell them what's in the memory above.
+
 ## ACTIONS
 When the user wants to do something, include ONE action tag at the END of your response:
 [NAV:tasks] [NAV:inv] [NAV:dms] [NAV:anns] [NAV:act] [NAV:set] [NAV:home] [NAV:leaderboard]
@@ -79,6 +84,12 @@ When the user wants to do something, include ONE action tag at the END of your r
 [DISMISS_ANN]
 [SEND_DM:name|message]
 [SET_STATUS:online|offline|busy]
+
+## REMEMBER ACTION
+When user says "remember that X" or "don't forget X", respond naturally AND include:
+[REMEMBER:fact_key|the fact to store]
+Example: User: "remember we restock on Tuesdays"
+Finn: "Got it — I'll remember that. [REMEMBER:restock_day|We restock on Tuesdays]"
 
 ## RULES
 - Keep responses to 1-3 sentences
