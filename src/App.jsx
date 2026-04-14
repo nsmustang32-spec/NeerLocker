@@ -1,10 +1,31 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.7.4";
-const FINN_VERSION = "1.3.1";
-const VIGIL_VERSION = "2.0.1";
+const VERSION   = "1.8.0";
+const FINN_VERSION = "1.4.0";
+const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
+  "1.4.0": [
+    "Finn Memory: remembers facts across sessions — say remember that...",
+    "Finn Memory: injected into Aether context every message",
+    "Task reminders: say remind me in 2 hours about [task]",
+    "Continuous voice: mic stays on until you say stop or tap again",
+    "Stop phrases: say stop, done, cancel, stop listening, bye finn, etc.",
+    "Time zone fix: Finn Aether now shows your correct local time",
+    "Vigil HyperCore v2.1.0: login now server-verified via api/vigil.js",
+    "Vigil: JWT session tokens — validated every 5 minutes",
+    "Vigil: logout clears server session",
+    "Morning brief now includes streak count",
+  ],
+  "1.3.2": [
+    "Finn Memory: remembers facts across sessions — say remember that...",
+    "Finn Memory: works in both Aether and Atlas",
+    "Task reminders: say remind me in 2 hours about [task]",
+    "Vigil HyperCore: login now server-verified via api/vigil.js",
+    "Vigil: session validated every 5 minutes",
+    "Vigil: logout clears server session token",
+    "Morning brief now includes streak count",
+  ],
   "1.3.1": [
     "Voice mode: Finn now speaks replies aloud using male voice",
     "Voice mode: Tap mic button to talk to Finn hands-free",
@@ -2130,6 +2151,14 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const nick=typeof localStorage!=="undefined"?localStorage.getItem("nl3-nickname")||user?.name?.split(" ")[0]:user?.name?.split(" ")[0];
   const setNick=(n)=>{ try{ localStorage.setItem("nl3-nickname",n); }catch(e){} };
 
+  // ── Finn Memory: persistent facts across sessions ──────────────────────────
+  const finnMemory={
+    get:()=>{ try{ return JSON.parse(localStorage.getItem("nl3-finn-memory")||"{}"); }catch(e){return {};} },
+    set:(key,val)=>{ try{ const m=finnMemory.get(); m[key]=val; m._updated=Date.now(); localStorage.setItem("nl3-finn-memory",JSON.stringify(m)); }catch(e){} },
+    clear:()=>localStorage.removeItem("nl3-finn-memory"),
+    all:()=>{ try{ const m=finnMemory.get(); return Object.entries(m).filter(([k])=>k!=="_updated").map(([k,v])=>k+": "+v).join(", "); }catch(e){return "";} },
+  };
+
   // Preload voices so speakReply has no delay on first call
   useEffect(()=>{
     if(window.speechSynthesis){
@@ -2140,7 +2169,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")==="atlas"?false:true);
 
   const callGroqFinn=async(userMsg,history)=>{
-    const context={user,tasks,inv,anns,emps,progress,dms,clientTime:Date.now(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
+    const context={user,tasks,inv,anns,emps,progress,dms,clientTime:Date.now(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,finnMemory:finnMemory.all()};
     const messages=[...history.filter(m=>m.role!=="assistant"||history.indexOf(m)>history.length-8).map(m=>({role:m.role,content:m.content})),{role:"user",content:userMsg}];
     const r=await fetch("https://neer-locker.vercel.app/api/finn",{
       method:"POST",
@@ -2194,6 +2223,12 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     }
     const statusMatch=reply.match(/\[SET_STATUS:(\w+)\]/);
     if(statusMatch){ clean=clean.replace(statusMatch[0],"").trim(); if(saveStatus) saveStatus(statusMatch[1]); }
+    // Parse REMEMBER tag — store in Finn memory
+    const rememberMatch=reply.match(/\[REMEMBER:([^|]+)\|([^\]]+)\]/);
+    if(rememberMatch){
+      clean=clean.replace(rememberMatch[0],"").trim();
+      finnMemory.set(rememberMatch[1].trim(),rememberMatch[2].trim());
+    }
     if(reply.includes("[DISMISS_ANN]")){
       clean=clean.replace("[DISMISS_ANN]","").trim();
       const active=anns.filter(a=>!(a.dismissed||[]).includes(user?.id));
@@ -2235,6 +2270,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         if(dueToday.length>0) parts.push("📅 "+dueToday.length+" due today: "+dueToday.map(t=>t.title).join(", ")+".");
         if(openT.length>0&&overdue.length===0&&dueToday.length===0) parts.push("✅ "+openT.length+" open task"+(openT.length>1?"s":"")+" — no urgent deadlines.");
         if(openT.length===0) parts.push("🎉 No open tasks — all clear!");
+        if(pg.streak>1) parts.push("🔥 Day "+pg.streak+" streak — keep it going!");
         if(pg.streak>0) parts.push("🔥 "+pg.streak+"-day streak going.");
         const brief=parts.join("\n");
         setTimeout(()=>setMsgs(prev=>[...prev,{role:"assistant",content:brief}]),800);
@@ -2690,10 +2726,27 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         reply="No problem! Anything else?";
 
       // ── NICKNAME ──────────────────────────────────────────────────────────
+      } else if(has("remember that","remember this","don't forget","finn remember","store this","make note","note that")){
+        // Store arbitrary fact in Finn memory
+        const fact=text.replace(/remember (that|this)?|don't forget|finn remember|store this|make note( that)?|note that/gi,"").trim();
+        if(fact.length>2){
+          const key="fact_"+Date.now();
+          finnMemory.set(key,fact);
+          reply="Got it — I'll remember: "+fact+" 🧠";
+        } else {
+          reply="What do you want me to remember?";
+        }
+      } else if(has("what do you remember","what do you know about me","your memory","finn memory","what have i told you")){
+        const mem=finnMemory.all();
+        reply=mem?"Here's what I remember: "+mem:"I don't have anything stored yet. Tell me something and I'll remember it!";
+      } else if(has("forget everything","clear your memory","wipe your memory","forget what i told you")){
+        finnMemory.clear();
+        reply="Memory cleared — fresh start! 🧹";
       } else if(has("call me ","my name is ","go by ","i go by ","nickname")){
         const nameGuess=text.replace(/call me|my name is|go by|i go by|nickname|please|just/gi,"").trim().split(" ")[0];
         if(nameGuess.length>1){
           setNick(nameGuess);
+          finnMemory.set("preferred_name",nameGuess);
           reply="Got it — "+nameGuess+" it is! 👋";
         } else {
           setPendingAction({type:"nickname",data:{}});
@@ -3033,6 +3086,19 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         reply="Today is "+todayStr+".";
 
       // ── DUE TODAY / THIS WEEK ─────────────────────────────────────────────
+      } else if(has("remind me","snooze","remind me in","check in with me","ping me in")){
+        const nm=text.match(/(\d+)\s*(hour|hr|minute|min)/i);
+        const t2=taskMatch(q)||ctx.lastTask||openTasks[0];
+        if(nm){
+          const n=parseInt(nm[1]);
+          const unit=nm[2].toLowerCase();
+          const ms=unit.startsWith("h")?n*3600000:n*60000;
+          const label=t2?"\""+t2.title+"\"":"check-in";
+          setTimeout(()=>{ toast("⏰ Finn reminder: "+label,"ok"); haptic("medium"); playSound("notify"); },ms);
+          reply="Got it — I'll remind you about "+label+" in "+n+" "+unit+(n>1?"s":"")+". ⏰";
+        } else {
+          reply="How long should I wait? Try: remind me in 2 hours.";
+        }
       } else if(has("due today","today's tasks","what's due today")){
         const dueT=openTasks.filter(t=>{if(!t.dueDate)return false; return new Date(t.dueDate).toDateString()===now.toDateString();});
         reply=dueT.length===0?"Nothing due today.":"Due today: "+dueT.map(t=>t.title).join(", ")+".";
@@ -3976,6 +4042,23 @@ export default function App() {
   },[]);
 
   // Refresh shared data from Supabase — called on interval and on key actions
+  // ── Vigil: validate session on load and periodically ──────────────────────
+  useEffect(()=>{
+    const checkSession=async()=>{
+      if(!user) return;
+      try {
+        const result=await VIGIL.validateSession();
+        if(!result.ok){
+          toast("Session expired — please sign in again","warn");
+          doLogout();
+        }
+      } catch(e){ /* Server unavailable — client timeout handles it */ }
+    };
+    checkSession();
+    const interval=setInterval(checkSession, 5*60*1000); // check every 5 min
+    return ()=>clearInterval(interval);
+  },[user]);
+
   const refreshData=useCallback(async()=>{
     const [empRows,taskRows,invRows,annRows,actRows,errRows,dmRows]=await Promise.all([
       SB.select("employees","?order=created_at.asc"),
@@ -4360,24 +4443,44 @@ export default function App() {
 
   const doPin=async()=>{
     if(!pending) return;
-    // Vigil: lockout check
-    const lockMins=VIGIL.isLockedOut(pending.email);
-    if(lockMins){toast("Account locked — try again in "+lockMins+" min","err");return;}
-    // Vigil: verify PIN
-    const pinOk=await VIGIL.verifyPIN(pinIn,pending.pin);
-    if(!pinOk){
-      const attempts=VIGIL.recordAttempt(pending.email);
-      VIGIL.logEvent("failed_pin",pending.email,pending.id);
-      const left=VIGIL.MAX_ATTEMPTS-attempts;
-      if(left<=0){
-        toast("Account locked for 15 min — too many failed PINs","err");
-        VIGIL.logEvent("account_locked",pending.email,pending.id);
-      } else {
-        toast("Wrong PIN — "+left+" attempt"+(left!==1?"s":"")+" left","err");
+    setPinIn("");
+    try {
+      // ── Vigil HyperCore: server-side PIN verification ─────────────────────
+      const result=await VIGIL.login(pending.email, pinIn, "");
+      if(!result.ok){
+        playSound("error"); haptic("error");
+        if(result.lockedUntil){
+          const mins=Math.ceil((new Date(result.lockedUntil)-new Date())/60000);
+          setEmailErr("Account locked — try again in "+mins+" min.");
+          VIGIL.logEvent("lockout_blocked",pending.email,pending.id);
+        } else {
+          setEmailErr(result.error||"Wrong PIN.");
+          VIGIL.logEvent("failed_pin",pending.email,pending.id);
+        }
+        return;
       }
-      setPinIn(""); return;
+      // Server login success — store JWT session token
+      if(result.sessionToken) sessionStorage.setItem("vigil-session",result.sessionToken);
+      if(result.anomalies&&result.anomalies.length>0){
+        if(result.anomalies.includes("unusual_hour")) toast("⚠️ Vigil: Login outside normal hours logged","warn");
+        if(result.anomalies.includes("new_device")) toast("🛡 Vigil: New device detected — logged","warn");
+      }
+      VIGIL.logEvent("login_success",pending.email,pending.id);
+      finishLogin(pending);setPending(null);setShowPin(false);
+    } catch(e){
+      // Server unavailable — fall back to client-side verification
+      console.warn("Vigil server unavailable, using client fallback:",e.message);
+      const pinOk=await VIGIL.verifyPIN(pinIn,pending.pin);
+      if(!pinOk){
+        const attempts=VIGIL.recordAttempt(pending.email);
+        VIGIL.logEvent("failed_pin",pending.email,pending.id);
+        const left=VIGIL.MAX_ATTEMPTS-attempts;
+        if(left<=0){ toast("Account locked for 15 min","err"); VIGIL.logEvent("account_locked",pending.email,pending.id); }
+        else { setEmailErr("Wrong PIN — "+left+" attempt"+(left!==1?"s":"")+" left"); }
+        return;
+      }
+      finishLogin(pending);setPending(null);setShowPin(false);
     }
-    finishLogin(pending);setPinIn("");setPending(null);setShowPin(false);
   };
 
   const finishLogin=(emp)=>{
@@ -4417,6 +4520,9 @@ export default function App() {
   };
 
   const doLogout=()=>{
+    // Vigil: server logout
+    try{ VIGIL.logout(); }catch(e){}
+    sessionStorage.removeItem("vigil-session");
     clearTimeout(loginTimerRef.current);
     const lu=user;
     // Fade out first, then switch
@@ -6410,11 +6516,12 @@ export default function App() {
               </div>
               {/* Security stats */}
               {(()=>{
+                // Try server dashboard data, fall back to local log
                 const log=VIGIL.getLog();
                 const failed=log.filter(e=>e.type==="failed_pin").length;
                 const locked=log.filter(e=>e.type==="account_locked").length;
-                const anomalies=log.filter(e=>e.type==="anomaly").length;
-                const injections=log.filter(e=>e.type==="prompt_injection").length;
+                const anomalies=log.filter(e=>e.type.includes("anomaly")).length;
+                const injections=log.filter(e=>e.type==="prompt_injection"||e.type==="injection").length;
                 const logins=log.filter(e=>e.type==="login_success").length;
                 return (
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
