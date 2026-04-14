@@ -439,7 +439,12 @@ const SB = {
         headers: {...SB.headers, "Prefer": "resolution=merge-duplicates,return=representation"},
         body: JSON.stringify(data)
       });
-      return r.ok ? await r.json() : null;
+      if(!r.ok){
+        const err=await r.text().catch(()=>"unknown");
+        console.error("SB.upsert failed:",table,r.status,err.slice(0,200));
+        return null;
+      }
+      return await r.json();
     } catch { return null; }
   },
 
@@ -2325,7 +2330,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     window.speechSynthesis.cancel();
     const utt=new SpeechSynthesisUtterance(clean);
     const pickVoice=(voices)=>voices.find(v=>v.name==="Microsoft David - English (United States)")||voices.find(v=>v.name==="Microsoft Mark - English (United States)")||voices.find(v=>v.name==="Google UK English Male")||voices.find(v=>v.name==="Aaron")||voices.find(v=>v.name==="Daniel")||voices.find(v=>v.name==="Alex")||voices.find(v=>/microsoft david/i.test(v.name))||voices.find(v=>/microsoft mark/i.test(v.name))||voices.find(v=>/google uk english male/i.test(v.name))||voices.find(v=>/male/i.test(v.name)&&v.lang.startsWith("en"))||voices.find(v=>v.lang==="en-US"&&!/zira|helena|laura|hortense|julie|samantha|karen|victoria|female/i.test(v.name))||voices.find(v=>v.lang==="en-US")||voices[0];
-    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>setSpeaking(true); utt.onend=()=>setSpeaking(false); utt.onerror=()=>setSpeaking(false); synthRef.current=window.speechSynthesis; synthRef.current.speak(utt); };
+    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>setSpeaking(true); utt.onend=()=>setSpeaking(false); utt.onerror=()=>setSpeaking(false); window.speechSynthesis.speak(utt); };
     const v=window.speechSynthesis.getVoices();
     if(v.length){ doSpeak(v); } else { window.speechSynthesis.onvoiceschanged=()=>{ window.speechSynthesis.onvoiceschanged=null; doSpeak(window.speechSynthesis.getVoices()); }; setTimeout(()=>doSpeak(window.speechSynthesis.getVoices()),600); }
   }
@@ -4283,14 +4288,16 @@ export default function App() {
       priority:t.priority||"Medium",
       assigned_to:t.assignedTo||"all",
       created_by:t.createdBy||"",
-      due_date:t.dueDate||"",
+      due_date:t.dueDate||null,
       done:t.done||false,
       repeat:t.repeat||false,
       repeat_days:t.repeatDays||[],
       created_at:t.createdAt||Date.now()
     };
     const r=await SB.upsert("tasks",row);
-    if(!r) console.warn("upsertTask failed for:",t.title);
+    if(!r){
+      console.warn("upsertTask failed for:",t.title,"— check Supabase RLS policies allow inserts for authenticated users");
+    }
     return r;
   },[]);
 
