@@ -488,10 +488,12 @@ const SB = {
       });
       if(!r.ok){
         const err=await r.text().catch(()=>"unknown");
-        console.error("SB.upsert failed:",table,r.status,err.slice(0,200));
+        console.error("SB.upsert failed:",table,"status:",r.status,"body:",err,"data sent:",JSON.stringify(data).slice(0,300));
         return null;
       }
-      return await r.json();
+      const result = await r.json();
+      console.log("SB.upsert OK:",table, result?.[0]?.id||"no id");
+      return result;
     } catch { return null; }
   },
 
@@ -2402,14 +2404,11 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     const pickVoice=(voices)=>voices.find(v=>v.name==="Microsoft David - English (United States)")||voices.find(v=>v.name==="Microsoft Mark - English (United States)")||voices.find(v=>v.name==="Google UK English Male")||voices.find(v=>v.name==="Aaron")||voices.find(v=>v.name==="Daniel")||voices.find(v=>v.name==="Alex")||voices.find(v=>/microsoft david/i.test(v.name))||voices.find(v=>/microsoft mark/i.test(v.name))||voices.find(v=>/google uk english male/i.test(v.name))||voices.find(v=>/male/i.test(v.name)&&v.lang.startsWith("en"))||voices.find(v=>v.lang==="en-US"&&!/zira|helena|laura|hortense|julie|samantha|karen|victoria|female/i.test(v.name))||voices.find(v=>v.lang==="en-US")||voices[0];
     const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>{ setSpeaking(true); if(recognitionRef.current){try{recognitionRef.current.stop();}catch(_){}} }; utt.onend=()=>{
       setSpeaking(false);
-      // Restart mic after Finn finishes speaking so user can continue talking
-      if(voiceOn&&listening&&recognitionRef.current){
-        try{ recognitionRef.current.stop(); }catch(_){}
+      // Restart fresh recognition after Finn finishes so user can keep talking
+      if(voiceOn){
         setTimeout(()=>{
-          if(voiceOn&&listening){
-            try{ recognitionRef.current?.start(); }catch(_){}
-          }
-        },300);
+          if(voiceOn) startListening();
+        },350);
       }
     }; utt.onerror=()=>setSpeaking(false); window.speechSynthesis.speak(utt); };
     const v=window.speechSynthesis.getVoices();
@@ -2426,7 +2425,11 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
       else toast("Voice not supported — try Chrome","warn");
       return;
     }
-    if(listening){ stopListening(); return; }
+    // If already listening, stop first then restart fresh
+    if(recognitionRef.current){
+      try{ recognitionRef.current.stop(); }catch(_){}
+      recognitionRef.current=null;
+    }
     window.speechSynthesis.cancel();
     const rec=new SR();
     rec.lang="en-US";
