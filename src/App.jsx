@@ -80,10 +80,11 @@ const BUILD_TAG = "FR";
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
   "1.8.2": [
+    "Schedule tab: tap from home screen quick stats card to open schedule",
     "Schedule tab: new page for staff to view the current schedule in-app",
     "Tech Admin: paste any schedule URL — Google Sheets, OneDrive, SharePoint",
     "Schedule: auto-saves to Supabase — all staff see it instantly",
-    "Schedule: refresh button and open-in-browser fallback",
+    "Schedule: open in new tab or current browser options",
   ],
   "1.8.1": [
     "Fix: Push notifications now fire when tasks are created for everyone",
@@ -1274,7 +1275,7 @@ function HeroBanner({user,T,onProfileClick}) {
   );
 }
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline}) {
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
   const doneTasks=tasks.filter(t=>t.done&&t.createdBy===user.id||tasks.filter(tt=>tt.done&&(tt.assignedTo===user.id||tt.assignedTo==="all")).includes(t));
   const overdueTasks=myTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
@@ -1287,6 +1288,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
     {icon:"🔔",label:"Announcements",val:myAnns.length,color:T.scarlet,page:"anns"},
     {icon:"💬",label:"Unread DMs",val:unreadDMs,color:"#7c3aed",page:"dms"},
     {icon:"⚠️",label:"Overdue",val:overdueTasks.length,color:T.err,page:"tasks"},
+    ...(scheduleUrl?[{icon:"📅",label:"Schedule",val:"View",color:"#16a34a",page:"schedule"}]:[]),
   ];
 
   const myProgress=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
@@ -5212,7 +5214,7 @@ export default function App() {
               )}
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline}/>}
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl}/>}
 
               {/* TASKS */}
               {page==="tasks"&&(
