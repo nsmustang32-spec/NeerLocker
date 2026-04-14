@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.8.0";
+const VERSION   = "1.8.1";
 const FINN_VERSION = "1.4.0";
 const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
@@ -2208,7 +2208,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     const createMatch=reply.match(/\[CREATE_TASK:([^|]+)\|([^|]+)\|([^\]]+)\]/);
     if(createMatch){
       clean=clean.replace(createMatch[0],"").trim();
-      const newTask={id:Math.random().toString(36).slice(2,9),title:createMatch[1],priority:createMatch[2],assignedTo:createMatch[3]==="Everyone"?"all":emps.find(e=>e.name.includes(createMatch[3]))?.id||"all",createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:"",repeat:false,repeatDays:[]};
+      const newTask={id:Math.random().toString(36).slice(2,9),title:createMatch[1],priority:createMatch[2],assignedTo:createMatch[3]==="Everyone"?"all":emps.find(e=>e.name.includes(createMatch[3]))?.id||"all",createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:null,repeat:false,repeatDays:[]};
       // Update local state + save to Supabase
       if(saveTask) saveTask(newTask);
       if(upsertTask) upsertTask(newTask);
@@ -2429,7 +2429,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     addMsg("user",text);
     setLoading(true);
     haptic("light");
-    // Aether
+    // Try Aether first
     if(useGroq){
       try {
         const groqPromise=callGroqFinn(text,msgs);
@@ -2449,10 +2449,8 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         await new Promise(r=>setTimeout(r,300));
       }
     }
-    // Run Atlas via send() — set input and trigger
-    setInput(text);
-    await new Promise(r=>setTimeout(r,20));
-    send();
+    // Fall through to Atlas — pass text directly, no state dependency
+    sendAtlas(text);
   };
 
   async function send(){
@@ -2503,7 +2501,11 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
       }
     }
 
-    // ── Local engine fallback ──────────────────────────────────────────────
+    sendAtlas(text);
+  }
+
+  function sendAtlas(text){
+    // ── Local Atlas engine ─────────────────────────────────────────────────
     let reply="";
     try {
       const q=text.toLowerCase().trim().replace(/[\u2018\u2019\u201A\u201B']/g,"'");
@@ -2595,7 +2597,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
               setPendingAction(null);
               reply="Announcement dismissed. ✅";
             } else if(act.action==="create_task"){
-              const newTask={id:Math.random().toString(36).slice(2,9),title:act.title,description:"",priority:act.priority,assignedTo:act.assignedTo,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:act.dueDate||"",repeat:false,repeatDays:[]};
+              const newTask={id:Math.random().toString(36).slice(2,9),title:act.title,description:"",priority:act.priority,assignedTo:act.assignedTo,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:act.dueDate||null,repeat:false,repeatDays:[]};
               // Save to Supabase AND update local state so task doesn't disappear
               if(upsertTask) upsertTask(newTask);
               if(saveTask) saveTask(newTask); // also updates local tasks state
@@ -3624,7 +3626,10 @@ function SkeletonCard({T,lines=2}) {
 
 // ─── NOTIFICATION BELL ────────────────────────────────────────────────────────
 function NotifBell({T,anns,dms,tasks,user,onOpen}) {
-  const count=(anns.filter(a=>!(a.dismissed||[]).includes(user?.id)).length)+(dms.filter(d=>d.to===user?.id&&!d.read).length);
+  const unreadAnns=anns.filter(a=>!(a.dismissed||[]).includes(user?.id)).length;
+  const unreadDms=dms.filter(d=>d.to===user?.id&&!d.read).length;
+  const overdueTasks=tasks.filter(t=>!t.done&&t.dueDate&&new Date(t.dueDate)<new Date()&&(t.assignedTo==="all"||t.assignedTo===user?.id)).length;
+  const count=unreadAnns+unreadDms+overdueTasks;
   return (
     <button onClick={onOpen} style={{position:"relative",background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:8,display:"flex",alignItems:"center",transition:"background .15s"}}
       onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
@@ -3905,6 +3910,7 @@ export default function App() {
   const [screen,setScreen]=useState("login");
   const [user,setUser]=useState(null);
   const userRef=useRef(null);
+  const progressRef=useRef({});
   const [welData,setWelData]=useState({name:"",role:"employee"});
   const [showBriefing,setShowBriefing]=useState(false);
   const [loggingOut,setLoggingOut]=useState(false);
@@ -3940,6 +3946,7 @@ export default function App() {
   // Keep refs in sync with state so refreshData always sees latest value
   useEffect(()=>{notifEnabledRef.current=notifEnabled;},[notifEnabled]);
   useEffect(()=>{userRef.current=user;},[user]);
+  useEffect(()=>{progressRef.current=progress;},[progress]);
   const [passkeyEmail,setPasskeyEmail]=useState("");
 
   useEffect(()=>{
@@ -4308,21 +4315,25 @@ export default function App() {
       await SB.upsert("tasks",{id:t.id,title:t.title,description:t.description||"",priority:t.priority||"Medium",assigned_to:t.assignedTo||"all",created_by:t.createdBy||"",due_date:t.dueDate||"",done:t.done||false,repeat:t.repeat||false,created_at:t.createdAt||Date.now()});
     }
   },[]);
-  const saveInv  =useCallback(async v=>{
+  const saveInv  =useCallback(async(v,changedItem)=>{
     setInv(v);
-    for(const i of v){
+    // Only upsert the changed item if provided, otherwise upsert all (for bulk ops)
+    const toSave=changedItem?[changedItem]:v;
+    for(const i of toSave){
       await SB.upsert("inventory",{id:i.id,name:i.name,stock:i.stock||0,created_at:i.createdAt||Date.now()});
     }
   },[]);
-  const saveAnns =useCallback(async v=>{
+  const saveAnns =useCallback(async(v,changedAnn)=>{
     setAnns(v);
-    for(const a of v){
+    const toSave=changedAnn?[changedAnn]:v;
+    for(const a of toSave){
       await SB.upsert("announcements",{id:a.id,msg:a.msg,level:a.level||"info",by_name:a.by||"System",at:a.at||Date.now(),dismissed:a.dismissed||[],patch_notes:a.patchNotes||null,patch_version:a.patchVersion||null,patch_build:a.patchBuild||null});
     }
   },[]);
-  const saveDms  =useCallback(async v=>{
+  const saveDms  =useCallback(async(v,changedDm)=>{
     setDms(v);
-    for(const d of v){
+    const toSave=changedDm?[changedDm]:v;
+    for(const d of toSave){
       await SB.upsert("direct_messages",{id:d.id,from_id:d.from||"",to_id:d.to||"",text:d.text||"",at:d.at||Date.now(),read:d.read||false,system:d.system||false,thread_with:d.threadWith||"",feedback:d.feedback||false});
     }
   },[]);
@@ -4594,12 +4605,22 @@ export default function App() {
       else if(lowWords.some(w=>tl.includes(w))) autoPri="Low";
     }
     const repDays=form.tRepeatDays||[];
-    const task={id:uid(),title:san(title),description:desc,priority:autoPri,assignedTo:assign,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:due,repeat:rep,repeatDays:repDays};
+    const task={id:uid(),title:san(title),description:desc,priority:autoPri,assignedTo:assign,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:due||null,repeat:rep,repeatDays:repDays};
     setModal(null);setForm({});
     toast("Task created! ✅");
     setTasks(prev=>[task,...prev]);
     await upsertTask(task);
     addAct("task_created",`Task created: "${task.title}" by ${user?.name}`,user?.id);
+    // Send push notifications to assigned users
+    if(task.assignedTo==="all"){
+      // Notify everyone except the creator
+      emps.filter(e=>e.id!==user?.id).forEach(e=>{
+        NOTIF.send(e.id,"New Task 📋",`${task.title} — assigned to everyone`,"task");
+      });
+    } else if(task.assignedTo!==user?.id){
+      // Notify the specific person assigned
+      NOTIF.send(task.assignedTo,"New Task 📋",`${task.title} — assigned to you`,"task");
+    }
   };
 
   const toggleTask=async id=>{
@@ -4719,7 +4740,7 @@ export default function App() {
   // Grant XP to current user
   const grantXP=async(amount,label)=>{
     if(!user||!XP_ELIGIBLE_ROLES.includes(user.role)) return;
-    const cur=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+    const cur=progressRef.current[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
     const newXP=cur.xp+amount;
     const info=getLevelInfo(newXP);
     const leveledUp=info.level>cur.level;
