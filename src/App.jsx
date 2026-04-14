@@ -491,9 +491,7 @@ const SB = {
         console.error("SB.upsert failed:",table,"status:",r.status,"body:",err,"data sent:",JSON.stringify(data).slice(0,300));
         return null;
       }
-      const result = await r.json();
-      console.log("SB.upsert OK:",table, result?.[0]?.id||"no id");
-      return result;
+      return await r.json();
     } catch { return null; }
   },
 
@@ -4391,7 +4389,6 @@ export default function App() {
       due_date:t.dueDate||null,
       done:t.done||false,
       repeat:t.repeat||false,
-      repeat_days:JSON.stringify(t.repeatDays||[]),
       created_at:t.createdAt?new Date(t.createdAt).toISOString():new Date().toISOString()
     };
     const r=await SB.upsert("tasks",row);
