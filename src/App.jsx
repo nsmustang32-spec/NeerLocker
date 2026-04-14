@@ -2227,18 +2227,18 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   },[]);
 
 
-  // ── Stop mic + speech when FinnChat unmounts (panel closes) ──────────────
+  // ── Stop speech only when FinnChat unmounts (mic stays if user wants) ──────
   useEffect(()=>{
     return ()=>{
-      // Stop listening
+      // Stop speaking when panel closes
+      if(window.speechSynthesis) window.speechSynthesis.cancel();
+      setSpeaking(false);
+      // Stop mic on close
       if(recognitionRef.current){
         try{ recognitionRef.current.stop(); }catch(_){}
         recognitionRef.current=null;
       }
       setListening(false);
-      // Stop speaking
-      if(window.speechSynthesis) window.speechSynthesis.cancel();
-      setSpeaking(false);
     };
   },[]);
   const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")==="atlas"?false:true);
@@ -2400,7 +2400,18 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     window.speechSynthesis.cancel();
     const utt=new SpeechSynthesisUtterance(clean);
     const pickVoice=(voices)=>voices.find(v=>v.name==="Microsoft David - English (United States)")||voices.find(v=>v.name==="Microsoft Mark - English (United States)")||voices.find(v=>v.name==="Google UK English Male")||voices.find(v=>v.name==="Aaron")||voices.find(v=>v.name==="Daniel")||voices.find(v=>v.name==="Alex")||voices.find(v=>/microsoft david/i.test(v.name))||voices.find(v=>/microsoft mark/i.test(v.name))||voices.find(v=>/google uk english male/i.test(v.name))||voices.find(v=>/male/i.test(v.name)&&v.lang.startsWith("en"))||voices.find(v=>v.lang==="en-US"&&!/zira|helena|laura|hortense|julie|samantha|karen|victoria|female/i.test(v.name))||voices.find(v=>v.lang==="en-US")||voices[0];
-    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>{ setSpeaking(true); if(recognitionRef.current){try{recognitionRef.current.stop();}catch(_){}} }; utt.onend=()=>{ setSpeaking(false); }; utt.onerror=()=>setSpeaking(false); window.speechSynthesis.speak(utt); };
+    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>{ setSpeaking(true); if(recognitionRef.current){try{recognitionRef.current.stop();}catch(_){}} }; utt.onend=()=>{
+      setSpeaking(false);
+      // Restart mic after Finn finishes speaking so user can continue talking
+      if(voiceOn&&listening&&recognitionRef.current){
+        try{ recognitionRef.current.stop(); }catch(_){}
+        setTimeout(()=>{
+          if(voiceOn&&listening){
+            try{ recognitionRef.current?.start(); }catch(_){}
+          }
+        },300);
+      }
+    }; utt.onerror=()=>setSpeaking(false); window.speechSynthesis.speak(utt); };
     const v=window.speechSynthesis.getVoices();
     if(v.length){ doSpeak(v); } else { window.speechSynthesis.onvoiceschanged=()=>{ window.speechSynthesis.onvoiceschanged=null; doSpeak(window.speechSynthesis.getVoices()); }; setTimeout(()=>doSpeak(window.speechSynthesis.getVoices()),600); }
   }
@@ -4110,7 +4121,7 @@ export default function App() {
         }
       }
 
-      setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:t.repeat_days||[],createdAt:t.created_at})));
+      setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:new Date(t.created_at).getTime()})));
       setInv((invRows||[]).map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
       setAnns((annRows||[]).map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build})));
       setAct((actRows||[]).map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
@@ -4168,7 +4179,7 @@ export default function App() {
     ]);
     if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",createdAt:e.created_at})));
     if(taskRows?.length>=0){
-      const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,createdAt:t.created_at}));
+      const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:new Date(t.created_at).getTime()}));
       setTasks(prev=>{
         // Detect brand new tasks assigned to me
         if(notifEnabledRef.current&&userRef.current){
@@ -4377,8 +4388,8 @@ export default function App() {
       due_date:t.dueDate||null,
       done:t.done||false,
       repeat:t.repeat||false,
-      repeat_days:t.repeatDays||[],
-      created_at:t.createdAt||Date.now()
+      repeat_days:JSON.stringify(t.repeatDays||[]),
+      created_at:t.createdAt?new Date(t.createdAt).toISOString():new Date().toISOString()
     };
     const r=await SB.upsert("tasks",row);
     if(!r){
