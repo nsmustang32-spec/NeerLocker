@@ -79,6 +79,37 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.8.1": [
+    "Fix: Push notifications now fire when tasks are created for everyone",
+    "Fix: Notification badge now includes overdue task count",
+    "Fix: dueDate empty string replaced with null — prevents Supabase rejects",
+    "Fix: saveInv/saveAnns/saveDms now only upsert changed records (performance)",
+    "Fix: grantXP stale closure fixed with progressRef — correct XP calculation",
+    "Fix: Voice input (sendAtlas) no longer depends on stale input state",
+  ],
+  "1.8.0": [
+    "Finn v1.4.0 — Memory system, task reminders, continuous voice mode",
+    "Vigil HyperCore v2.1.0 — Full server-side login enforcement via JWT",
+    "Vigil: Session validation every 5 minutes with auto-logout",
+    "Voice: Continuous listening mode with 18 stop phrases",
+    "Voice: Male voice fixed (Microsoft David priority)",
+    "Time zone fix: Finn Aether uses your device local time",
+    "Fix: Display & Sound settings no longer crashes",
+    "Fix: Finn stays open when Aether navigates",
+    "Fix: Voice settings save correctly across sessions",
+    "Fix: Task creation no longer disappears — 30s polling with merge logic",
+    "Fix: synthRef crash resolved — Finn voice fully operational",
+    "Fix: Aether switching to Atlas bug fixed",
+  ],
+  "1.7.5": [
+    "Finn Memory: remembers facts across sessions — say remember that...",
+    "Finn Memory: injected into Aether context every message",
+    "Task snooze/reminders: say remind me in 2 hours about [task]",
+    "Vigil HyperCore v2.1.0: login now server-verified via api/vigil.js",
+    "Vigil: JWT session tokens — validated every 5 minutes",
+    "Vigil: logout clears server session",
+    "Morning brief now includes streak count",
+  ],
   "1.7.4": [
     "Vigil HyperCore v2.0.1 — Failed email login now tracked and locked",
     "Vigil: New PIN creation now hashed automatically via VIGIL.hashPIN()",
