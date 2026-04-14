@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.8.2";
+const VERSION   = "1.8.3";
 const FINN_VERSION = "1.4.0";
 const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
@@ -79,6 +79,15 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.8.3": [
+    "DMs: Long messages now scrollable within the bubble",
+    "DMs: Group chat now shows who sent each message",
+    "Voice: Finn stops listening while speaking — no more talking to himself",
+    "Tasks: Fixed empty due date sending invalid data to Supabase",
+    "Announcements: Recently dismissed section with Restore button",
+    "Notifications: DM push notifications no longer send twice",
+    "Finn: Aether now asks for confirmation before executing any action",
+  ],
   "1.8.2": [
     "Schedule tab: tap from home screen quick stats card to open schedule",
     "Schedule tab: new page for staff to view the current schedule in-app",
@@ -1716,10 +1725,15 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
                 const msgRead=mine&&(theirMsgsAfter||msg.read);
                 // Only show "Read" on the LAST sent message to avoid clutter
                 const isLastMine=mine&&thread.filter(d=>d.from===user.id&&!d.system).slice(-1)[0]?.id===msg.id;
+                const senderEmp=!mine?emps.find(e=>e.id===msg.from):null;
+                const isGroupChat=selected?.id===GROUP_ID;
                 return (
                   <div key={msg.id} style={{display:"flex",justifyContent:mine?"flex-end":"flex-start",animation:`fadeUp .2s ${i*15}ms ease both`}}>
                     <div style={{maxWidth:"72%"}}>
-                      <div style={{background:mine?T.scarlet:T.surfH,color:mine?"#fff":T.txt,borderRadius:mine?"18px 18px 5px 18px":"18px 18px 18px 5px",padding:"11px 16px",fontSize:15,fontWeight:500,lineHeight:1.6,boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+                      {isGroupChat&&!mine&&senderEmp&&(
+                        <div style={{fontSize:11,fontWeight:700,color:ROLES[senderEmp.role]?.color||T.sub,marginBottom:3,paddingLeft:4}}>{senderEmp.name}</div>
+                      )}
+                      <div style={{background:mine?T.scarlet:T.surfH,color:mine?"#fff":T.txt,borderRadius:mine?"18px 18px 5px 18px":"18px 18px 18px 5px",padding:"11px 16px",fontSize:15,fontWeight:500,lineHeight:1.6,boxShadow:"0 2px 8px rgba(0,0,0,.08)",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:320,overflowY:"auto"}}>
                         <div>{msg.text}</div>
                         <div style={{fontSize:11,opacity:0.65,marginTop:4,textAlign:mine?"right":"left",fontWeight:400,display:"flex",alignItems:"center",justifyContent:mine?"flex-end":"flex-start",gap:4}}>
                           <span>{fmtT(msg.at)}</span>
@@ -2211,6 +2225,22 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
       window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
     }
   },[]);
+
+
+  // ── Stop mic + speech when FinnChat unmounts (panel closes) ──────────────
+  useEffect(()=>{
+    return ()=>{
+      // Stop listening
+      if(recognitionRef.current){
+        try{ recognitionRef.current.stop(); }catch(_){}
+        recognitionRef.current=null;
+      }
+      setListening(false);
+      // Stop speaking
+      if(window.speechSynthesis) window.speechSynthesis.cancel();
+      setSpeaking(false);
+    };
+  },[]);
   const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")==="atlas"?false:true);
 
   const callGroqFinn=async(userMsg,history)=>{
@@ -2370,7 +2400,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     window.speechSynthesis.cancel();
     const utt=new SpeechSynthesisUtterance(clean);
     const pickVoice=(voices)=>voices.find(v=>v.name==="Microsoft David - English (United States)")||voices.find(v=>v.name==="Microsoft Mark - English (United States)")||voices.find(v=>v.name==="Google UK English Male")||voices.find(v=>v.name==="Aaron")||voices.find(v=>v.name==="Daniel")||voices.find(v=>v.name==="Alex")||voices.find(v=>/microsoft david/i.test(v.name))||voices.find(v=>/microsoft mark/i.test(v.name))||voices.find(v=>/google uk english male/i.test(v.name))||voices.find(v=>/male/i.test(v.name)&&v.lang.startsWith("en"))||voices.find(v=>v.lang==="en-US"&&!/zira|helena|laura|hortense|julie|samantha|karen|victoria|female/i.test(v.name))||voices.find(v=>v.lang==="en-US")||voices[0];
-    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>setSpeaking(true); utt.onend=()=>setSpeaking(false); utt.onerror=()=>setSpeaking(false); window.speechSynthesis.speak(utt); };
+    const doSpeak=(voices)=>{ const v=pickVoice(voices); if(v) utt.voice=v; utt.rate=1.05; utt.pitch=0.95; utt.volume=1.0; utt.onstart=()=>{ setSpeaking(true); if(recognitionRef.current){try{recognitionRef.current.stop();}catch(_){}} }; utt.onend=()=>{ setSpeaking(false); }; utt.onerror=()=>setSpeaking(false); window.speechSynthesis.speak(utt); };
     const v=window.speechSynthesis.getVoices();
     if(v.length){ doSpeak(v); } else { window.speechSynthesis.onvoiceschanged=()=>{ window.speechSynthesis.onvoiceschanged=null; doSpeak(window.speechSynthesis.getVoices()); }; setTimeout(()=>doSpeak(window.speechSynthesis.getVoices()),600); }
   }
@@ -4177,7 +4207,13 @@ export default function App() {
           newDms.filter(d=>d.to===userRef.current.id&&!d.read&&!d.system).forEach(d=>{
             if(!prev.find(p=>p.id===d.id)){
               const sender=emps.find(e=>e.id===d.from);
-              NOTIF.send(userRef.current.id,`Message from ${sender?.name||"Someone"} 💬`,d.text.slice(0,80),"dm");
+              // Dedup: only notify once per message id
+          const notifKey="nl3-notif-"+d.id;
+          if(!localStorage.getItem(notifKey)){
+            localStorage.setItem(notifKey,"1");
+            setTimeout(()=>localStorage.removeItem(notifKey),60000);
+            NOTIF.send(userRef.current.id,`Message from ${sender?.name||"Someone"} 💬`,d.text.slice(0,80),"dm");
+          }
             }
           });
         }
@@ -4346,7 +4382,7 @@ export default function App() {
     };
     const r=await SB.upsert("tasks",row);
     if(!r){
-      console.warn("upsertTask failed for:",t.title,"— check Supabase RLS policies allow inserts for authenticated users");
+      console.error("upsertTask FAILED:",t.title,"— Supabase may have rejected due to RLS or invalid data. Row:",JSON.stringify({id:t.id,title:t.title,due_date:t.dueDate||null}));
     }
     return r;
   },[]);
@@ -4634,7 +4670,7 @@ export default function App() {
     const desc=san(String(form.tDesc||"").trim());
     const pri=form.tPri||"Medium";
     const assign=form.tAssign||"all";
-    const due=form.tDue||"";
+    const due=form.tDue||null;
     const rep=form.tRepeat||false;
     // Auto-categorize priority from keywords if not manually set
     const urgentWords=["urgent","asap","immediately","emergency","critical","now"];
@@ -4740,11 +4776,18 @@ export default function App() {
     toast("Announcement sent! ✅");
     saveAnns([ann,...anns]);
   };
-  const dismissAnn=async id=>{
-    const updated=anns.map(a=>a.id===id?{...a,dismissed:[...(a.dismissed||[]),user?.id]}:a);
+  const dismissAnn=async(id,restore=false)=>{
+    const updated=anns.map(a=>{
+      if(a.id!==id) return a;
+      const dismissed=restore
+        ?(a.dismissed||[]).filter(uid=>uid!==user?.id)
+        :[...(a.dismissed||[]),user?.id];
+      return {...a,dismissed};
+    });
     setAnns(updated);
     const ann=updated.find(a=>a.id===id);
     if(ann) await fetch(`${SUPABASE_URL}/rest/v1/announcements?id=eq.${id}`,{method:"PATCH",headers:SB.headers,body:JSON.stringify({dismissed:ann.dismissed})});
+    if(restore) toast("Announcement restored ✅");
   };
 
   // EMPLOYEES
@@ -5314,6 +5357,30 @@ export default function App() {
                       })}
                     </div>
                   )}
+                  {/* Recently Dismissed */}
+                  {(()=>{
+                    const dismissed=anns.filter(a=>(a.dismissed||[]).includes(user?.id));
+                    if(!dismissed.length) return null;
+                    return (
+                      <div style={{marginTop:24}}>
+                        <div style={{fontSize:12,fontWeight:700,color:T.faint,letterSpacing:"0.06em",textTransform:"uppercase",marginBottom:10}}>Recently Dismissed ({dismissed.length})</div>
+                        <div style={{display:"grid",gap:8,opacity:0.6}}>
+                          {dismissed.map((a,i)=>{
+                            const lc={info:T.blue,warn:T.warn,danger:T.scarlet}[a.level]||T.blue;
+                            return (
+                              <div key={a.id} style={{background:T.card,border:`1px solid ${T.bor}`,borderLeft:`3px solid ${lc}44`,borderRadius:12,padding:"10px 14px",display:"flex",gap:10,alignItems:"center"}}>
+                                <span style={{fontSize:16}}>{({info:"ℹ️",warn:"⚠️",danger:"🚨"})[a.level]||"ℹ️"}</span>
+                                <div style={{flex:1,fontSize:13,color:T.sub,lineHeight:1.5}}>{a.msg}</div>
+                                <button onClick={()=>{playSound("click");dismissAnn(a.id,true);}} title="Restore"
+                                  style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,color:T.sub,cursor:"pointer",fontFamily:"inherit",flexShrink:0,whiteSpace:"nowrap"}}
+                                >↩ Restore</button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
