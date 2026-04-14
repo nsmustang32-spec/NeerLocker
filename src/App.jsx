@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.8.1";
+const VERSION   = "1.8.2";
 const FINN_VERSION = "1.4.0";
 const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
@@ -79,6 +79,12 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.8.2": [
+    "Schedule tab: new page for staff to view the current schedule in-app",
+    "Tech Admin: paste any schedule URL — Google Sheets, OneDrive, SharePoint",
+    "Schedule: auto-saves to Supabase — all staff see it instantly",
+    "Schedule: refresh button and open-in-browser fallback",
+  ],
   "1.8.1": [
     "Fix: Push notifications now fire when tasks are created for everyone",
     "Fix: Notification badge now includes overdue task count",
@@ -1064,6 +1070,7 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
     {key:"dms",         icon:"💬", label:"Messages",       badge:unreadDMs, perm:"dms"},
     {key:"leaderboard", icon:"🏆", label:"Leaderboard",    perm:"leaderboard"},
     {key:"act",         icon:"📊", label:"Activity",       perm:"act"},
+    {key:"schedule",    icon:"📅", label:"Schedule"},
     {key:"set",         icon:"⚙️", label:"Settings"},
     {key:"finn",        icon:"finn",label:"Ask Finn",      finn:true},
   ].filter(i=>!i.perm||can(user,i.perm));
@@ -4012,6 +4019,7 @@ export default function App() {
   const [bkps,setBkps]=useState([]);
   const [dms,setDms]=useState([]);
   const [notice,setNotice]=useState("");
+  const [scheduleUrl,setScheduleUrl]=useState("");
   const [siteOffline,setSiteOffline]=useState(false);
 
   const [page,setPage]=useState("home");
@@ -4078,6 +4086,8 @@ export default function App() {
       setBkps((bkpRows||[]).map(b=>({id:b.id,at:b.at,...(b.data||{})})));
       setDms((dmRows||[]).map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback})));
       if(sn) setNotice(sn);
+      const schedUrl=await DB.get('nl3-schedule-url');
+      if(schedUrl) setScheduleUrl(schedUrl);
       const d=dk??false; const c=cp??false; const av=accentVal||"";
       setDk(d); setCompact(c); setAccent(av); setT(mkTheme(d,c,av));
       if(offlineVal) setSiteOffline(offlineVal);
@@ -5311,6 +5321,47 @@ export default function App() {
               {/* LEADERBOARD */}
               {page==="leaderboard"&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T}/>}
 
+              {/* SCHEDULE */}
+              {page==="schedule"&&(
+                <div className="fu" style={{display:"flex",flexDirection:"column",height:"calc(100vh - 120px)",marginTop:48}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
+                    <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:20,fontWeight:800,color:T.txt}}>📅 Schedule</div>
+                    {scheduleUrl&&(
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={()=>setScheduleUrl(u=>{const r=u+"?t="+Date.now();setTimeout(()=>setScheduleUrl(u),50);return r;})}
+                          style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,color:T.sub,cursor:"pointer",fontFamily:"inherit"}}>↻ Refresh</button>
+                        <a href={scheduleUrl} target="_blank" rel="noopener"
+                          style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,color:T.sub,cursor:"pointer",fontFamily:"inherit",textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>
+                          ↗ Open in Browser
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  {!scheduleUrl?(
+                    <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,color:T.sub,textAlign:"center",padding:40}}>
+                      <div style={{fontSize:48}}>📅</div>
+                      <div style={{fontSize:18,fontWeight:700,color:T.txt}}>No schedule set yet</div>
+                      <div style={{fontSize:14,lineHeight:1.6,maxWidth:320}}>
+                        Ask your Technical Administrator to paste the schedule link in the Tech Dashboard.
+                      </div>
+                    </div>
+                  ):(
+                    <div style={{flex:1,borderRadius:12,overflow:"hidden",border:"1px solid "+T.bor,background:T.surf,position:"relative"}}>
+                      <iframe
+                        src={scheduleUrl}
+                        style={{width:"100%",height:"100%",border:"none",display:"block"}}
+                        title="Staff Schedule"
+                        allow="fullscreen"
+                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                      />
+                      <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent,"+T.surf+"88)",padding:"20px 16px 12px",pointerEvents:"none",display:"flex",justifyContent:"center"}}>
+                        <div style={{fontSize:11,color:T.sub,fontStyle:"italic"}}>If the schedule doesn't load, tap Open in Browser above</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* ACTIVITY */}
               {page==="act"&&can(user,"act")&&(
                 <div className="fu">
@@ -6166,6 +6217,42 @@ export default function App() {
                 {techAction}
               </div>
             )}
+
+            {/* Schedule URL */}
+            <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
+              <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>📅 Staff Schedule Link</div>
+              <div style={{fontSize:12,color:T.sub,marginBottom:10,lineHeight:1.6}}>
+                Paste any schedule URL here — Google Sheets, OneDrive, SharePoint, or any link. All staff will see it instantly in the Schedule tab.
+              </div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:8}}>
+                <input
+                  placeholder="https://docs.google.com/spreadsheets/... or any schedule URL"
+                  value={form.schedUrl??scheduleUrl}
+                  onChange={e=>setForm(p=>({...p,schedUrl:e.target.value}))}
+                  style={{flex:1,minWidth:200,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 14px",fontSize:13,fontFamily:"inherit",outline:"none"}}
+                />
+                <Btn T={T} sm onClick={async()=>{
+                  const url=String(form.schedUrl||"").trim();
+                  if(!url){toast("Paste a URL first","err");return;}
+                  await DB.set("nl3-schedule-url",url);
+                  setScheduleUrl(url);
+                  setForm(p=>({...p,schedUrl:""}));
+                  toast("Schedule link saved! Staff can now see it in the Schedule tab ✅");
+                  playSound("success");
+                }}>Save Link</Btn>
+                {scheduleUrl&&<Btn T={T} sm variant="danger" onClick={async()=>{
+                  await DB.set("nl3-schedule-url","");
+                  setScheduleUrl("");
+                  toast("Schedule link cleared","warn");
+                }}>Clear</Btn>}
+              </div>
+              {scheduleUrl&&(
+                <div style={{fontSize:12,color:T.ok,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+                  <span>✓ Active:</span>
+                  <a href={scheduleUrl} target="_blank" rel="noopener" style={{color:T.blue,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:300}}>{scheduleUrl}</a>
+                </div>
+              )}
+            </div>
 
             {/* Site notice */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
