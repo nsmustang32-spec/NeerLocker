@@ -4122,7 +4122,7 @@ export default function App() {
         }
       }
 
-      setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:new Date(t.created_at).getTime()})));
+      setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:t.created_at})));
       setInv((invRows||[]).map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
       setAnns((annRows||[]).map(a=>({id:a.id,msg:a.msg,level:a.level,by:a.by_name,at:a.at,dismissed:a.dismissed||[],patchNotes:a.patch_notes,patchVersion:a.patch_version,patchBuild:a.patch_build})));
       setAct((actRows||[]).map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
@@ -4180,7 +4180,7 @@ export default function App() {
     ]);
     if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",createdAt:e.created_at})));
     if(taskRows?.length>=0){
-      const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:new Date(t.created_at).getTime()}));
+      const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:t.created_at}));
       setTasks(prev=>{
         // Detect brand new tasks assigned to me
         if(notifEnabledRef.current&&userRef.current){
@@ -4389,7 +4389,7 @@ export default function App() {
       due_date:t.dueDate||null,
       done:t.done||false,
       repeat:t.repeat||false,
-      created_at:t.createdAt?new Date(t.createdAt).toISOString():new Date().toISOString()
+      created_at:t.createdAt||Date.now()
     };
     const r=await SB.upsert("tasks",row);
     if(!r){
