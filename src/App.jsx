@@ -5323,42 +5323,39 @@ export default function App() {
 
               {/* SCHEDULE */}
               {page==="schedule"&&(
-                <div className="fu" style={{display:"flex",flexDirection:"column",height:"calc(100vh - 120px)",marginTop:48}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8}}>
-                    <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:20,fontWeight:800,color:T.txt}}>📅 Schedule</div>
+                <div className="fu" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",marginTop:48,padding:24}}>
+                  <div style={{background:T.card,border:"1px solid "+T.bor,borderRadius:20,padding:32,maxWidth:380,width:"100%",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
+                    <div style={{fontSize:52}}>📅</div>
+                    <div>
+                      <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,marginBottom:8}}>Staff Schedule</div>
+                      {scheduleUrl?(
+                        <div style={{fontSize:14,color:T.sub,lineHeight:1.6}}>Your schedule is ready. Choose how you'd like to open it.</div>
+                      ):(
+                        <div style={{fontSize:14,color:T.sub,lineHeight:1.6}}>No schedule has been set yet. Ask your Technical Administrator to add the schedule link.</div>
+                      )}
+                    </div>
                     {scheduleUrl&&(
-                      <div style={{display:"flex",gap:8}}>
-                        <button onClick={()=>setScheduleUrl(u=>{const r=u+"?t="+Date.now();setTimeout(()=>setScheduleUrl(u),50);return r;})}
-                          style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,color:T.sub,cursor:"pointer",fontFamily:"inherit"}}>↻ Refresh</button>
+                      <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%"}}>
                         <a href={scheduleUrl} target="_blank" rel="noopener"
-                          style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,color:T.sub,cursor:"pointer",fontFamily:"inherit",textDecoration:"none",display:"flex",alignItems:"center",gap:4}}>
-                          ↗ Open in Browser
+                          style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:T.scarlet,color:"#fff",borderRadius:12,padding:"14px 20px",fontWeight:800,fontSize:15,fontFamily:"inherit",textDecoration:"none",transition:"opacity .15s"}}
+                          onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
+                          onMouseLeave={e=>e.currentTarget.style.opacity="1"}
+                        >
+                          <span style={{fontSize:18}}>↗</span> Open in New Tab
                         </a>
+                        <button onClick={()=>window.location.href=scheduleUrl}
+                          style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:T.surfH,color:T.txt,border:"1px solid "+T.bor,borderRadius:12,padding:"14px 20px",fontWeight:700,fontSize:15,fontFamily:"inherit",cursor:"pointer",transition:"all .15s"}}
+                          onMouseEnter={e=>e.currentTarget.style.background=T.surf}
+                          onMouseLeave={e=>e.currentTarget.style.background=T.surfH}
+                        >
+                          <span style={{fontSize:18}}>🌐</span> Open in This Browser
+                        </button>
+                        <div style={{fontSize:11,color:T.faint,marginTop:4}}>
+                          Last updated by Tech Admin
+                        </div>
                       </div>
                     )}
                   </div>
-                  {!scheduleUrl?(
-                    <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,color:T.sub,textAlign:"center",padding:40}}>
-                      <div style={{fontSize:48}}>📅</div>
-                      <div style={{fontSize:18,fontWeight:700,color:T.txt}}>No schedule set yet</div>
-                      <div style={{fontSize:14,lineHeight:1.6,maxWidth:320}}>
-                        Ask your Technical Administrator to paste the schedule link in the Tech Dashboard.
-                      </div>
-                    </div>
-                  ):(
-                    <div style={{flex:1,borderRadius:12,overflow:"hidden",border:"1px solid "+T.bor,background:T.surf,position:"relative"}}>
-                      <iframe
-                        src={scheduleUrl}
-                        style={{width:"100%",height:"100%",border:"none",display:"block"}}
-                        title="Staff Schedule"
-                        allow="fullscreen"
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-                      />
-                      <div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent,"+T.surf+"88)",padding:"20px 16px 12px",pointerEvents:"none",display:"flex",justifyContent:"center"}}>
-                        <div style={{fontSize:11,color:T.sub,fontStyle:"italic"}}>If the schedule doesn't load, tap Open in Browser above</div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
