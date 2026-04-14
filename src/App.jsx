@@ -2204,7 +2204,9 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
     if(createMatch){
       clean=clean.replace(createMatch[0],"").trim();
       const newTask={id:Math.random().toString(36).slice(2,9),title:createMatch[1],priority:createMatch[2],assignedTo:createMatch[3]==="Everyone"?"all":emps.find(e=>e.name.includes(createMatch[3]))?.id||"all",createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:"",repeat:false,repeatDays:[]};
+      // Update local state + save to Supabase
       if(saveTask) saveTask(newTask);
+      if(upsertTask) upsertTask(newTask);
       if(grantXP) grantXP(25,"finn task");
       haptic("success");
     }
@@ -2406,38 +2408,46 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
 
 
   const sendText=async(text)=>{
-    if(!text||loading) return;
+    if(!text?.trim()||loading) return;
+    // Vigil checks
+    if(!VIGIL.checkFinnRate()){ addMsg("assistant","Slow down a bit! 😄"); return; }
+    if(VIGIL.detectInjection(text)){ VIGIL.logEvent("prompt_injection",text.slice(0,100),user?.id); addMsg("assistant","Vigil flagged that. What can I help with?"); return; }
+    // Set input and trigger the full send() pipeline
+    setInput(text);
+    // Use a tiny delay so state updates before send() reads it
+    await new Promise(r=>setTimeout(r,30));
+    await sendFromText(text);
+  };
+
+  const sendFromText=async(text)=>{
+    setInput("");
     addMsg("user",text);
     setLoading(true);
     haptic("light");
-    // Try Aether first
+    // Aether
     if(useGroq){
       try {
         const groqPromise=callGroqFinn(text,msgs);
         const timeoutPromise=new Promise((_,reject)=>setTimeout(()=>reject(new Error("timeout")),5000));
         const groqReply=await Promise.race([groqPromise,timeoutPromise]);
         const clean=await parseAndExecuteActions(groqReply);
-        finnSpeak(clean);
         setMsgs(prev=>[...prev,{role:"assistant",content:clean}]);
+        if(voiceOn) speakReply(clean);
         setLoading(false);
         return;
       } catch(e){
         const isTimeout=e.message==="timeout";
         const isOffline=e.message==="Failed to fetch"||e.name==="TypeError";
-        const msg=isTimeout?"⚡ Finn Aether took too long — switching to Finn Atlas.":isOffline?"📱 No connection to Finn Aether — switching to Finn Atlas.":"⚡ Finn Aether unavailable — switching to Finn Atlas.";
+        const msg=isTimeout?"⚡ Finn Aether took too long — switching to Finn Atlas.":isOffline?"📱 No connection — switching to Finn Atlas.":"⚡ Finn Aether unavailable — switching to Finn Atlas.";
+        console.warn("Aether fallback:",e.message);
         setMsgs(prev=>[...prev,{role:"assistant",content:msg+" Response coming..."}]);
         await new Promise(r=>setTimeout(r,300));
       }
     }
-    // Atlas fallback
-    let reply="";
-    try {
-      // ── Atlas local engine (abbreviated — full logic in send()) ──
-      reply="Ask me anything about your tasks, inventory, XP, or team!";
-    } catch(e){ reply="Something went wrong. Try again!"; }
-    if(!reply) reply="I'm here! What do you need?";
-    finnSpeak(reply);
-    setTimeout(()=>{ setMsgs(prev=>[...prev,{role:"assistant",content:reply}]); setLoading(false); },280);
+    // Run Atlas via send() — set input and trigger
+    setInput(text);
+    await new Promise(r=>setTimeout(r,20));
+    send();
   };
 
   async function send(){
@@ -2581,7 +2591,9 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
               reply="Announcement dismissed. ✅";
             } else if(act.action==="create_task"){
               const newTask={id:Math.random().toString(36).slice(2,9),title:act.title,description:"",priority:act.priority,assignedTo:act.assignedTo,createdBy:user?.id||"",createdAt:Date.now(),done:false,dueDate:act.dueDate||"",repeat:false,repeatDays:[]};
-              if(saveTask) saveTask(newTask);
+              // Save to Supabase AND update local state so task doesn't disappear
+              if(upsertTask) upsertTask(newTask);
+              if(saveTask) saveTask(newTask); // also updates local tasks state
               if(addAct) addAct("task_created","Finn created: "+newTask.title,user?.id);
               if(grantXP) grantXP(25,"finn task");
               setPendingAction(null);
@@ -5967,7 +5979,7 @@ export default function App() {
           )}
 
           {/* Finn chat panel */}
-          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} act={act} onClose={()=>setShowFinn(false)} setPage={p=>{setPrevPage(page);setPage(p);}} toast={toast} saveTask={upsertTask} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact} upsertTask={upsertTask} dismissAnn={dismissAnn} voiceOnGlobal={voiceOnGlobal} setVoiceOnGlobal={setVoiceOnGlobal}/>}
+          {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} act={act} onClose={()=>setShowFinn(false)} setPage={p=>{setPrevPage(page);setPage(p);}} toast={toast} saveTask={(t)=>{setTasks(prev=>{const exists=prev.find(x=>x.id===t.id);return exists?prev.map(x=>x.id===t.id?t:x):[t,...prev];});upsertTask(t);}} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact} upsertTask={upsertTask} dismissAnn={dismissAnn} voiceOnGlobal={voiceOnGlobal} setVoiceOnGlobal={setVoiceOnGlobal}/>}
 
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
 
