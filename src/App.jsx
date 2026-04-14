@@ -4093,7 +4093,10 @@ export default function App() {
             }
           });
         }
-        return newMapped;
+        // Merge: keep any locally-created tasks not yet in Supabase response
+        const supabaseIds=new Set(newMapped.map(t=>t.id));
+        const localOnly=prev.filter(t=>!supabaseIds.has(t.id)&&(Date.now()-t.createdAt)<60000);
+        return [...newMapped,...localOnly];
       });
     }
     if(invRows) setInv(invRows.map(i=>({id:i.id,name:i.name,stock:i.stock,createdAt:i.created_at})));
@@ -4131,7 +4134,7 @@ export default function App() {
   // Poll every 8 seconds when app is open — keeps all data fresh across devices
   useEffect(()=>{
     if(screen!=="app"&&screen!=="tech") return;
-    const interval=setInterval(refreshData, 8000);
+    const interval=setInterval(refreshData, 30000); // 30s - was 8s which caused task flicker
     return()=>clearInterval(interval);
   },[screen, refreshData]);
 
