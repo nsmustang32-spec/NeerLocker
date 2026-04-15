@@ -2035,11 +2035,21 @@ const NOTIF = {
     } catch(e) { console.warn("Unsubscribe failed:", e); }
   },
 
+  // Global rate limit — no notification can fire twice within 5 seconds
+  _recentFired: {},
+  _canFire(key) {
+    const now = Date.now();
+    const last = NOTIF._recentFired[key] || 0;
+    if(now - last < 5000) return false;
+    NOTIF._recentFired[key] = now;
+    return true;
+  },
+
   // Trigger server-side push (calls Vercel function)
   async send(userId, title, body, tag="neer-locker") {
-    console.log("[NOTIF] send called", {userId, title, body});
+    if(!NOTIF._canFire(userId+"|"+tag+"|"+title)) return;
     try {
-      const r=await fetch("https://neer-locker.vercel.app/api/send-push", {
+      await fetch("https://neer-locker.vercel.app/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({userId, title, body, tag}),
@@ -2049,9 +2059,9 @@ const NOTIF = {
 
   // Broadcast to all users (no userId filter)
   async broadcast(title, body, tag="neer-locker") {
-    console.log("[NOTIF] broadcast called", {title, body});
+    if(!NOTIF._canFire("broadcast|"+tag+"|"+title)) return;
     try {
-      const r=await fetch("https://neer-locker.vercel.app/api/send-push", {
+      await fetch("https://neer-locker.vercel.app/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({title, body, tag}),
@@ -4186,7 +4196,12 @@ export default function App() {
         if(notifEnabledRef.current&&userRef.current){
           newMapped.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===userRef.current.id)).forEach(t=>{
             if(!prev.find(p=>p.id===t.id)){
-              NOTIF.send(userRef.current.id,"New Task 📋",`${t.title} — assigned to you`,"task");
+              const taskNotifKey="nl3-notif-task-"+t.id;
+              if(!localStorage.getItem(taskNotifKey)){
+                localStorage.setItem(taskNotifKey,"1");
+                setTimeout(()=>localStorage.removeItem(taskNotifKey),300000);
+                NOTIF.send(userRef.current.id,"New Task 📋",`${t.title} — assigned to you`,"task");
+              }
             }
           });
         }
@@ -4203,7 +4218,12 @@ export default function App() {
         if(notifEnabledRef.current&&userRef.current){
           newAnns.filter(a=>!(a.dismissed||[]).includes(userRef.current.id)).forEach(a=>{
             if(!prev.find(p=>p.id===a.id)){
-              NOTIF.broadcast("New Announcement 📢",a.msg.slice(0,80),"announcement");
+              const annNotifKey="nl3-notif-ann-"+a.id;
+              if(!localStorage.getItem(annNotifKey)){
+                localStorage.setItem(annNotifKey,"1");
+                setTimeout(()=>localStorage.removeItem(annNotifKey),300000); // 5 min
+                NOTIF.broadcast("New Announcement 📢",a.msg.slice(0,80),"announcement");
+              }
             }
           });
         }
@@ -4705,10 +4725,14 @@ export default function App() {
     if(task.assignedTo==="all"){
       // Notify everyone except the creator
       emps.filter(e=>e.id!==user?.id).forEach(e=>{
+        const ck="nl3-notif-task-"+task.id;
+        if(!localStorage.getItem(ck)){ localStorage.setItem(ck,"1"); setTimeout(()=>localStorage.removeItem(ck),300000); }
         NOTIF.send(e.id,"New Task 📋",`${task.title} — assigned to everyone`,"task");
       });
     } else if(task.assignedTo!==user?.id){
       // Notify the specific person assigned
+      const ck2="nl3-notif-task-"+task.id;
+      if(!localStorage.getItem(ck2)){ localStorage.setItem(ck2,"1"); setTimeout(()=>localStorage.removeItem(ck2),300000); }
       NOTIF.send(task.assignedTo,"New Task 📋",`${task.title} — assigned to you`,"task");
     }
   };
@@ -4785,6 +4809,12 @@ export default function App() {
     setModal(null);setForm({});
     playSound("notify");
     toast("Announcement sent! ✅");
+    // Pre-set notification dedup key so refreshData won't fire a second notification
+    const annNotifKey="nl3-notif-ann-"+ann.id;
+    localStorage.setItem(annNotifKey,"1");
+    setTimeout(()=>localStorage.removeItem(annNotifKey),300000);
+    // Send the notification now directly to all staff
+    NOTIF.broadcast("New Announcement 📢",ann.msg.slice(0,80),"announcement");
     saveAnns([ann,...anns]);
   };
   const dismissAnn=async(id,restore=false)=>{
