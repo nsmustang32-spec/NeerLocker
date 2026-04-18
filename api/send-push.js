@@ -46,79 +46,24 @@ async function sendToSubs(subs, payload) {
 }
 
 module.exports = async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const body = req.body || {};
 
-  // ── New DM ────────────────────────────────────────────────────────────────
-  if (body.type === "INSERT" && body.table === "direct_messages") {
-    const record = body.record;
-    if (!record || record.system) return res.status(200).json({ skip: "system message" });
-
-    const empRes = await fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${record.from_id}`, {
-      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-    });
-    const emps = await empRes.json();
-    const senderName = emps?.[0]?.name || "Someone";
-
-    const subs = await getSubs(record.to_id);
-    if (!subs?.length) return res.status(200).json({ sent: 0 });
-
-    const result = await sendToSubs(subs, {
-      title: `Message from ${senderName} 💬`,
-      body: record.text?.slice(0, 100) || "",
-      tag: "dm"
-    });
-    return res.status(200).json(result);
+  // Reject Supabase webhook calls — app handles notifications manually to avoid doubles
+  if (body.type === "INSERT" || body.type === "UPDATE" || body.type === "DELETE") {
+    return res.status(200).json({ skip: "webhook calls ignored — app sends manually" });
   }
 
-  // ── New Task ──────────────────────────────────────────────────────────────
-  if (body.type === "INSERT" && body.table === "tasks") {
-    const record = body.record;
-    if (!record) return res.status(200).json({ skip: "no record" });
-
-    let subs;
-    if (record.assigned_to === "all") {
-      // Send to everyone
-      subs = await getAllSubs();
-    } else {
-      // Send to specific person
-      subs = await getSubs(record.assigned_to);
-    }
-    if (!subs?.length) return res.status(200).json({ sent: 0 });
-
-    const result = await sendToSubs(subs, {
-      title: "New Task 📋",
-      body: `${record.title}${record.priority ? ` · ${record.priority}` : ""}`,
-      tag: "task"
-    });
-    return res.status(200).json(result);
-  }
-
-  // ── New Announcement ──────────────────────────────────────────────────────
-  if (body.type === "INSERT" && body.table === "announcements") {
-    const record = body.record;
-    if (!record) return res.status(200).json({ skip: "no record" });
-
-    // Send to everyone
-    const subs = await getAllSubs();
-    if (!subs?.length) return res.status(200).json({ sent: 0 });
-
-    const result = await sendToSubs(subs, {
-      title: `New Announcement 📢`,
-      body: record.msg?.slice(0, 100) || "",
-      tag: "announcement"
-    });
-    return res.status(200).json(result);
-  }
-
-  // ── Manual call from app ──────────────────────────────────────────────────
+  // Manual call from app — must include title and body
   const { userId, title, body: msgBody, tag } = body;
   if (!title || !msgBody) return res.status(400).json({ error: "title and body required" });
 
-  const subs = await getSubs(userId);
+  const subs = userId ? await getSubs(userId) : await getAllSubs();
   if (!subs?.length) return res.status(200).json({ sent: 0 });
 
   const result = await sendToSubs(subs, { title, body: msgBody, tag: tag || "neer-locker" });
