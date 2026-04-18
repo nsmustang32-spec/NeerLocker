@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.8.3";
+const VERSION   = "1.8.4";
 const FINN_VERSION = "1.4.0";
 const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
@@ -79,6 +79,16 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.8.4": [
+    "Fix: Notifications no longer fire twice — webhook + manual call conflict resolved",
+    "Fix: Global 5-second notification rate limiter added to NOTIF object",
+    "Fix: Tasks now save correctly to Supabase — repeat_days column conflict removed",
+    "Fix: created_at correctly sent as bigint to match Supabase schema",
+    "Voice: Finn pauses mic while speaking, restarts automatically when done",
+    "Voice: Mic stops cleanly when Finn panel is closed",
+    "Fix: Announcement notifications pre-deduped on creation",
+    "Tasks: DB load logging added for diagnostics",
+  ],
   "1.8.3": [
     "DMs: Long messages now scrollable within the bubble",
     "DMs: Group chat now shows who sent each message",
@@ -475,8 +485,11 @@ const SB = {
   async select(table, query="") {
     try {
       const r = await fetch(SB.url(table, query), {headers: SB.headers});
-      return r.ok ? await r.json() : [];
-    } catch { return []; }
+      if(!r.ok){ console.error("SB.select failed:",table,r.status); return []; }
+      const data = await r.json();
+      if(table==="tasks") console.log("[DB] tasks loaded:",data.length,"rows");
+      return data;
+    } catch(e) { console.error("SB.select error:",table,e.message); return []; }
   },
 
   async upsert(table, data) {
