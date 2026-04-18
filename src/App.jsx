@@ -2053,7 +2053,7 @@ const NOTIF = {
   _canFire(key) {
     const now = Date.now();
     const last = NOTIF._recentFired[key] || 0;
-    if(now - last < 5000) return false;
+    if(now - last < 3000) return false; // 3s window per exact key
     NOTIF._recentFired[key] = now;
     return true;
   },
@@ -4737,15 +4737,17 @@ export default function App() {
     // Send push notifications to assigned users
     if(task.assignedTo==="all"){
       // Notify everyone except the creator
+      // Mark this task notified so refreshData won't double-fire
+      localStorage.setItem("nl3-notif-task-"+task.id,"1");
+      setTimeout(()=>localStorage.removeItem("nl3-notif-task-"+task.id),300000);
+      // Notify each person individually
       emps.filter(e=>e.id!==user?.id).forEach(e=>{
-        const ck="nl3-notif-task-"+task.id;
-        if(!localStorage.getItem(ck)){ localStorage.setItem(ck,"1"); setTimeout(()=>localStorage.removeItem(ck),300000); }
         NOTIF.send(e.id,"New Task 📋",`${task.title} — assigned to everyone`,"task");
       });
     } else if(task.assignedTo!==user?.id){
       // Notify the specific person assigned
-      const ck2="nl3-notif-task-"+task.id;
-      if(!localStorage.getItem(ck2)){ localStorage.setItem(ck2,"1"); setTimeout(()=>localStorage.removeItem(ck2),300000); }
+      localStorage.setItem("nl3-notif-task-"+task.id,"1");
+      setTimeout(()=>localStorage.removeItem("nl3-notif-task-"+task.id),300000);
       NOTIF.send(task.assignedTo,"New Task 📋",`${task.title} — assigned to you`,"task");
     }
   };
