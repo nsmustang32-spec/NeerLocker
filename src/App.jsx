@@ -4447,11 +4447,11 @@ export default function App() {
       if(!alive) return;
       // Map Supabase rows back to app format
       const mappedEmps=empRows?.length>0
-        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",createdAt:e.created_at}))
+        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",status:e.status||"offline",createdAt:e.created_at}))
         :SEED;
       setEmps(mappedEmps);
       // Seed initial employees if none exist
-      if(!empRows?.length){for(const s of SEED)await SB.upsert("employees",{id:s.id,email:s.email,name:s.name,role:s.role,pin:s.pin||"",status:"offline",created_at:s.createdAt||Date.now()});}
+      if(!empRows?.length){for(const s of SEED)await SB.upsert("employees",{id:s.id,email:s.email,name:s.name,role:s.role,status:"offline",created_at:s.createdAt||Date.now()});}
       // Force-upsert any SEED employees missing from Supabase (e.g. new additions)
       const existingEmails=new Set((empRows||[]).map(e=>e.email));
       for(const s of SEED){
@@ -4516,7 +4516,7 @@ export default function App() {
       SB.select("system_logs","?order=at.desc&limit=200"),
       SB.select("direct_messages","?order=at.asc"),
     ]);
-    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin||"",status:e.status||"offline",createdAt:e.created_at})));
+    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",status:e.status||"offline",avatar_url:e.avatar_url||"",createdAt:e.created_at})));
     if(taskRows?.length>=0){
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:t.created_at}));
       setTasks(prev=>{
