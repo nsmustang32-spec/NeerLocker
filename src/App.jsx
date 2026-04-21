@@ -6728,6 +6728,74 @@ export default function App() {
                 toast("All XP reset","warn");
               }}>🔄 Reset All XP</Btn>
             </div>
+
+            {/* ── XP GRANT PANEL ─────────────────────────────────────────── */}
+            <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
+              <div style={{fontWeight:700,color:T.txt,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:18}}>⭐</span> Grant XP to Staff
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}} className="two-col">
+                {/* Target selector */}
+                <div>
+                  <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.05em",marginBottom:6}}>SELECT RECIPIENT</div>
+                  <select value={form.xpGrantTarget||"all"} onChange={e=>setForm(p=>({...p,xpGrantTarget:e.target.value}))}
+                    style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+                    <option value="all">Everyone (all eligible staff)</option>
+                    {emps.filter(e=>["boss","manager","assistant","employee"].includes(e.role)).map(e=>(
+                      <option key={e.id} value={e.id}>{e.name} — {ROLES[e.role]?.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {/* Amount input */}
+                <div>
+                  <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.05em",marginBottom:6}}>XP AMOUNT</div>
+                  <input type="number" min={1} max={10000} placeholder="e.g. 100"
+                    value={form.xpGrantAmount||""} onChange={e=>setForm(p=>({...p,xpGrantAmount:e.target.value}))}
+                    style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}
+                  />
+                </div>
+              </div>
+              {/* Quick amount buttons */}
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}}>
+                {[10,25,50,100,250,500,1000].map(amt=>(
+                  <button key={amt} onClick={()=>setForm(p=>({...p,xpGrantAmount:String(amt)}))}
+                    style={{background:form.xpGrantAmount===String(amt)?T.accent:T.surfH,color:form.xpGrantAmount===String(amt)?"#fff":T.sub,border:`1px solid ${form.xpGrantAmount===String(amt)?T.accent:T.bor}`,borderRadius:9999,padding:"4px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                    +{amt}
+                  </button>
+                ))}
+              </div>
+              {/* Optional note */}
+              <input placeholder="Reason / note (optional)" value={form.xpGrantNote||""}
+                onChange={e=>setForm(p=>({...p,xpGrantNote:e.target.value}))}
+                style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none",marginBottom:12}}
+              />
+              <Btn T={T} full onClick={async()=>{
+                const amount=parseInt(form.xpGrantAmount||"0");
+                if(!amount||amount<1){toast("Enter an XP amount","err");return;}
+                const targets=form.xpGrantTarget==="all"
+                  ? emps.filter(e=>["boss","manager","assistant","employee"].includes(e.role))
+                  : emps.filter(e=>e.id===form.xpGrantTarget);
+                if(!targets.length){toast("No eligible recipients","err");return;}
+                let updated=0;
+                for(const emp of targets){
+                  const pg=progress[emp.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+                  const newXP=(pg.xp||0)+amount;
+                  const info=getLevelInfo(newXP);
+                  const newPg={...pg,xp:newXP,level:info.level,title:info.title};
+                  await SB.upsert("user_progress",{user_id:emp.id,xp:newXP,level:info.level,title:info.title,streak:pg.streak||0,last_login:pg.last_login||""});
+                  setProgress(prev=>({...prev,[emp.id]:newPg}));
+                  updated++;
+                }
+                const note=form.xpGrantNote?` — "${form.xpGrantNote}"`:"";
+                addAct("xp_grant",`Tech Admin granted ${amount} XP to ${form.xpGrantTarget==="all"?"all staff":targets[0]?.name}${note}`,"system");
+                playSound("success");haptic&&haptic("heavy");
+                const who=form.xpGrantTarget==="all"?`all ${updated} staff members`:targets[0]?.name;
+                toast(`✅ Granted ${amount} XP to ${who}!`);
+                setTechAction(`✅ Granted ${amount} XP to ${who}${note}`);
+                setTimeout(()=>setTechAction(""),5000);
+                setForm(p=>({...p,xpGrantAmount:"",xpGrantNote:"",xpGrantTarget:"all"}));
+              }}>⭐ Grant XP</Btn>
+            </div>
             {techAction&&(
               <div style={{display:"flex",alignItems:"center",gap:8,background:"#dcfce7",border:"1px solid #86efac",borderRadius:10,padding:"9px 14px",marginBottom:14,animation:"fadeUp .2s ease",fontSize:13,fontWeight:700,color:"#15803d"}}>
                 {techAction}
