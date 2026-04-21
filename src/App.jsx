@@ -1471,12 +1471,15 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
                 onMouseLeave={el=>el.currentTarget.style.background=T.surfH}>
                 <StatusDot status={e.status}/>
                 {(()=>{
-                  const grantedBadges=JSON.parse(e.badge_grants||"[]").slice(0,3);
-                  const isCreator=grantedBadges.includes("creator");
+                  const granted=JSON.parse(e.badge_grants||"[]");
+                  const equipped=JSON.parse(e.equipped_badges||"[]");
+                  const grantedBadges=[...new Set([...granted,...equipped])].slice(0,3);
+                  const isCreator=grantedBadges.includes("creator")||granted.includes("creator");
+                  const onlinNameColor=(e.name_color||"base")==="name_color"?T.accent:T.txt;
                   return <>
                     {isCreator
                       ?<CreatorName name={e.name.split(" ")[0]} size={12}/>
-                      :<span style={{fontSize:12,fontWeight:600,color:T.txt}}>{e.name.split(" ")[0]}</span>}
+                      :<span style={{fontSize:12,fontWeight:600,color:onlinNameColor}}>{e.name.split(" ")[0]}</span>}
                     {grantedBadges.length>0&&<UserBadges badgeIds={grantedBadges} size={13} gap={2}/>}
                   </>;
                 })()}
@@ -3939,7 +3942,24 @@ function LeaderboardPage({emps,progress,user,T,onShop,onViewProfile}) {
               {/* Info */}
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                  <span style={{fontWeight:800,fontSize:14,color:T.txt,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3,textDecorationStyle:"dotted"}} onClick={()=>{playSound("click");onViewProfile&&onViewProfile(e);}}>{e.name}</span>
+                  {(()=>{
+                    // Combine admin-granted + equipped shop badges, deduplicated, max 5
+                    const granted=JSON.parse(e.badge_grants||"[]");
+                    const equipped=JSON.parse(e.equipped_badges||"[]");
+                    const badges=[...new Set([...granted,...equipped])].slice(0,5);
+                    const isCreator=badges.includes("creator")||granted.includes("creator");
+                    // Name color: use Supabase-stored name_color field
+                    const nameColor=(e.name_color||"base")==="name_color"?T.accent:T.txt;
+                    return (
+                      <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}>
+                        <span style={{fontWeight:800,fontSize:14,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3,textDecorationStyle:"dotted"}}
+                          onClick={()=>{playSound("click");onViewProfile&&onViewProfile(e);}}>
+                          {isCreator?<CreatorName name={e.name} size={14}/>:<span style={{color:nameColor}}>{e.name}</span>}
+                        </span>
+                        {badges.length>0&&<UserBadges badgeIds={badges} size={16} gap={3}/>}
+                      </div>
+                    );
+                  })()}
                   {isEotm&&<span style={{fontSize:14}}>⭐</span>}
                   {isMe&&<span style={{background:T.scarlet,color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:800}}>YOU</span>}
                 </div>
@@ -4257,7 +4277,10 @@ function StaffProfileModal({T,emp,progress,onClose}) {
   if(!emp) return null;
   const pg=progress[emp.id]||{xp:0,level:1,title:"Pioneer",streak:0};
   const lv=getLevelInfo(pg.xp);
-  const grantedBadges=JSON.parse(emp.badge_grants||"[]");
+  const granted=JSON.parse(emp.badge_grants||"[]");
+  const equipped=JSON.parse(emp.equipped_badges||"[]");
+  const grantedBadges=[...new Set([...granted,...equipped])];
+  const isCreatorName=(emp.name_color||"base")==="name_color";
   const isCreator=grantedBadges.includes("creator");
 
   return (
@@ -4277,7 +4300,8 @@ function StaffProfileModal({T,emp,progress,onClose}) {
               {isCreator?(
                 <div style={{marginBottom:4}}><CreatorName name={emp.name} size={22}/></div>
               ):(
-                <div style={{fontSize:22,fontWeight:800,color:T.txt,letterSpacing:"-0.4px",marginBottom:4}}>{emp.name}</div>
+                <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.4px",marginBottom:4,
+                  color:isCreatorName?T.accent:T.txt}}>{emp.name}</div>
               )}
               <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
                 <Tag label={ROLES[emp.role]?.label||emp.role} color={ROLES[emp.role]?.color||"#6b7280"}/>
@@ -4498,8 +4522,18 @@ export default function App() {
     try{return JSON.parse(localStorage.getItem("nl3-badges")||"[]");}catch{return [];}
   });
   const [nameColorId,setNameColorId]=useState(()=>localStorage.getItem("nl3-name-color")||"base");
-  const saveEquippedBadges=(badges)=>{setEquippedBadges(badges);localStorage.setItem("nl3-badges",JSON.stringify(badges));};
-  const saveNameColor=(id)=>{setNameColorId(id);localStorage.setItem("nl3-name-color",id);};
+  const saveEquippedBadges=(badges)=>{
+    setEquippedBadges(badges);
+    localStorage.setItem("nl3-badges",JSON.stringify(badges));
+    // Persist to Supabase so all viewers see the badges
+    if(user?.id) SB.upsert("employees",{id:user.id,equipped_badges:JSON.stringify(badges)});
+  };
+  const saveNameColor=(id)=>{
+    setNameColorId(id);
+    localStorage.setItem("nl3-name-color",id);
+    // Persist to Supabase so everyone sees custom name color
+    if(user?.id) SB.upsert("employees",{id:user.id,name_color:id});
+  };
   const [showShop,setShowShop]=useState(false);
   const [showPfpUpload,setShowPfpUpload]=useState(false);
   // Monthly rating check — show once per calendar month per user
@@ -4583,7 +4617,7 @@ export default function App() {
       if(!alive) return;
       // Map Supabase rows back to app format
       const mappedEmps=empRows?.length>0
-        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at}))
+        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at}))
         :SEED;
       setEmps(mappedEmps);
       // Seed initial employees if none exist
@@ -4652,7 +4686,7 @@ export default function App() {
       SB.select("system_logs","?order=at.desc&limit=200"),
       SB.select("direct_messages","?order=at.asc"),
     ]);
-    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at})));
+    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at})));
     if(taskRows?.length>=0){
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:t.created_at}));
       setTasks(prev=>{
@@ -5122,6 +5156,17 @@ export default function App() {
       setPage("home");
       setScreen("app");
       setShowBriefing(true);
+      // Sync equipped badges + name color from Supabase (source of truth for all-viewers)
+      const savedEquipped=JSON.parse(emp.equipped_badges||"[]");
+      if(savedEquipped.length>0){
+        localStorage.setItem("nl3-badges",JSON.stringify(savedEquipped));
+        setEquippedBadges(savedEquipped);
+      }
+      const savedNameColor=emp.name_color||"base";
+      if(savedNameColor!=="base"){
+        localStorage.setItem("nl3-name-color",savedNameColor);
+        setNameColorId(savedNameColor);
+      }
       // Load admin-granted badges from employee record
       const grantedBadges=JSON.parse(emp.badge_grants||"[]");
       if(grantedBadges.length>0){
@@ -7139,14 +7184,21 @@ export default function App() {
                   <select value={form.badgeGrantType||"eotm"} onChange={e=>setForm(p=>({...p,badgeGrantType:e.target.value}))}
                     style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
                     <option value="eotm">⭐ Employee of the Month</option>
-                    {Object.values(BADGE_CATALOG).filter(b=>b.adminOnly&&b.id!=="creator").map(b=>(
-                      <option key={b.id} value={b.id}>{b.icon} {b.name}</option>
-                    ))}
+                    <optgroup label="── Special ──">
+                      {Object.values(BADGE_CATALOG).filter(b=>b.adminOnly&&b.id!=="creator").map(b=>(
+                        <option key={b.id} value={b.id}>{b.icon} {b.name} (Admin Only)</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="── All Badges ──">
+                      {Object.values(BADGE_CATALOG).filter(b=>!b.adminOnly).map(b=>(
+                        <option key={b.id} value={b.id}>{b.icon} {b.name}</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               </div>
               {/* EOTM month/year picker */}
-              {(!form.badgeGrantType||form.badgeGrantType==="eotm")&&(
+              {(form.badgeGrantType==="eotm"||!form.badgeGrantType)&&(
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}} className="two-col">
                   <div>
                     <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.05em",marginBottom:6}}>MONTH</div>
@@ -7174,7 +7226,10 @@ export default function App() {
                 const mo=(form.badgeGrantMonth||String(new Date().getMonth()+1).padStart(2,"0"));
                 const yr=(form.badgeGrantYear||String(new Date().getFullYear()));
                 const badgeId=isEotm?`eotm_${yr}_${mo}`:(form.badgeGrantType||"eotm");
-                const badgeName=isEotm?`Employee of the Month — ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(mo)-1]} ${yr}`:BADGE_CATALOG[badgeId]?.name||badgeId;
+                const catalogBadge=BADGE_CATALOG[badgeId];
+                const badgeName=isEotm
+                  ?`Employee of the Month — ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(mo)-1]} ${yr}`
+                  :(catalogBadge?.name||badgeId);
                 // Save badge grant to Supabase (in employees table as a JSON array in badge_grants column)
                 const existing=JSON.parse(emp.badge_grants||"[]");
                 if(!existing.includes(badgeId)){
