@@ -799,10 +799,10 @@ function VersionBadge({T,hide}) {
 
 function ClaudeTag({T}) {
   return (
-    <div style={{position:"fixed",bottom:32,left:12,fontSize:11,color:T.faint,fontWeight:500,letterSpacing:"0.01em",userSelect:"none",zIndex:9997,opacity:0.75,lineHeight:1.65}}>
-      Built using Claude<br/>Created by Nate Smith<br/>
-      <span style={{color:"#1e7fa8",fontWeight:700}}>Powered by Finn v{FINN_VERSION}</span><br/>
-      <span style={{color:"#16a34a",fontWeight:700}}>🛡 Secured by Vigil HyperCore v{VIGIL_VERSION}</span>
+    <div style={{position:"fixed",bottom:8,left:8,fontSize:10,color:T.faint,fontWeight:500,letterSpacing:"0.01em",userSelect:"none",zIndex:290,opacity:0.6,lineHeight:1.75,pointerEvents:"none"}}>
+      Built using Claude · Created by Nate Smith<br/>
+      <span style={{color:"#1e7fa8",fontWeight:600}}>⬡ Powered by Finn v{FINN_VERSION}</span><br/>
+      <span style={{color:"#16a34a",fontWeight:600}}>🛡 Secured by Vigil HyperCore v{VIGIL_VERSION}</span>
     </div>
   );
 }
@@ -1120,7 +1120,7 @@ function LoginBriefing({user,tasks,anns,dms,emps,T,onClose}) {
 }
 
 // ─── SIDEBAR NAV ─────────────────────────────────────────────────────────────
-function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
+function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn,onShop}) {
   const [open,setOpen]=useState(false);
   const ref=useRef(null);
   const myAnns=anns.filter(a=>!(a.dismissed||[]).includes(user?.id)).length;
@@ -1134,7 +1134,8 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
     {key:"inv",         icon:E("📦","□"), label:"Inventory",      perm:"inv"},
     {key:"anns",        icon:E("🔔","○"), label:"Announcements",  badge:myAnns,    perm:"ann"},
     {key:"dms",         icon:E("💬","≡"), label:"Messages",       badge:unreadDMs, perm:"dms"},
-    {key:"leaderboard", icon:E("🏆","◆"), label:"Leaderboard",    perm:"leaderboard"},
+    {key:"leaderboard", icon:E("🏆","◆"), label:"Leaderboard",   perm:"leaderboard"},
+    {key:"shop",        icon:E("🛍","◇"), label:"XP Shop",        shop:true},
     {key:"act",         icon:E("📊","▦"), label:"Activity",       perm:"act"},
     {key:"schedule",    icon:E("📅","◷"), label:"Schedule"},
     {key:"set",         icon:E("⚙️","◎"), label:"Settings"},
@@ -1149,7 +1150,7 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
     return()=>document.removeEventListener("mousedown",handler);
   },[]);
 
-  const go=(key,finn)=>{if(finn){onFinn();setOpen(false);playSound("open");}else{setPage(key);setOpen(false);playSound("click");}};
+  const go=(key,finn,shop)=>{if(finn){onFinn();setOpen(false);playSound("open");}else if(shop){onShop&&onShop();setOpen(false);playSound("open");}else{setPage(key);setOpen(false);playSound("click");}};
 
   return (
     <div ref={ref} style={{position:"relative"}}>
@@ -1192,7 +1193,7 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
           {items.map((item,i)=>{
             const active=page===item.key;
             return (
-              <button key={item.key} onClick={()=>go(item.key,item.finn)}
+              <button key={item.key} onClick={()=>go(item.key,item.finn,item.shop)}
                 style={{width:"100%",background:active?T.accent+"18":"transparent",color:active?T.accent:T.sub,border:"none",borderRadius:12,padding:"13px 16px",fontWeight:700,fontSize:16,fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:12,cursor:"pointer",borderLeft:active?`4px solid ${T.scarlet}`:"4px solid transparent",transition:"all .15s",animation:`slideRight .18s ${i*25}ms ease both`}}
                 onMouseEnter={e=>{if(!active){e.currentTarget.style.background=T.surfH;e.currentTarget.style.color=T.txt;}}}
                 onMouseLeave={e=>{if(!active){e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.sub;}}}
@@ -1331,7 +1332,7 @@ function HeroBanner({user,T,onProfileClick}) {
 }
 
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl}) {
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl,onShop}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
   const doneTasks=tasks.filter(t=>t.done&&t.createdBy===user.id||tasks.filter(tt=>tt.done&&(tt.assignedTo===user.id||tt.assignedTo==="all")).includes(t));
   const overdueTasks=myTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
@@ -1401,6 +1402,14 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
                 <span>{lvInfo.pct}% to next level</span>
                 {lvInfo.next&&<span>{lvInfo.next.title}</span>}
               </div>
+              {/* Shop button */}
+              <button onClick={()=>{playSound("open");onShop&&onShop();}}
+                style={{marginTop:10,width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:T.minimal?9999:10,padding:"9px 14px",fontSize:12,fontWeight:T.minimal?500:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"opacity .15s"}}
+                onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
+                onMouseLeave={e=>e.currentTarget.style.opacity="1"}
+              >
+                <span style={{fontSize:14}}>{E("🛍","◇")}</span> Spend {myProgress.xp} XP in the Shop
+              </button>
             </div>
           </div>
         </div>
@@ -3718,41 +3727,68 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
 
   // Shop catalog
   const items=[
-    // Accent color unlocks (beyond default 6)
-    {id:"color_teal",cat:"colors",name:"Teal Accent",desc:"Calm ocean vibe",cost:500,icon:"●",color:"#0d9488",type:"color"},
-    {id:"color_indigo",cat:"colors",name:"Indigo Accent",desc:"Deep and focused",cost:500,icon:"●",color:"#4f46e5",type:"color"},
-    {id:"color_rose",cat:"colors",name:"Rose Accent",desc:"Soft and modern",cost:500,icon:"●",color:"#e11d48",type:"color"},
-    {id:"color_amber",cat:"colors",name:"Amber Accent",desc:"Warm and energetic",cost:500,icon:"●",color:"#d97706",type:"color"},
-    {id:"color_emerald",cat:"colors",name:"Emerald Accent",desc:"Fresh and vibrant",cost:600,icon:"●",color:"#059669",type:"color"},
-    {id:"color_violet",cat:"colors",name:"Violet Accent",desc:"Creative and bold",cost:600,icon:"●",color:"#9333ea",type:"color"},
-    {id:"color_slate",cat:"colors",name:"Slate Accent",desc:"Minimalist classic",cost:400,icon:"●",color:"#475569",type:"color"},
-    {id:"color_rainbow",cat:"colors",name:"Rainbow Accent",desc:"Animated cycling color 🌈",cost:2500,icon:"◈",color:"linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7)",type:"rainbow"},
-    // Power-ups
-    {id:"streak_saver",cat:"powerups",name:"Streak Saver",desc:"Restore your lost streak (one-time use)",cost:300,icon:E("🔥","·"),color:"#ea580c",type:"streak_save",consumable:true},
-    {id:"xp_boost_1h",cat:"powerups",name:"2× XP Boost — 1 Hour",desc:"Double XP on all tasks for 1 hour",cost:400,icon:E("⚡","↯"),color:"#eab308",type:"xp_boost",consumable:true,duration:3600000},
-    {id:"xp_boost_24h",cat:"powerups",name:"2× XP Boost — 24 Hours",desc:"Double XP on all tasks for a full day",cost:1200,icon:E("⚡","↯"),color:"#ca8a04",type:"xp_boost_long",consumable:true,duration:86400000},
-    // Profile / Badges
-    {id:"badge_pioneer",cat:"badges",name:"Pioneer Badge",desc:"Display on your profile",cost:800,icon:E("🚀","▲"),color:"#6366f1",type:"badge"},
-    {id:"badge_legend",cat:"badges",name:"Legend Badge",desc:"Shows on leaderboard",cost:2000,icon:E("👑","♛"),color:"#eab308",type:"badge"},
-    {id:"badge_sparkle",cat:"badges",name:"Sparkle Trail",desc:"Little sparkles on your profile",cost:1500,icon:E("✨","★"),color:"#a855f7",type:"badge"},
-    // Custom profile pic (always available — no cost needed)
-    {id:"pfp_custom",cat:"profile",name:"Custom Profile Picture",desc:"Upload your own picture — saves to cloud across all devices",cost:0,icon:E("📸","◎"),color:T.accent,type:"pfp",free:true},
-    {id:"pfp_frame_gold",cat:"profile",name:"Gold Profile Frame",desc:"Shiny gold border around your avatar",cost:1000,icon:E("⚙","◎"),color:"#eab308",type:"frame"},
-    {id:"pfp_frame_scarlet",cat:"profile",name:"Scarlet Frame",desc:"MNU scarlet border around your avatar",cost:800,icon:E("⚙","◎"),color:"#C8102E",type:"frame"},
-    // Fun / misc
-    {id:"fun_confetti",cat:"fun",name:"Task Confetti",desc:"Confetti burst when you complete any task",cost:700,icon:E("🎊","✦"),color:"#ec4899",type:"confetti"},
-    {id:"fun_sound_pack",cat:"fun",name:"Premium Sound Pack",desc:"New richer sound effects throughout the app",cost:900,icon:E("🔊","♪"),color:"#0891b2",type:"sounds"},
-  ];
+    // ── ACCENT COLORS ──────────────────────────────────────────────────────────
+    {id:"color_teal",     cat:"colors", name:"Teal",          desc:"Cool ocean accent",           cost:400,  icon:"●", color:"#0d9488", type:"color"},
+    {id:"color_indigo",   cat:"colors", name:"Indigo",        desc:"Deep focus vibes",             cost:400,  icon:"●", color:"#4f46e5", type:"color"},
+    {id:"color_rose",     cat:"colors", name:"Rose",          desc:"Soft and modern",              cost:400,  icon:"●", color:"#e11d48", type:"color"},
+    {id:"color_amber",    cat:"colors", name:"Amber",         desc:"Warm energy",                  cost:400,  icon:"●", color:"#d97706", type:"color"},
+    {id:"color_emerald",  cat:"colors", name:"Emerald",       desc:"Fresh and vibrant",            cost:500,  icon:"●", color:"#059669", type:"color"},
+    {id:"color_violet",   cat:"colors", name:"Violet",        desc:"Creative and bold",            cost:500,  icon:"●", color:"#9333ea", type:"color"},
+    {id:"color_slate",    cat:"colors", name:"Slate",         desc:"Minimalist classic",           cost:300,  icon:"●", color:"#475569", type:"color"},
+    {id:"color_cyan",     cat:"colors", name:"Cyan",          desc:"Electric and crisp",           cost:400,  icon:"●", color:"#0891b2", type:"color"},
+    {id:"color_lime",     cat:"colors", name:"Lime",          desc:"Bright and fresh",             cost:400,  icon:"●", color:"#65a30d", type:"color"},
+    {id:"color_fuchsia",  cat:"colors", name:"Fuchsia",       desc:"Bold and electric",            cost:450,  icon:"●", color:"#c026d3", type:"color"},
+    {id:"color_midnight", cat:"colors", name:"Midnight",      desc:"Dark and mysterious",          cost:450,  icon:"●", color:"#1e1b4b", type:"color"},
+    {id:"color_gold",     cat:"colors", name:"Gold",          desc:"Premium and prestigious",      cost:800,  icon:"●", color:"#b45309", type:"color"},
+    {id:"color_rainbow",  cat:"colors", name:"Rainbow",       desc:"Animated cycling rainbow 🌈",  cost:2500, icon:"◈", color:"linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7)", type:"rainbow"},
+
+    // ── POWER-UPS ──────────────────────────────────────────────────────────────
+    {id:"streak_saver",   cat:"powerups", name:"Streak Saver",      desc:"Restore your lost login streak",          cost:300,  icon:E("🔥","·"),  color:"#ea580c", type:"streak_save",  consumable:true},
+    {id:"xp_boost_1h",    cat:"powerups", name:"2× XP — 1 Hour",    desc:"Double XP on all tasks for 1 hour",       cost:400,  icon:E("⚡","↯"),  color:"#eab308", type:"xp_boost",     consumable:true, duration:3600000},
+    {id:"xp_boost_24h",   cat:"powerups", name:"2× XP — 24 Hours",  desc:"Double XP on tasks for a full day",       cost:1200, icon:E("⚡","↯"),  color:"#ca8a04", type:"xp_boost_long",consumable:true, duration:86400000},
+    {id:"xp_gift_100",    cat:"powerups", name:"100 XP Gift",        desc:"Instantly add 100 XP to your total",      cost:50,   icon:E("🎁","★"),  color:"#16a34a", type:"xp_gift",      consumable:true, amount:100},
+    {id:"xp_gift_500",    cat:"powerups", name:"500 XP Gift",        desc:"Instantly add 500 XP to your total",      cost:200,  icon:E("🎁","★"),  color:"#15803d", type:"xp_gift",      consumable:true, amount:500},
+    {id:"task_hint",      cat:"powerups", name:"Task Hint",          desc:"Finn gives you a priority suggestion",     cost:150,  icon:E("💡","i"),  color:"#f59e0b", type:"task_hint",    consumable:true},
+    {id:"overtime_badge", cat:"powerups", name:"Overtime Badge",     desc:"Shows you put in extra work this week",   cost:200,  icon:E("💪","◉"),  color:"#7c3aed", type:"badge",         consumable:false},
+
+    // ── BADGES ─────────────────────────────────────────────────────────────────
+    {id:"badge_pioneer",  cat:"badges", name:"Pioneer",       desc:"For the early adopters",       cost:800,  icon:E("🚀","▲"), color:"#6366f1", type:"badge"},
+    {id:"badge_legend",   cat:"badges", name:"Legend",        desc:"Top performer status",         cost:2000, icon:E("👑","♛"), color:"#eab308", type:"badge"},
+    {id:"badge_sparkle",  cat:"badges", name:"Sparkle Trail", desc:"Sparkles on your profile",     cost:1500, icon:E("✨","★"), color:"#a855f7", type:"badge"},
+    {id:"badge_goat",     cat:"badges", name:"G.O.A.T.",      desc:"Greatest of all time",         cost:5000, icon:E("🐐","◆"), color:"#0d9488", type:"badge"},
+    {id:"badge_mnu",      cat:"badges", name:"MNU Pride",     desc:"Show your school spirit",      cost:600,  icon:E("🎓","◈"), color:"#C8102E", type:"badge"},
+    {id:"badge_grinder",  cat:"badges", name:"Grinder",       desc:"You never stop working",       cost:1000, icon:E("⚙️","◎"), color:"#374151", type:"badge"},
+    {id:"badge_nightowl", cat:"badges", name:"Night Owl",     desc:"Working late hours",           cost:700,  icon:E("🦉","◉"), color:"#1e1b4b", type:"badge"},
+    {id:"badge_streak7",  cat:"badges", name:"7-Day Streak",  desc:"Logged in 7 days straight",    cost:400,  icon:E("🔥","·"), color:"#ea580c", type:"badge"},
+    {id:"badge_streak30", cat:"badges", name:"30-Day Streak", desc:"A full month of dedication",   cost:1500, icon:E("🏆","◆"), color:"#b45309", type:"badge"},
+
+    // ── PROFILE ────────────────────────────────────────────────────────────────
+    {id:"pfp_custom",      cat:"profile", name:"Custom Profile Pic",  desc:"Upload your own · saved to cloud",     cost:0,    icon:E("📸","◎"), color:T.accent,   type:"pfp",   free:true},
+    {id:"pfp_frame_gold",  cat:"profile", name:"Gold Frame",          desc:"Gold border around your avatar",       cost:1000, icon:E("🖼","◎"), color:"#eab308",  type:"frame"},
+    {id:"pfp_frame_scarlet",cat:"profile",name:"Scarlet Frame",       desc:"MNU scarlet border",                   cost:800,  icon:E("🖼","◎"), color:"#C8102E",  type:"frame"},
+    {id:"pfp_frame_blue",  cat:"profile", name:"Blue Frame",          desc:"Cool blue border",                     cost:600,  icon:E("🖼","◎"), color:"#1e7fa8",  type:"frame"},
+    {id:"pfp_frame_rainbow",cat:"profile",name:"Rainbow Frame",       desc:"Animated rainbow border",              cost:3000, icon:E("🌈","◎"), color:"#ec4899",  type:"frame"},
+    {id:"name_color",      cat:"profile", name:"Custom Name Color",   desc:"Your name glows in your accent color", cost:500,  icon:E("✍","◎"),  color:T.accent,   type:"name_color"},
+
+    // ── FUN / EFFECTS ──────────────────────────────────────────────────────────
+    {id:"fun_confetti",    cat:"fun", name:"Task Confetti",      desc:"Confetti when you complete tasks",       cost:700,  icon:E("🎊","✦"), color:"#ec4899", type:"confetti"},
+    {id:"fun_sound_pack",  cat:"fun", name:"Premium Sounds",     desc:"Richer sound effects throughout",        cost:900,  icon:E("🔊","♪"), color:"#0891b2", type:"sounds"},
+    {id:"fun_dark_aura",   cat:"fun", name:"Dark Aura",          desc:"Subtle glow effect in dark mode",        cost:1200, icon:E("🌑","●"), color:"#1e1b4b", type:"aura"},
+    {id:"fun_finn_skin",   cat:"fun", name:"Finn Gold Skin",     desc:"Finn button turns gold",                 cost:2000, icon:E("🤖","⬡"), color:"#b45309", type:"finn_skin"},
+    {id:"fun_compact_xp",  cat:"fun", name:"XP Multiplier Tag",  desc:"Shows ×2 badge on your leaderboard row",cost:800,  icon:E("✖","×"),  color:"#7c3aed", type:"badge"},
+    {id:"fun_title_custom",cat:"fun", name:"Custom Rank Title",  desc:"Replace your rank title with any word",  cost:2500, icon:E("🏷","≡"),  color:"#0d9488", type:"custom_title"},
+    {id:"fun_fireworks",   cat:"fun", name:"Level-Up Fireworks", desc:"Fireworks animation when you level up",  cost:600,  icon:E("🎆","✦"), color:"#dc2626", type:"fireworks"},
+  ];;
 
   const owned=id=>purchases.some(p=>p.item_id===id&&!p.consumed);
   const filtered=category==="all"?items:items.filter(i=>i.cat===category);
   const cats=[
-    {key:"all",label:"All",icon:E("🛍","◇")},
-    {key:"colors",label:"Colors",icon:E("🎨","●")},
-    {key:"powerups",label:"Power-ups",icon:E("⚡","↯")},
-    {key:"badges",label:"Badges",icon:E("🏅","♛")},
-    {key:"profile",label:"Profile",icon:E("👤","◎")},
-    {key:"fun",label:"Fun",icon:E("✨","★")},
+    {key:"all",     label:"All",       icon:E("🛍","◇")},
+    {key:"colors",  label:"Colors",    icon:E("🎨","●")},
+    {key:"powerups",label:"Power-ups", icon:E("⚡","↯")},
+    {key:"badges",  label:"Badges",    icon:E("🏅","♛")},
+    {key:"profile", label:"Profile",   icon:E("👤","◎")},
+    {key:"fun",     label:"Fun",       icon:E("✨","★")},
   ];
 
   const buy=async(item)=>{
@@ -3790,8 +3826,8 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
   if(!open) return null;
 
   return (
-    <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:800,padding:16,animation:"fadeUp .25s ease both"}}>
-      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:620,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.5)"}}>
+    <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:800,padding:"24px 16px",animation:"fadeUp .25s ease both"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:620,maxHeight:"90vh",display:"flex",flexDirection:"column",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.5)",overflowY:"hidden",overflowX:"visible"}}>
         {/* Header */}
         <div style={{padding:"18px 22px 14px",borderBottom:`1px solid ${T.bor}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
           <div>
@@ -3810,16 +3846,16 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
           </div>
         </div>
         {/* Category tabs */}
-        <div style={{padding:"10px 18px",borderBottom:`1px solid ${T.bor}`,display:"flex",gap:6,overflowX:"auto"}}>
+        <div style={{padding:"10px 18px 10px",borderBottom:`1px solid ${T.bor}`,display:"flex",gap:8,overflowX:"auto",overflowY:"visible",background:T.surfH,flexShrink:0,minHeight:52}}>
           {cats.map(c=>(
             <button key={c.key} onClick={()=>{setCategory(c.key);playSound("click");}}
-              style={{background:category===c.key?T.accent:T.surfH,color:category===c.key?"#fff":T.sub,border:`1px solid ${category===c.key?T.accent:T.bor}`,borderRadius:9999,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,transition:"all .15s"}}>
+              style={{background:category===c.key?T.accent:T.bg,color:category===c.key?"#fff":T.txt,border:`2px solid ${category===c.key?T.accent:T.bor}`,borderRadius:9999,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,transition:"all .15s",boxShadow:category===c.key?`0 2px 8px ${T.accent}44`:"none",letterSpacing:T.minimal?"-0.1px":"normal"}}>
               {c.icon} {c.label}
             </button>
           ))}
         </div>
         {/* Items grid */}
-        <div style={{flex:1,overflowY:"auto",padding:"16px 18px"}}>
+        <div style={{flex:1,overflowY:"auto",overflowX:"hidden",padding:"16px 18px",minHeight:0}}>
           {loading?(
             <div style={{padding:40,textAlign:"center",color:T.sub,fontSize:13}}>Loading shop…</div>
           ):(
@@ -5507,7 +5543,7 @@ export default function App() {
 
             {/* Floating circle NavMenu — always visible top-left */}
             <div style={{position:"fixed",left:10,top:62,zIndex:350}}>
-              <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T} onFinn={()=>openFinn()}/>
+              <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T} onFinn={()=>openFinn()} onShop={()=>setShowShop(true)}/>
             </div>
 
             {/* Page content */}
@@ -5598,7 +5634,7 @@ export default function App() {
               )}
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl}/>}
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl} onShop={()=>setShowShop(true)}/>}
 
               {/* TASKS */}
               {page==="tasks"&&(
