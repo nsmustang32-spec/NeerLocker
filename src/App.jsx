@@ -1202,7 +1202,7 @@ function HeroBanner({user,T,onProfileClick}) {
             <div style={{fontSize:28,fontWeight:400,color:T.txt,lineHeight:1.1,marginBottom:6,letterSpacing:"-0.5px"}}>
               {greet},
             </div>
-            <div style={{fontSize:28,fontWeight:700,color:T.txt,lineHeight:1.1,marginBottom:4,letterSpacing:"-0.5px"}}>{user.name}</div>
+            <div style={{fontSize:28,fontWeight:700,color:T.txt,lineHeight:1.1,marginBottom:4,letterSpacing:"-0.5px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>{user.name}<UserBadges badgeIds={equippedBadges} size={20} gap={4}/></div>
             {/* Breathing animated underline */}
             <div style={{width:lineW,height:2,background:`linear-gradient(90deg, hsl(${(phase*25)%360},80%,55%), hsl(${(phase*25+120)%360},80%,55%))`,borderRadius:9999,opacity:lineOpacity,marginBottom:18,transition:"none"}}/>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -1260,7 +1260,7 @@ function HeroBanner({user,T,onProfileClick}) {
 }
 
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl,onShop}) {
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl,onShop,equippedBadges,nameColorId}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
   const doneTasks=tasks.filter(t=>t.done&&t.createdBy===user.id||tasks.filter(tt=>tt.done&&(tt.assignedTo===user.id||tt.assignedTo==="all")).includes(t));
   const overdueTasks=myTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
@@ -3731,9 +3731,11 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
     const pg=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
     const newXP=pg.xp-item.cost;
     const info=getLevelInfo(newXP);
-    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:pg.streak||0,last_login:pg.last_login||""});
+    // Keep existing title/level — spending XP doesn't demote your rank
+    const keepLevel=pg.level||1; const keepTitle=pg.title||"Pioneer";
+    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
     // Update local progress state immediately so UI reflects new XP
-    onSpendXP&&onSpendXP(user.id,{xp:newXP,level:info.level,title:info.title,streak:pg.streak||0,last_login:pg.last_login||""});
+    onSpendXP&&onSpendXP(user.id,{xp:newXP,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
     // Record purchase
     await SB.upsert("user_purchases",{
       id:uid(),
@@ -3863,7 +3865,7 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
   );
 }
 
-function LeaderboardPage({emps,progress,user,T,onShop}) {
+function LeaderboardPage({emps,progress,user,T,onShop,onViewProfile}) {
   const eligible=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role));
   const ranked=eligible.map(e=>{
     const pg=progress[e.id]||{xp:0,level:1,title:"Pioneer",streak:0};
@@ -3925,7 +3927,7 @@ function LeaderboardPage({emps,progress,user,T,onShop}) {
               {/* Info */}
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-                  <span style={{fontWeight:800,fontSize:14,color:T.txt}}>{e.name}</span>
+                  <span style={{fontWeight:800,fontSize:14,color:T.txt,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3,textDecorationStyle:"dotted"}} onClick={()=>{playSound("click");onViewProfile&&onViewProfile(e);}}>{e.name}</span>
                   {isEotm&&<span style={{fontSize:14}}>⭐</span>}
                   {isMe&&<span style={{background:T.scarlet,color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:800}}>YOU</span>}
                 </div>
@@ -4236,6 +4238,164 @@ const VIGIL = {
   clearLog:()=>localStorage.removeItem("vigil-log"),
 };
 
+
+
+// ─── STAFF PROFILE MODAL ─────────────────────────────────────────────────────
+function StaffProfileModal({T,emp,progress,onClose}) {
+  if(!emp) return null;
+  const pg=progress[emp.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+  const lv=getLevelInfo(pg.xp);
+  const grantedBadges=JSON.parse(emp.badge_grants||"[]");
+  const isCreator=grantedBadges.includes("creator");
+
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:800,padding:20,animation:"fadeUp .2s ease both"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:380,animation:"tourCardIn .3s cubic-bezier(.34,1.56,.64,1) both",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.5)"}}>
+        {/* Header gradient banner */}
+        <div style={{background:`linear-gradient(135deg,${lv.color}33,${lv.color}11)`,padding:"24px 20px 20px",position:"relative"}}>
+          {/* Close */}
+          <button onClick={onClose} style={{position:"absolute",top:12,right:12,background:"rgba(0,0,0,0.2)",border:"none",color:"#fff",width:28,height:28,borderRadius:"50%",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1}}>×</button>
+          {/* Avatar */}
+          <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
+            <div style={{position:"relative",flexShrink:0}}>
+              <Avatar email={emp.email} color={ROLES[emp.role]?.color||"#6b7280"} size={72} avatarUrl={emp.avatar_url}/>
+              <div style={{position:"absolute",bottom:-4,right:-4,background:lv.color,borderRadius:9999,padding:"2px 7px",fontSize:9,fontWeight:800,color:"#fff",border:`2px solid ${T.surf}`,whiteSpace:"nowrap"}}>{lv.title||"Pioneer"}</div>
+            </div>
+            <div style={{flex:1,minWidth:0,paddingTop:4}}>
+              {isCreator?(
+                <div style={{marginBottom:4}}><CreatorName name={emp.name} size={22}/></div>
+              ):(
+                <div style={{fontSize:22,fontWeight:800,color:T.txt,letterSpacing:"-0.4px",marginBottom:4}}>{emp.name}</div>
+              )}
+              <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                <Tag label={ROLES[emp.role]?.label||emp.role} color={ROLES[emp.role]?.color||"#6b7280"}/>
+                <StatusDot status={emp.status||"offline"}/>
+                <span style={{fontSize:11,color:T.sub,textTransform:"capitalize"}}>{emp.status||"offline"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Stats */}
+        <div style={{padding:"16px 20px"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+            <div style={{background:T.surfH,borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
+              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:20,fontWeight:800,color:T.accent}}>{pg.xp||0}</div>
+              <div style={{fontSize:10,color:T.sub,fontWeight:600}}>XP</div>
+            </div>
+            <div style={{background:T.surfH,borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
+              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:20,fontWeight:800,color:lv.color}}>{lv.level||1}</div>
+              <div style={{fontSize:10,color:T.sub,fontWeight:600}}>Level</div>
+            </div>
+            <div style={{background:T.surfH,borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
+              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:20,fontWeight:800,color:"#ea580c"}}>{pg.streak||0}</div>
+              <div style={{fontSize:10,color:T.sub,fontWeight:600}}>Streak</div>
+            </div>
+          </div>
+          {/* XP bar */}
+          <div style={{marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.sub,marginBottom:4}}>
+              <span>{lv.pct}% to next level</span>
+              {lv.next&&<span>{lv.next.title}</span>}
+            </div>
+            <div style={{height:5,background:T.bor,borderRadius:9999,overflow:"hidden"}}>
+              <div style={{width:`${lv.pct}%`,height:"100%",background:`linear-gradient(90deg,${lv.color}88,${lv.color})`,borderRadius:9999}}/>
+            </div>
+          </div>
+          {/* Badges */}
+          {grantedBadges.length>0&&(
+            <div style={{marginBottom:10}}>
+              <div style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.06em",marginBottom:6}}>BADGES</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {grantedBadges.map(id=>{
+                  const b=getBadge(id);
+                  if(!b) return null;
+                  return (
+                    <div key={id} title={b.monthLabel?`${b.name} — ${b.monthLabel}`:b.desc}
+                      style={{display:"flex",alignItems:"center",gap:5,background:b.color+"18",border:`1px solid ${b.color}44`,borderRadius:9999,padding:"4px 10px",animation:id.startsWith("eotm_")?"eotmGlow 2s ease-in-out infinite":undefined}}>
+                      <span style={{fontSize:16}}>{b.icon}</span>
+                      <div>
+                        <div style={{fontSize:11,fontWeight:700,color:b.color}}>{b.name}</div>
+                        {b.monthLabel&&<div style={{fontSize:9,color:T.sub,marginTop:1}}>{b.monthLabel}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {/* Email */}
+          <div style={{fontSize:11,color:T.sub,marginTop:8}}>{emp.email}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── USER BADGES ─────────────────────────────────────────────────────────────
+function UserBadges({badgeIds,size=16,gap=4}){
+  if(!badgeIds||!badgeIds.length) return null;
+  return (
+    <span style={{display:"inline-flex",alignItems:"center",gap}}>
+      {badgeIds.map(id=>{
+        const b=getBadge(id);
+        if(!b) return null;
+        const isEotm=id.startsWith("eotm_");
+        const isCreator=id==="creator";
+        return (
+          <span key={id} title={b.monthLabel?`${b.name} — ${b.monthLabel}: ${b.desc}`:b.desc}
+            style={{cursor:"default",lineHeight:1,display:"inline-flex",alignItems:"center",flexDirection:"column",
+              filter:isCreator?"drop-shadow(0 0 6px #16a34a) drop-shadow(0 0 12px #16a34a88)":`drop-shadow(0 1px 2px ${b.color}66)`}}>
+            <span style={{fontSize:size}}>{b.icon}</span>
+            {isEotm&&b.monthLabel&&<span style={{fontSize:Math.max(6,size*0.55),fontWeight:800,color:b.color,letterSpacing:"0.02em",lineHeight:1,marginTop:1,whiteSpace:"nowrap"}}>{b.monthLabel}</span>}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+// ─── CREATOR NAME (animated green color shift) ───────────────────────────────
+function CreatorName({name,size=13}){
+  return (
+    <span style={{fontWeight:700,fontSize:size,background:"linear-gradient(90deg,#16a34a,#4ade80,#86efac,#4ade80,#16a34a)",backgroundSize:"200%",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",animation:"creatorShimmer 3s linear infinite",display:"inline-block"}}>
+      {name}
+    </span>
+  );
+}
+
+// ─── BADGE + NAME COLOR CATALOG ──────────────────────────────────────────────
+const BADGE_CATALOG = {
+  badge_pioneer:  {id:"badge_pioneer",  name:"Pioneer",       icon:E("🚀","▲"), color:"#6366f1", desc:"For the early adopters"},
+  badge_legend:   {id:"badge_legend",   name:"Legend",        icon:E("👑","♛"), color:"#eab308", desc:"Top performer status"},
+  badge_sparkle:  {id:"badge_sparkle",  name:"Sparkle",       icon:E("✨","★"), color:"#a855f7", desc:"Sparkle trail"},
+  badge_goat:     {id:"badge_goat",     name:"G.O.A.T.",      icon:E("🐐","◆"), color:"#0d9488", desc:"Greatest of all time"},
+  badge_mnu:      {id:"badge_mnu",      name:"MNU Pride",     icon:E("🎓","◈"), color:"#C8102E", desc:"MNU school spirit"},
+  badge_grinder:  {id:"badge_grinder",  name:"Grinder",       icon:E("⚙️","◎"), color:"#374151", desc:"Never stops working"},
+  badge_nightowl: {id:"badge_nightowl", name:"Night Owl",     icon:E("🦉","◉"), color:"#1e1b4b", desc:"Working late hours"},
+  badge_streak7:  {id:"badge_streak7",  name:"7-Day",         icon:E("🔥","·"), color:"#ea580c", desc:"7 days straight"},
+  badge_streak30: {id:"badge_streak30", name:"30-Day",        icon:E("🏆","◆"), color:"#b45309", desc:"30 days of dedication"},
+  overtime_badge: {id:"overtime_badge", name:"Overtime",      icon:E("💪","◉"), color:"#7c3aed", desc:"Extra work this week"},
+  // ── SPECIAL / ADMIN-GRANTED ──────────────────────────────────────────────
+  creator:        {id:"creator",        name:"Creator",       icon:"◈",         color:"#16a34a", desc:"Neer Locker Creator — Nate Smith", special:true, adminOnly:true},
+};
+// EOTM badges are dynamically keyed: eotm_YYYY_MM
+// e.g. eotm_2026_04 = Employee of the Month — April 2026
+const makeEotmBadge=(monthKey)=>{
+  const [yr,mo]=monthKey.split("_");
+  const monthName=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(mo)-1]||mo;
+  return {id:`eotm_${monthKey}`,name:`EOTM`,icon:E("⭐","★"),color:"#f59e0b",
+    desc:`Employee of the Month — ${monthName} ${yr}`,special:true,adminOnly:true,monthLabel:`${monthName} ${yr}`};
+};
+const getEotmBadge=(id)=>{
+  if(!id?.startsWith("eotm_")) return null;
+  return makeEotmBadge(id.replace("eotm_",""));
+};
+const getBadge=(id)=>BADGE_CATALOG[id]||getEotmBadge(id)||null;
+const NAME_COLORS = {
+  base:        {id:"base",         label:"Default",  value:null},
+  name_color:  {id:"name_color",   label:"Accent",   value:null}, // uses T.accent
+};
+
 export default function App() {
   const [T,setT]=useState(T0);
   const [dark,setDk]=useState(LS.get('nl3-dark')!==null?LS.get('nl3-dark'):window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -4302,6 +4462,13 @@ export default function App() {
   const [selectedTasks,setSelectedTasks]=useState(new Set());
   const [selPatchNotes,setSelPatchNotes]=useState(()=>new Set((PATCH_NOTES[VERSION]||[]).map((_,i)=>i)));
   const [showRating,setShowRating]=useState(false);
+  // Badge + name color — stored in localStorage
+  const [equippedBadges,setEquippedBadges]=useState(()=>{
+    try{return JSON.parse(localStorage.getItem("nl3-badges")||"[]");}catch{return [];}
+  });
+  const [nameColorId,setNameColorId]=useState(()=>localStorage.getItem("nl3-name-color")||"base");
+  const saveEquippedBadges=(badges)=>{setEquippedBadges(badges);localStorage.setItem("nl3-badges",JSON.stringify(badges));};
+  const saveNameColor=(id)=>{setNameColorId(id);localStorage.setItem("nl3-name-color",id);};
   const [showShop,setShowShop]=useState(false);
   const [showPfpUpload,setShowPfpUpload]=useState(false);
   // Monthly rating check — show once per calendar month per user
@@ -4315,6 +4482,7 @@ export default function App() {
     return()=>clearTimeout(t);
   },[user?.id]);
   const [showOnboarding,setShowOnboarding]=useState(false);
+  const [viewingProfile,setViewingProfile]=useState(null); // emp object
   useEffect(()=>{window._startOnboarding=()=>setShowOnboarding(true);return()=>{delete window._startOnboarding;};},[]);
   const [showFeedback,setShowFeedback]=useState(false);
   const [showFinn,setShowFinn]=useState(false);
@@ -4384,7 +4552,7 @@ export default function App() {
       if(!alive) return;
       // Map Supabase rows back to app format
       const mappedEmps=empRows?.length>0
-        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",status:e.status||"offline",createdAt:e.created_at}))
+        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",status:e.status||"offline",createdAt:e.created_at}))
         :SEED;
       setEmps(mappedEmps);
       // Seed initial employees if none exist
@@ -4453,7 +4621,7 @@ export default function App() {
       SB.select("system_logs","?order=at.desc&limit=200"),
       SB.select("direct_messages","?order=at.asc"),
     ]);
-    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",status:e.status||"offline",avatar_url:e.avatar_url||"",createdAt:e.created_at})));
+    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",status:e.status||"offline",createdAt:e.created_at})));
     if(taskRows?.length>=0){
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:t.created_at}));
       setTasks(prev=>{
@@ -4923,6 +5091,25 @@ export default function App() {
       setPage("home");
       setScreen("app");
       setShowBriefing(true);
+      // Load admin-granted badges from employee record
+      const grantedBadges=JSON.parse(emp.badge_grants||"[]");
+      if(grantedBadges.length>0){
+        const unlocked=JSON.parse(localStorage.getItem("nl3-unlocked-badges")||"[]");
+        grantedBadges.forEach(id=>{if(!unlocked.includes(id))unlocked.push(id);});
+        localStorage.setItem("nl3-unlocked-badges",JSON.stringify(unlocked));
+        // Auto-equip granted badges not yet equipped
+        const equipped=JSON.parse(localStorage.getItem("nl3-badges")||"[]");
+        let updated=false;
+        grantedBadges.forEach(id=>{if(!equipped.includes(id)&&equipped.length<3){equipped.push(id);updated=true;}});
+        if(updated){localStorage.setItem("nl3-badges",JSON.stringify(equipped));setEquippedBadges(equipped);}
+      }
+      // Auto-grant Creator badge to Nate Smith (nrsmith2@mnu.edu) — exclusive, permanent
+      if(emp.email==="nrsmith2@mnu.edu"){
+        const unlocked=JSON.parse(localStorage.getItem("nl3-unlocked-badges")||"[]");
+        if(!unlocked.includes("creator")){unlocked.push("creator");localStorage.setItem("nl3-unlocked-badges",JSON.stringify(unlocked));}
+        const equipped=JSON.parse(localStorage.getItem("nl3-badges")||"[]");
+        if(!equipped.includes("creator")){const next=[...equipped,"creator"];localStorage.setItem("nl3-badges",JSON.stringify(next));setEquippedBadges(next);}
+      }
       if(!LS.get("nl3-portal-seen")){LS.set("nl3-portal-seen",true);setTimeout(()=>setShowWelcomePortal(true),600);}
     },2000);
   };
@@ -5571,7 +5758,7 @@ export default function App() {
               )}
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl} onShop={()=>setShowShop(true)}/>}
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl} onShop={()=>setShowShop(true)} equippedBadges={equippedBadges} nameColorId={nameColorId}/>}
 
               {/* TASKS */}
               {page==="tasks"&&(
@@ -5702,7 +5889,7 @@ export default function App() {
               {page==="dms"&&<DMSection user={user} emps={emps} dms={dms} setDms={saveDms} T={T} toast={toast} onXP={()=>grantXP(5,"dm sent")}/>}
 
               {/* LEADERBOARD */}
-              {page==="leaderboard"&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T} onShop={()=>setShowShop(true)}/>}
+              {page==="leaderboard"&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T} onShop={()=>setShowShop(true)} onViewProfile={e=>setViewingProfile(e)}/>}
 
               {/* SCHEDULE */}
               {page==="schedule"&&(
@@ -5787,7 +5974,7 @@ export default function App() {
                             <div style={{position:"absolute",bottom:-2,right:-2,width:22,height:22,borderRadius:"50%",background:T.accent,border:`2px solid ${T.bg}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:800}}>{E("📸","+")}</div>
                           </div>
                           <div>
-                            <div style={{fontWeight:700,fontSize:T.fs.xl,color:T.txt}}>{user.name}</div>
+                            <div style={{fontWeight:700,fontSize:T.fs.xl,color:nameColorId==="name_color"?T.accent:T.txt,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>{user.name}<UserBadges badgeIds={equippedBadges} size={16} gap={4}/></div>
                             <div style={{color:T.sub,fontSize:T.fs.sm}}>{user.email}</div>
                             <Tag label={ROLES[user.role]?.label} color={ROLES[user.role]?.color||T.scarlet}/>
                           </div>
@@ -5836,6 +6023,81 @@ export default function App() {
                             </div>
                           </div>
                         </div>
+                        {/* ── Badge & Name Color Manager ─────────────────────── */}
+                        {(()=>{
+                          const unlockedBadgeIds=JSON.parse(localStorage.getItem("nl3-unlocked-badges")||
+                            // Fall back to checking purchases (if they have a purchase, badge is unlocked)
+                            "[]");
+                          // Always include all bought badge item IDs
+                          const allUnlocked=Object.keys(BADGE_CATALOG).filter(id=>{
+                            const ls=JSON.parse(localStorage.getItem("nl3-unlocked-badges")||"[]");
+                            return ls.includes(id);
+                          });
+                          const hasAnyBadge=allUnlocked.length>0;
+                          const hasNameColor=localStorage.getItem("nl3-unlocked-colors")?.includes("name_color")||false;
+                          if(!hasAnyBadge&&!hasNameColor) return null;
+                          return (
+                            <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:14,padding:16}}>
+                              <div style={{fontWeight:T.minimal?600:700,fontSize:T.minimal?15:14,color:T.txt,marginBottom:12,letterSpacing:T.minimal?"-0.2px":"normal"}}>
+                                {E("🏅","◆")} Badges & Name Style
+                              </div>
+                              {/* Badge slots — up to 3 equipped */}
+                              {hasAnyBadge&&(
+                                <div style={{marginBottom:12}}>
+                                  <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.04em",marginBottom:8}}>EQUIPPED BADGES (max 3)</div>
+                                  <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:8}}>
+                                    {allUnlocked.map(id=>{
+                                      const b=BADGE_CATALOG[id];
+                                      if(!b) return null;
+                                      const isEquipped=equippedBadges.includes(id);
+                                      return (
+                                        <button key={id} title={`${b.name}: ${b.desc}${isEquipped?" (equipped — click to remove)": equippedBadges.length>=3?" (max 3 equipped)":" (click to equip)"}`}
+                                          onClick={()=>{
+                                            playSound("click");
+                                            if(isEquipped){
+                                              saveEquippedBadges(equippedBadges.filter(x=>x!==id));
+                                            } else if(equippedBadges.length<3){
+                                              saveEquippedBadges([...equippedBadges,id]);
+                                            } else {
+                                              toast("Max 3 badges equipped — remove one first","warn");
+                                            }
+                                          }}
+                                          style={{display:"flex",alignItems:"center",gap:6,background:isEquipped?b.color+"22":T.bg,border:`1.5px solid ${isEquipped?b.color:T.bor}`,borderRadius:9999,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",opacity:equippedBadges.length>=3&&!isEquipped?0.5:1}}>
+                                          <span style={{fontSize:16}}>{b.icon}</span>
+                                          <span style={{fontSize:12,fontWeight:700,color:isEquipped?b.color:T.txt}}>{b.name}</span>
+                                          {isEquipped&&<span style={{fontSize:10,color:b.color,fontWeight:800}}>✓</span>}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  <div style={{fontSize:11,color:T.sub}}>Tap a badge to equip/unequip · max 3 show next to your name</div>
+                                  {equippedBadges.length>0&&(
+                                    <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8,background:T.bg,borderRadius:10,padding:"8px 12px"}}>
+                                      <span style={{fontSize:11,color:T.sub,fontWeight:600}}>Preview:</span>
+                                      <span style={{fontSize:13,fontWeight:700,color:nameColorId==="name_color"?T.accent:T.txt}}>{user.name.split(" ")[0]}</span>
+                                      <UserBadges badgeIds={equippedBadges} size={16} gap={4}/>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {/* Name color toggle */}
+                              {hasNameColor&&(
+                                <div>
+                                  <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.04em",marginBottom:8}}>NAME COLOR</div>
+                                  <div style={{display:"flex",gap:8}}>
+                                    {["base","name_color"].map(id=>(
+                                      <button key={id} onClick={()=>{playSound("click");saveNameColor(id);}}
+                                        style={{flex:1,background:nameColorId===id?T.accent+"18":T.bg,border:`1.5px solid ${nameColorId===id?T.accent:T.bor}`,borderRadius:9999,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:id==="name_color"?T.accent:T.txt,transition:"all .15s"}}>
+                                        {id==="base"?"Default":E("✨","★")+" Accent Color"}
+                                        {nameColorId===id&&<span style={{marginLeft:4,fontSize:10,fontWeight:800,color:T.accent}}>✓</span>}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                         {/* Guided tour button */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:14,padding:20,display:"flex",gap:14,alignItems:"center"}}>
                           <div style={{width:44,height:44,borderRadius:T.minimal?"50%":12,background:T.accent+"18",border:`1px solid ${T.accent}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22}}>{E("✨","★")}</div>
@@ -5945,7 +6207,7 @@ export default function App() {
                             <div key={e.id} style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:"11px 14px",display:"flex",alignItems:"center",gap:10}}>
                               <div style={{position:"relative"}}><Avatar email={e.email} color={ROLES[e.role]?.color||T.mut} size={36}/><div style={{position:"absolute",bottom:0,right:0}}><StatusDot status={e.status||"offline"}/></div></div>
                               <div style={{flex:1,minWidth:0}}>
-                                <div style={{fontWeight:700,color:T.txt,fontSize:T.fs.md,display:"flex",alignItems:"center",gap:6}}>{e.name}{e.id===user.id&&<span style={{fontSize:11,color:T.mut,fontWeight:400}}>(you)</span>}</div>
+                                <div style={{fontWeight:700,color:T.txt,fontSize:T.fs.md,display:"flex",alignItems:"center",gap:6}}><span style={{cursor:"pointer",textDecoration:"underline",textUnderlineOffset:2,textDecorationStyle:"dotted"}} onClick={()=>setViewingProfile(e)}>{e.name}</span>{e.id===user.id&&<span style={{fontSize:11,color:T.mut,fontWeight:400}}>(you)</span>}</div>
                                 <div style={{color:T.sub,fontSize:T.fs.xs+1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.email}</div>
                               </div>
                               <Tag label={ROLES[e.role]?.label} color={ROLES[e.role]?.color||T.mut}/>
@@ -6581,6 +6843,7 @@ export default function App() {
 
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
             {showRating&&<RatingModal T={T} user={user} open={showRating} onClose={()=>setShowRating(false)}/>}
+            {viewingProfile&&<StaffProfileModal T={T} emp={viewingProfile} progress={progress} onClose={()=>setViewingProfile(null)}/>}
             {showPfpUpload&&<PfpUploadModal T={T} user={user} emps={emps} setEmps={setEmps} open={showPfpUpload} onClose={()=>setShowPfpUpload(false)} toast={toast}/>}
             {showShop&&<XPShopModal T={T} user={user} progress={progress} open={showShop} onClose={()=>setShowShop(false)} onSpendXP={(uid,pg)=>setProgress(prev=>({...prev,[uid]:pg}))} onPurchase={(item)=>{
               if(item.type==="color"||item.type==="rainbow"){
@@ -6608,7 +6871,28 @@ export default function App() {
                 setProgress(prev=>({...prev,[user.id]:{...pg,xp:newXP,level:info.level,title:info.title}}));
                 toast(`+${item.amount} XP added! 🎁`);
               }
-              else toast(`${item.name} unlocked! Check your profile.`);
+              else if(item.type==="badge"){
+                // Save to unlocked badges list
+                const unlocked=JSON.parse(localStorage.getItem("nl3-unlocked-badges")||"[]");
+                if(!unlocked.includes(item.id)){unlocked.push(item.id);localStorage.setItem("nl3-unlocked-badges",JSON.stringify(unlocked));}
+                // Auto-equip if slot available (max 3)
+                const current=JSON.parse(localStorage.getItem("nl3-badges")||"[]");
+                if(!current.includes(item.id)&&current.length<3){
+                  const next=[...current,item.id];
+                  saveEquippedBadges(next);
+                  toast(`${item.name} badge equipped! See it next to your name. ✅`);
+                } else {
+                  toast(`${item.name} badge unlocked! Equip it in Settings → Profile.`);
+                }
+              }
+              else if(item.type==="name_color"){
+                // Save to unlocked colors list too
+                const uc=JSON.parse(localStorage.getItem("nl3-unlocked-colors")||"[]");
+                if(!uc.includes("name_color")){uc.push("name_color");localStorage.setItem("nl3-unlocked-colors",JSON.stringify(uc));}
+                saveNameColor("name_color");
+                toast("Custom name color unlocked! Toggle it in Settings → Profile.");
+              }
+              else toast(`${item.name} unlocked! Check Settings → Profile.`);
             }}/>}
             {showOnboarding&&<OnboardingTour T={T} user={user} open={showOnboarding} onClose={()=>setShowOnboarding(false)} setPage={p=>{setPrevPage(page);setPage(p);}} setShowFinn={setShowFinn} setShowFeedback={setShowFeedback}/>}
 
@@ -6795,6 +7079,89 @@ export default function App() {
                 setTimeout(()=>setTechAction(""),5000);
                 setForm(p=>({...p,xpGrantAmount:"",xpGrantNote:"",xpGrantTarget:"all"}));
               }}>⭐ Grant XP</Btn>
+            </div>
+
+            {/* ── BADGE GRANT PANEL ─────────────────────────────────────── */}
+            <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
+              <div style={{fontWeight:700,color:T.txt,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:18}}>🏅</span> Grant Special Badge
+              </div>
+              <div style={{fontSize:12,color:T.sub,marginBottom:10,lineHeight:1.6,background:T.bg,borderRadius:8,padding:"8px 12px"}}>
+                Grant Employee of the Month or other exclusive badges. EOTM badges are permanent and show the month + year they were earned.
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}} className="two-col">
+                <div>
+                  <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.05em",marginBottom:6}}>RECIPIENT</div>
+                  <select value={form.badgeGrantTarget||""} onChange={e=>setForm(p=>({...p,badgeGrantTarget:e.target.value}))}
+                    style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+                    <option value="">Select staff member…</option>
+                    {emps.filter(e=>e.role!=="superadmin").map(e=>(
+                      <option key={e.id} value={e.id}>{e.name} — {ROLES[e.role]?.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.05em",marginBottom:6}}>BADGE TYPE</div>
+                  <select value={form.badgeGrantType||"eotm"} onChange={e=>setForm(p=>({...p,badgeGrantType:e.target.value}))}
+                    style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+                    <option value="eotm">⭐ Employee of the Month</option>
+                    {Object.values(BADGE_CATALOG).filter(b=>b.adminOnly&&b.id!=="creator").map(b=>(
+                      <option key={b.id} value={b.id}>{b.icon} {b.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {/* EOTM month/year picker */}
+              {(!form.badgeGrantType||form.badgeGrantType==="eotm")&&(
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}} className="two-col">
+                  <div>
+                    <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.05em",marginBottom:6}}>MONTH</div>
+                    <select value={form.badgeGrantMonth||String(new Date().getMonth()+1).padStart(2,"0")} onChange={e=>setForm(p=>({...p,badgeGrantMonth:e.target.value}))}
+                      style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+                      {["01","02","03","04","05","06","07","08","09","10","11","12"].map((m,i)=>(
+                        <option key={m} value={m}>{["January","February","March","April","May","June","July","August","September","October","November","December"][i]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.05em",marginBottom:6}}>YEAR</div>
+                    <select value={form.badgeGrantYear||String(new Date().getFullYear())} onChange={e=>setForm(p=>({...p,badgeGrantYear:e.target.value}))}
+                      style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 12px",fontSize:13,fontFamily:"inherit",outline:"none"}}>
+                      {[2025,2026,2027,2028].map(y=><option key={y} value={String(y)}>{y}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+              <Btn T={T} full onClick={async()=>{
+                if(!form.badgeGrantTarget){toast("Select a staff member","err");return;}
+                const emp=emps.find(e=>e.id===form.badgeGrantTarget);
+                if(!emp){toast("Staff member not found","err");return;}
+                const isEotm=!form.badgeGrantType||form.badgeGrantType==="eotm";
+                const mo=(form.badgeGrantMonth||String(new Date().getMonth()+1).padStart(2,"0"));
+                const yr=(form.badgeGrantYear||String(new Date().getFullYear()));
+                const badgeId=isEotm?`eotm_${yr}_${mo}`:(form.badgeGrantType||"eotm");
+                const badgeName=isEotm?`Employee of the Month — ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(mo)-1]} ${yr}`:BADGE_CATALOG[badgeId]?.name||badgeId;
+                // Save badge grant to Supabase (in employees table as a JSON array in badge_grants column)
+                const existing=JSON.parse(emp.badge_grants||"[]");
+                if(!existing.includes(badgeId)){
+                  existing.push(badgeId);
+                  await SB.upsert("employees",{id:emp.id,badge_grants:JSON.stringify(existing)});
+                  const next=emps.map(e=>e.id===emp.id?{...e,badge_grants:JSON.stringify(existing)}:e);
+                  setEmps(next);
+                  // Send announcement to staff
+                  const ann={id:uid(),msg:`🏅 ${emp.name} has been awarded: ${badgeName}! Congratulations!`,level:"info",by:"Tech Admin",at:Date.now(),dismissed:[]};
+                  await SB.upsert("announcements",{id:ann.id,msg:ann.msg,level:ann.level,by_name:ann.by,at:ann.at,dismissed:[]});
+                  setAnns(prev=>[ann,...prev]);
+                  addAct("badge_grant",`Tech Admin granted "${badgeName}" badge to ${emp.name}`,"system");
+                  playSound("success");haptic&&haptic("heavy");
+                  toast(`✅ ${badgeName} granted to ${emp.name}!`);
+                  setTechAction(`✅ ${badgeName} granted to ${emp.name} — announcement sent!`);
+                  setTimeout(()=>setTechAction(""),5000);
+                  setForm(p=>({...p,badgeGrantTarget:"",badgeGrantType:"eotm"}));
+                } else {
+                  toast(`${emp.name} already has this badge!`,"warn");
+                }
+              }}>🏅 Grant Badge</Btn>
             </div>
             {techAction&&(
               <div style={{display:"flex",alignItems:"center",gap:8,background:"#dcfce7",border:"1px solid #86efac",borderRadius:10,padding:"9px 14px",marginBottom:14,animation:"fadeUp .2s ease",fontSize:13,fontWeight:700,color:"#15803d"}}>
