@@ -1466,10 +1466,20 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:10,fontFamily:"'Clash Display',sans-serif"}}>🟢 Online Now ({onlineEmps.length})</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
             {onlineEmps.map(e=>(
-              <div key={e.id} style={{display:"flex",alignItems:"center",gap:6,background:T.surfH,borderRadius:20,padding:"5px 12px"}}>
+              <div key={e.id} onClick={()=>{playSound("click");setViewingProfile&&setViewingProfile(e);}} style={{display:"flex",alignItems:"center",gap:5,background:T.surfH,borderRadius:20,padding:"5px 12px",cursor:"pointer",transition:"background .15s"}}
+                onMouseEnter={el=>el.currentTarget.style.background=T.bor}
+                onMouseLeave={el=>el.currentTarget.style.background=T.surfH}>
                 <StatusDot status={e.status}/>
-                <span style={{fontSize:12,fontWeight:600,color:T.txt}}>{e.name}</span>
-                <Tag label={ROLES[e.role]?.label} color={ROLES[e.role]?.color||T.mut}/>
+                {(()=>{
+                  const grantedBadges=JSON.parse(e.badge_grants||"[]").slice(0,3);
+                  const isCreator=grantedBadges.includes("creator");
+                  return <>
+                    {isCreator
+                      ?<CreatorName name={e.name.split(" ")[0]} size={12}/>
+                      :<span style={{fontSize:12,fontWeight:600,color:T.txt}}>{e.name.split(" ")[0]}</span>}
+                    {grantedBadges.length>0&&<UserBadges badgeIds={grantedBadges} size={13} gap={2}/>}
+                  </>;
+                })()}
               </div>
             ))}
           </div>
@@ -3731,11 +3741,13 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
     const pg=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
     const newXP=pg.xp-item.cost;
     const info=getLevelInfo(newXP);
-    // Keep existing title/level — spending XP doesn't demote your rank
-    const keepLevel=pg.level||1; const keepTitle=pg.title||"Pioneer";
-    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
+    // Keep highest title — spending XP never demotes rank
+    const maxXP=Math.max(newXP,pg.max_xp||pg.xp||0); // max_xp stays at peak
+    const keepInfo=getLevelInfo(pg.max_xp||pg.xp||0); // title from highest ever
+    const keepLevel=keepInfo.level; const keepTitle=keepInfo.title;
+    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,max_xp:pg.max_xp||pg.xp||0,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
     // Update local progress state immediately so UI reflects new XP
-    onSpendXP&&onSpendXP(user.id,{xp:newXP,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
+    onSpendXP&&onSpendXP(user.id,{xp:newXP,max_xp:pg.max_xp||pg.xp||0,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
     // Record purchase
     await SB.upsert("user_purchases",{
       id:uid(),
@@ -4309,13 +4321,19 @@ function StaffProfileModal({T,emp,progress,onClose}) {
                 {grantedBadges.map(id=>{
                   const b=getBadge(id);
                   if(!b) return null;
+                  const glowFilter=id==="creator"
+                      ?"drop-shadow(0 0 8px #16a34a) drop-shadow(0 0 16px #16a34acc)"
+                      :`drop-shadow(0 0 6px ${b.glow||b.color+"88"}) drop-shadow(0 0 2px ${b.color})`;
                   return (
-                    <div key={id} title={b.monthLabel?`${b.name} — ${b.monthLabel}`:b.desc}
-                      style={{display:"flex",alignItems:"center",gap:5,background:b.color+"18",border:`1px solid ${b.color}44`,borderRadius:9999,padding:"4px 10px",animation:id.startsWith("eotm_")?"eotmGlow 2s ease-in-out infinite":undefined}}>
-                      <span style={{fontSize:16}}>{b.icon}</span>
+                    <div key={id} title={b.monthLabel?`${b.name} — ${b.monthLabel}: ${b.desc}`:b.name+": "+b.desc}
+                      style={{display:"flex",alignItems:"center",gap:7,background:b.color+"18",border:`1px solid ${b.color}55`,borderRadius:12,padding:"8px 12px",animation:id.startsWith("eotm_")?"eotmGlow 2.5s ease-in-out infinite":id==="creator"?"creatorPulse 3s ease-in-out infinite":undefined,cursor:"default",transition:"transform .15s"}}
+                      onMouseEnter={el=>el.currentTarget.style.transform="scale(1.05)"}
+                      onMouseLeave={el=>el.currentTarget.style.transform="scale(1)"}>
+                      <span style={{fontSize:28,filter:glowFilter,lineHeight:1}}>{b.icon}</span>
                       <div>
-                        <div style={{fontSize:11,fontWeight:700,color:b.color}}>{b.name}</div>
-                        {b.monthLabel&&<div style={{fontSize:9,color:T.sub,marginTop:1}}>{b.monthLabel}</div>}
+                        <div style={{fontSize:13,fontWeight:800,color:b.color,letterSpacing:"-0.2px"}}>{b.name}</div>
+                        {b.monthLabel&&<div style={{fontSize:10,color:T.sub,marginTop:1,fontWeight:600}}>{b.monthLabel}</div>}
+                        <div style={{fontSize:10,color:T.sub,marginTop:1,maxWidth:120,lineHeight:1.3}}>{b.desc}</div>
                       </div>
                     </div>
                   );
@@ -4332,7 +4350,7 @@ function StaffProfileModal({T,emp,progress,onClose}) {
 }
 
 // ─── USER BADGES ─────────────────────────────────────────────────────────────
-function UserBadges({badgeIds,size=16,gap=4}){
+function UserBadges({badgeIds,size=20,gap=6}){
   if(!badgeIds||!badgeIds.length) return null;
   return (
     <span style={{display:"inline-flex",alignItems:"center",gap}}>
@@ -4341,12 +4359,14 @@ function UserBadges({badgeIds,size=16,gap=4}){
         if(!b) return null;
         const isEotm=id.startsWith("eotm_");
         const isCreator=id==="creator";
+        const glowFilter=isCreator
+          ?"drop-shadow(0 0 8px #16a34a) drop-shadow(0 0 16px #16a34acc)"
+          :`drop-shadow(0 0 5px ${b.glow||b.color+"88"}) drop-shadow(0 0 2px ${b.color})`;
         return (
-          <span key={id} title={b.monthLabel?`${b.name} — ${b.monthLabel}: ${b.desc}`:b.desc}
-            style={{cursor:"default",lineHeight:1,display:"inline-flex",alignItems:"center",flexDirection:"column",
-              filter:isCreator?"drop-shadow(0 0 6px #16a34a) drop-shadow(0 0 12px #16a34a88)":`drop-shadow(0 1px 2px ${b.color}66)`}}>
-            <span style={{fontSize:size}}>{b.icon}</span>
-            {isEotm&&b.monthLabel&&<span style={{fontSize:Math.max(6,size*0.55),fontWeight:800,color:b.color,letterSpacing:"0.02em",lineHeight:1,marginTop:1,whiteSpace:"nowrap"}}>{b.monthLabel}</span>}
+          <span key={id} title={b.monthLabel?`${b.name} — ${b.monthLabel}\n${b.desc}`:b.name+": "+b.desc}
+            style={{cursor:"default",lineHeight:1,display:"inline-flex",alignItems:"center",flexDirection:"column",filter:glowFilter,animation:isEotm?"eotmGlow 2.5s ease-in-out infinite":isCreator?"creatorPulse 3s ease-in-out infinite":undefined}}>
+            <span style={{fontSize:size,lineHeight:1}}>{b.icon}</span>
+            {isEotm&&b.monthLabel&&<span style={{fontSize:Math.max(7,size*0.5),fontWeight:800,color:b.color,letterSpacing:"0.02em",lineHeight:1,marginTop:2,whiteSpace:"nowrap"}}>{b.monthLabel}</span>}
           </span>
         );
       })}
@@ -4365,25 +4385,36 @@ function CreatorName({name,size=13}){
 
 // ─── BADGE + NAME COLOR CATALOG ──────────────────────────────────────────────
 const BADGE_CATALOG = {
-  badge_pioneer:  {id:"badge_pioneer",  name:"Pioneer",       icon:E("🚀","▲"), color:"#6366f1", desc:"For the early adopters"},
-  badge_legend:   {id:"badge_legend",   name:"Legend",        icon:E("👑","♛"), color:"#eab308", desc:"Top performer status"},
-  badge_sparkle:  {id:"badge_sparkle",  name:"Sparkle",       icon:E("✨","★"), color:"#a855f7", desc:"Sparkle trail"},
-  badge_goat:     {id:"badge_goat",     name:"G.O.A.T.",      icon:E("🐐","◆"), color:"#0d9488", desc:"Greatest of all time"},
-  badge_mnu:      {id:"badge_mnu",      name:"MNU Pride",     icon:E("🎓","◈"), color:"#C8102E", desc:"MNU school spirit"},
-  badge_grinder:  {id:"badge_grinder",  name:"Grinder",       icon:E("⚙️","◎"), color:"#374151", desc:"Never stops working"},
-  badge_nightowl: {id:"badge_nightowl", name:"Night Owl",     icon:E("🦉","◉"), color:"#1e1b4b", desc:"Working late hours"},
-  badge_streak7:  {id:"badge_streak7",  name:"7-Day",         icon:E("🔥","·"), color:"#ea580c", desc:"7 days straight"},
-  badge_streak30: {id:"badge_streak30", name:"30-Day",        icon:E("🏆","◆"), color:"#b45309", desc:"30 days of dedication"},
-  overtime_badge: {id:"overtime_badge", name:"Overtime",      icon:E("💪","◉"), color:"#7c3aed", desc:"Extra work this week"},
-  // ── SPECIAL / ADMIN-GRANTED ──────────────────────────────────────────────
-  creator:        {id:"creator",        name:"Creator",       icon:"◈",         color:"#16a34a", desc:"Neer Locker Creator — Nate Smith", special:true, adminOnly:true},
+  // ── XP SHOP BADGES ───────────────────────────────────────────────────────
+  badge_pioneer:  {id:"badge_pioneer",  name:"Pioneer",        icon:E("🚀","▲"), color:"#6366f1", glow:"#6366f188", desc:"For the early adopters"},
+  badge_legend:   {id:"badge_legend",   name:"Legend",         icon:E("👑","♛"), color:"#eab308", glow:"#eab30888", desc:"Top performer status"},
+  badge_sparkle:  {id:"badge_sparkle",  name:"Sparkle",        icon:E("✨","★"), color:"#a855f7", glow:"#a855f788", desc:"Sparkle trail"},
+  badge_goat:     {id:"badge_goat",     name:"G.O.A.T.",       icon:E("🐐","◆"), color:"#0d9488", glow:"#0d948888", desc:"Greatest of all time"},
+  badge_mnu:      {id:"badge_mnu",      name:"MNU Pride",      icon:E("🎓","◈"), color:"#C8102E", glow:"#C8102E88", desc:"MNU school spirit"},
+  badge_grinder:  {id:"badge_grinder",  name:"Grinder",        icon:E("⚙️","◎"), color:"#64748b", glow:"#64748b88", desc:"Never stops working"},
+  badge_nightowl: {id:"badge_nightowl", name:"Night Owl",      icon:E("🦉","◉"), color:"#818cf8", glow:"#818cf888", desc:"Working late hours"},
+  badge_streak7:  {id:"badge_streak7",  name:"7-Day",          icon:E("🔥","·"), color:"#ea580c", glow:"#ea580c88", desc:"7 days straight"},
+  badge_streak30: {id:"badge_streak30", name:"30-Day",         icon:E("🏆","◆"), color:"#b45309", glow:"#b4530988", desc:"30 days of dedication"},
+  overtime_badge: {id:"overtime_badge", name:"Overtime",       icon:E("💪","◉"), color:"#7c3aed", glow:"#7c3aed88", desc:"Extra work this week"},
+  badge_diamond:  {id:"badge_diamond",  name:"Diamond",        icon:E("💎","◆"), color:"#22d3ee", glow:"#22d3ee88", desc:"Top 1% performer"},
+  badge_phoenix:  {id:"badge_phoenix",  name:"Phoenix",        icon:E("🔥","✦"), color:"#f97316", glow:"#f9731688", desc:"Rose from the ashes"},
+  badge_scholar:  {id:"badge_scholar",  name:"Scholar",        icon:E("📚","≡"), color:"#10b981", glow:"#10b98188", desc:"Knowledge seeker"},
+  badge_speedrun: {id:"badge_speedrun", name:"Speedrunner",    icon:E("⚡","↯"), color:"#facc15", glow:"#facc1588", desc:"Completed 10 tasks in one day"},
+  badge_silent:   {id:"badge_silent",   name:"Silent Worker",  icon:E("👻","○"), color:"#94a3b8", glow:"#94a3b888", desc:"Completes tasks without a word"},
+  badge_clutch:   {id:"badge_clutch",   name:"Clutch",         icon:E("⏰","◷"), color:"#f43f5e", glow:"#f43f5e88", desc:"Completed task right before deadline"},
+  badge_allstar:  {id:"badge_allstar",  name:"All-Star",       icon:E("⭐","★"), color:"#fbbf24", glow:"#fbbf2488", desc:"5-star week across all metrics"},
+  badge_hustler:  {id:"badge_hustler",  name:"Hustler",        icon:E("📈","▲"), color:"#34d399", glow:"#34d39988", desc:"Most tasks completed in a week"},
+  badge_ghost:    {id:"badge_ghost",    name:"Ghost",          icon:E("👤","○"), color:"#cbd5e1", glow:"#cbd5e188", desc:"Always online but silent"},
+  badge_teamplyr: {id:"badge_teamplyr", name:"Team Player",    icon:E("🤝","≡"), color:"#60a5fa", glow:"#60a5fa88", desc:"Helps the whole team succeed"},
+  // ── ADMIN-GRANTED ONLY ───────────────────────────────────────────────────
+  creator:        {id:"creator",        name:"Creator",        icon:"◈",         color:"#16a34a", glow:"#16a34acc", desc:"Neer Locker Creator — Nate Smith", special:true, adminOnly:true},
 };
 // EOTM badges are dynamically keyed: eotm_YYYY_MM
 // e.g. eotm_2026_04 = Employee of the Month — April 2026
 const makeEotmBadge=(monthKey)=>{
   const [yr,mo]=monthKey.split("_");
   const monthName=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(mo)-1]||mo;
-  return {id:`eotm_${monthKey}`,name:`EOTM`,icon:E("⭐","★"),color:"#f59e0b",
+  return {id:`eotm_${monthKey}`,name:`EOTM`,icon:E("⭐","★"),color:"#f59e0b",glow:"#f59e0bcc",
     desc:`Employee of the Month — ${monthName} ${yr}`,special:true,adminOnly:true,monthLabel:`${monthName} ${yr}`};
 };
 const getEotmBadge=(id)=>{
@@ -4552,7 +4583,7 @@ export default function App() {
       if(!alive) return;
       // Map Supabase rows back to app format
       const mappedEmps=empRows?.length>0
-        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",status:e.status||"offline",createdAt:e.created_at}))
+        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at}))
         :SEED;
       setEmps(mappedEmps);
       // Seed initial employees if none exist
@@ -4621,7 +4652,7 @@ export default function App() {
       SB.select("system_logs","?order=at.desc&limit=200"),
       SB.select("direct_messages","?order=at.asc"),
     ]);
-    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",status:e.status||"offline",createdAt:e.created_at})));
+    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at})));
     if(taskRows?.length>=0){
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:t.created_at}));
       setTasks(prev=>{
@@ -5100,7 +5131,7 @@ export default function App() {
         // Auto-equip granted badges not yet equipped
         const equipped=JSON.parse(localStorage.getItem("nl3-badges")||"[]");
         let updated=false;
-        grantedBadges.forEach(id=>{if(!equipped.includes(id)&&equipped.length<3){equipped.push(id);updated=true;}});
+        grantedBadges.forEach(id=>{if(!equipped.includes(id)&&equipped.length<5){equipped.push(id);updated=true;}});
         if(updated){localStorage.setItem("nl3-badges",JSON.stringify(equipped));setEquippedBadges(equipped);}
       }
       // Auto-grant Creator badge to Nate Smith (nrsmith2@mnu.edu) — exclusive, permanent
@@ -5329,11 +5360,12 @@ export default function App() {
     if(!user||!XP_ELIGIBLE_ROLES.includes(user.role)) return;
     const cur=progressRef.current[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
     const newXP=cur.xp+amount;
-    const info=getLevelInfo(newXP);
-    const leveledUp=info.level>cur.level;
-    const updated={xp:newXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login};
+    const maxXP=Math.max(newXP,cur.max_xp||newXP); // track highest XP ever for title
+    const info=getLevelInfo(maxXP); // title based on highest, not spendable
+    const leveledUp=info.level>(cur.level||1);
+    const updated={xp:newXP,max_xp:maxXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login};
     setProgress(prev=>({...prev,[user.id]:updated}));
-    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login,created_at:Date.now()});
+    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,max_xp:maxXP,level:info.level,title:info.title,streak:cur.streak,last_login:cur.last_login,created_at:Date.now()});
     // XP pop-up toast
     const xpId=uid();
     setXpToasts(p=>[...p,{id:xpId,amount,label}]); haptic("light");
@@ -6051,18 +6083,18 @@ export default function App() {
                                       if(!b) return null;
                                       const isEquipped=equippedBadges.includes(id);
                                       return (
-                                        <button key={id} title={`${b.name}: ${b.desc}${isEquipped?" (equipped — click to remove)": equippedBadges.length>=3?" (max 3 equipped)":" (click to equip)"}`}
+                                        <button key={id} title={`${b.name}: ${b.desc}${isEquipped?" (equipped — click to remove)": equippedBadges.length>=3?" (max 5 equipped)":" (click to equip)"}`}
                                           onClick={()=>{
                                             playSound("click");
                                             if(isEquipped){
                                               saveEquippedBadges(equippedBadges.filter(x=>x!==id));
-                                            } else if(equippedBadges.length<3){
+                                            } else if(equippedBadges.length<5){
                                               saveEquippedBadges([...equippedBadges,id]);
                                             } else {
                                               toast("Max 3 badges equipped — remove one first","warn");
                                             }
                                           }}
-                                          style={{display:"flex",alignItems:"center",gap:6,background:isEquipped?b.color+"22":T.bg,border:`1.5px solid ${isEquipped?b.color:T.bor}`,borderRadius:9999,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",opacity:equippedBadges.length>=3&&!isEquipped?0.5:1}}>
+                                          style={{display:"flex",alignItems:"center",gap:6,background:isEquipped?b.color+"22":T.bg,border:`1.5px solid ${isEquipped?b.color:T.bor}`,borderRadius:9999,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",opacity:equippedBadges.length>=5&&!isEquipped?0.5:1}}>
                                           <span style={{fontSize:16}}>{b.icon}</span>
                                           <span style={{fontSize:12,fontWeight:700,color:isEquipped?b.color:T.txt}}>{b.name}</span>
                                           {isEquipped&&<span style={{fontSize:10,color:b.color,fontWeight:800}}>✓</span>}
@@ -6070,7 +6102,7 @@ export default function App() {
                                       );
                                     })}
                                   </div>
-                                  <div style={{fontSize:11,color:T.sub}}>Tap a badge to equip/unequip · max 3 show next to your name</div>
+                                  <div style={{fontSize:11,color:T.sub}}>Tap a badge to equip/unequip · max 5 show next to your name</div>
                                   {equippedBadges.length>0&&(
                                     <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8,background:T.bg,borderRadius:10,padding:"8px 12px"}}>
                                       <span style={{fontSize:11,color:T.sub,fontWeight:600}}>Preview:</span>
@@ -6877,7 +6909,7 @@ export default function App() {
                 if(!unlocked.includes(item.id)){unlocked.push(item.id);localStorage.setItem("nl3-unlocked-badges",JSON.stringify(unlocked));}
                 // Auto-equip if slot available (max 3)
                 const current=JSON.parse(localStorage.getItem("nl3-badges")||"[]");
-                if(!current.includes(item.id)&&current.length<3){
+                if(!current.includes(item.id)&&current.length<5){
                   const next=[...current,item.id];
                   saveEquippedBadges(next);
                   toast(`${item.name} badge equipped! See it next to your name. ✅`);
@@ -7066,8 +7098,10 @@ export default function App() {
                   const newXP=(pg.xp||0)+amount;
                   const info=getLevelInfo(newXP);
                   const newPg={...pg,xp:newXP,level:info.level,title:info.title};
-                  await SB.upsert("user_progress",{user_id:emp.id,xp:newXP,level:info.level,title:info.title,streak:pg.streak||0,last_login:pg.last_login||""});
-                  setProgress(prev=>({...prev,[emp.id]:newPg}));
+                  const newMaxXP=Math.max(newXP,pg.max_xp||pg.xp||0);
+                  const grantInfo=getLevelInfo(newMaxXP);
+                  await SB.upsert("user_progress",{user_id:emp.id,xp:newXP,max_xp:newMaxXP,level:grantInfo.level,title:grantInfo.title,streak:pg.streak||0,last_login:pg.last_login||""});
+                  setProgress(prev=>({...prev,[emp.id]:{...newPg,max_xp:newMaxXP,level:grantInfo.level,title:grantInfo.title}}));
                   updated++;
                 }
                 const note=form.xpGrantNote?` — "${form.xpGrantNote}"`:"";
