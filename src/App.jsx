@@ -305,8 +305,8 @@ const LOCK_MS    = 5 * 60 * 1000;
 const AUTO_LOGOUT_MS = 30 * 60 * 1000;
 
 // ─── THEMES ───────────────────────────────────────────────────────────────────
-const // ── Google Antigravity exact minimal theme ──────────────────────────────────
-mkMinimalTheme = (dark, compact, accent) => ({
+// ── Google Antigravity exact minimal theme ──────────────────────────────────
+const mkMinimalTheme = (dark, compact, accent) => ({
   // Exact Google Antigravity palette
   scarlet: dark?"#ffffff":"#202124",  // pill color = opposite of bg
   sD:      dark?"#aecbfa":"#3c4043",
@@ -336,7 +336,7 @@ mkMinimalTheme = (dark, compact, accent) => ({
               : { xs:11, sm:13, md:15, lg:17, xl:21 },
 });
 
-mkTheme = (dark, compact, accent) => ({
+const mkTheme = (dark, compact, accent) => ({
   // accent overrides scarlet if provided
   scarlet:accent||"#C8102E", sD:accent?accent+"cc":"#9e0b23", sG:dark?(accent||"#C8102E")+"30":(accent||"#C8102E")+"20",
   blue: dark?"#5BBFDB":"#1e7fa8", bD:dark?"#3aa8c7":"#155f80", bG:dark?"#5BBFDB20":"#1e7fa818",
