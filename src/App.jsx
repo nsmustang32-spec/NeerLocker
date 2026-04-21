@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.9.0";
+const VERSION   = "1.9.1";
 const FINN_VERSION = "1.4.0";
 const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
@@ -3891,7 +3891,7 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
   );
 }
 
-function LeaderboardPage({emps,progress,user,T}) {
+function LeaderboardPage({emps,progress,user,T,onShop}) {
   const eligible=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role));
   const ranked=eligible.map(e=>{
     const pg=progress[e.id]||{xp:0,level:1,title:"Pioneer",streak:0};
