@@ -79,224 +79,152 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
-  "1.9.0": [
-    "New: Minimal Mode — clean Google-inspired UI, same features, different feel",
-    "Minimal Mode: toggleable in Settings → Display & Sound",
-    "Minimal Mode: supports light and dark variants",
-    "Minimal Mode: persists across sessions and app updates",
-    "Minimal Mode: Google Antigravity palette — white cards, pill buttons, Google Sans",
-    "Minimal Mode: Btn component switches to flat pill style",
-    "Minimal Mode: primary accent switches to dark/black Google-style",
+  "1.9.1": [
+    "Minimal Mode: Complete visual overhaul with Google Antigravity-inspired palette",
+    "Minimal Mode: Full accent color system — all UI elements respond to chosen color",
+    "Minimal Mode: Emoji toggle, minimal sounds engine, animated home banner",
+    "XP Shop: 36 items across Colors, Power-ups, Badges, Profile, and Fun categories",
+    "XP Shop: 13 accent colors including animated Rainbow (2500 XP)",
+    "XP Shop: Streak Saver, 2x XP Boost, XP Gifts, Task Hint power-ups",
+    "XP Shop: Pioneer, Legend, GOAT, MNU Pride, Grinder, Night Owl, Streak badges",
+    "XP Shop: Custom Profile Picture (free), Gold/Scarlet/Blue/Rainbow avatar frames",
+    "XP Shop: Task Confetti, Premium Sounds, Dark Aura, Finn Gold Skin, Fireworks",
+    "XP Shop: Accessible from Leaderboard, Nav Menu, and Home XP banner",
+    "Cloud Profile Pictures: Upload photo, auto-resized, saved to Supabase, team-visible",
+    "Monthly Rating: 1-10 rating + ideas, once per month, Tech Admin dashboard view",
+    "Tasks: Completed tasks show who finished them and when",
+    "Onboarding Tour: Interactive — navigates app live, spotlights UI with SVG mask",
+    "Onboarding Tour: Horizontal arrows, press-here labels, draggable minimized pill",
+    "Onboarding Tour: Edge-snapping pill — horizontal top/bottom, vertical left/right",
+    "Onboarding Tour: PIN, biometric, and required notifications gate steps",
+    "Nav Menu: Leaderboard and XP Shop entries added",
+    "Help: Updated guide with all new features documented",
+    "Fix: PINs now correctly persist across updates (pin_hash loaded from Supabase)",
+    "Fix: Profile pictures loaded on startup across all devices",
+    "Fix: mkTheme/mkMinimalTheme const declarations fixed — resolved white screen crash",
+    "Fix: Shop category tabs now fully visible — overflow clipping resolved",
+    "Fix: Toggle thumb colors — no more white-on-white in minimal dark mode",
+    "Fix: Claude tag no longer overlaps nav menu",
   ],
   "1.8.4": [
-
-    "Fix: Notifications no longer fire twice — webhook + manual call conflict resolved",
-    "Fix: Global 5-second notification rate limiter added to NOTIF object",
-    "Fix: Tasks now save correctly to Supabase — repeat_days column conflict removed",
-    "Fix: created_at correctly sent as bigint to match Supabase schema",
-    "Voice: Finn pauses mic while speaking, restarts automatically when done",
+    "Fix: Notifications no longer fire twice",
+    "Fix: Tasks now save correctly to Supabase",
+    "Voice: Finn pauses mic while speaking, restarts when done",
     "Voice: Mic stops cleanly when Finn panel is closed",
-    "Fix: Announcement notifications pre-deduped on creation",
-    "Tasks: DB load logging added for diagnostics",
   ],
   "1.8.3": [
-    "DMs: Long messages now scrollable within the bubble",
-    "DMs: Group chat now shows who sent each message",
-    "Voice: Finn stops listening while speaking — no more talking to himself",
+    "DMs: Long messages scrollable within the bubble",
+    "DMs: Group chat shows who sent each message",
     "Tasks: Fixed empty due date sending invalid data to Supabase",
     "Announcements: Recently dismissed section with Restore button",
-    "Notifications: DM push notifications no longer send twice",
-    "Finn: Aether now asks for confirmation before executing any action",
+    "Finn: Aether now asks for confirmation before executing actions",
   ],
   "1.8.2": [
-    "Schedule tab: tap from home screen quick stats card to open schedule",
     "Schedule tab: new page for staff to view the current schedule in-app",
     "Tech Admin: paste any schedule URL — Google Sheets, OneDrive, SharePoint",
-    "Schedule: auto-saves to Supabase — all staff see it instantly",
-    "Schedule: open in new tab or current browser options",
+    "Schedule: auto-saves to Supabase, all staff see it instantly",
   ],
   "1.8.1": [
-    "Fix: Push notifications now fire when tasks are created for everyone",
-    "Fix: Notification badge now includes overdue task count",
-    "Fix: dueDate empty string replaced with null — prevents Supabase rejects",
-    "Fix: saveInv/saveAnns/saveDms now only upsert changed records (performance)",
-    "Fix: grantXP stale closure fixed with progressRef — correct XP calculation",
-    "Fix: Voice input (sendAtlas) no longer depends on stale input state",
+    "Fix: Push notifications now fire when tasks are created",
+    "Fix: grantXP stale closure fixed with progressRef",
+    "Fix: Voice input no longer depends on stale input state",
   ],
   "1.8.0": [
     "Finn v1.4.0 — Memory system, task reminders, continuous voice mode",
     "Vigil HyperCore v2.1.0 — Full server-side login enforcement via JWT",
     "Vigil: Session validation every 5 minutes with auto-logout",
     "Voice: Continuous listening mode with 18 stop phrases",
-    "Voice: Male voice fixed (Microsoft David priority)",
-    "Time zone fix: Finn Aether uses your device local time",
-    "Fix: Display & Sound settings no longer crashes",
-    "Fix: Finn stays open when Aether navigates",
-    "Fix: Voice settings save correctly across sessions",
     "Fix: Task creation no longer disappears — 30s polling with merge logic",
-    "Fix: synthRef crash resolved — Finn voice fully operational",
-    "Fix: Aether switching to Atlas bug fixed",
   ],
   "1.7.5": [
-    "Finn Memory: remembers facts across sessions — say remember that...",
-    "Finn Memory: injected into Aether context every message",
-    "Task snooze/reminders: say remind me in 2 hours about [task]",
-    "Vigil HyperCore v2.1.0: login now server-verified via api/vigil.js",
-    "Vigil: JWT session tokens — validated every 5 minutes",
-    "Vigil: logout clears server session",
-    "Morning brief now includes streak count",
+    "Finn Memory: remembers facts across sessions",
+    "Task reminders: say remind me in 2 hours about [task]",
+    "Vigil: JWT session tokens validated every 5 minutes",
   ],
   "1.7.4": [
-    "Vigil HyperCore v2.0.1 — Failed email login now tracked and locked",
-    "Vigil: New PIN creation now hashed automatically via VIGIL.hashPIN()",
-    "Vigil: Lockout check runs on email submit before PIN screen",
-    "Vigil: All failed login events logged to Vigil dashboard",
+    "Vigil HyperCore v2.0.1 — Failed email login tracked and locked",
+    "Vigil: New PIN creation now hashed automatically",
   ],
   "1.7.3": [
     "Vigil HyperCore v2.0.0 — PIN hashing with SHA-256",
     "Vigil: Account lockout after 5 failed PIN attempts (15 min)",
-    "Vigil: Session timeout by role — employees 30min, managers 2hr, boss 4hr",
-    "Vigil: Prompt injection detection on Finn messages",
-    "Vigil: Finn rate limiting — 1 message per 1.5 seconds",
-    "Vigil: Anomaly detection — flags unusual hours and new devices",
     "Vigil: Security dashboard in Tech Admin with live event log",
-    "Vigil: Remaining attempts shown on failed PIN",
   ],
   "1.7.1": [
     "Fix: Haptic feedback now works and can be toggled in Settings",
     "Fix: Sign Out button no longer overflows on mobile",
-    "Fix: MNU Neer Locker version badge restored to bottom right",
-    "Fix: Header layout tightened on small screens",
     "Fix: TaskCard swipe and long press context menu fully repaired",
   ],
   "1.7.0": [
-    "UI: Dark mode follows system by default — System/Light/Dark selector in Settings",
     "UI: Pull to refresh on all pages",
     "UI: Swipe right to complete tasks, left to delete",
-    "UI: Long press (or right-click) tasks for context menu",
+    "UI: Long press tasks for context menu",
     "UI: Notification bell in header with notification center",
-    "UI: Skeleton loading cards while data loads",
-    "UI: Typing indicator in DMs",
-    "UI: Shake phone to open feedback form",
-    "Search: Filter pills — Tasks, Inventory, Staff, Announcements",
     "Haptics: Vibration on task complete and DM send",
     "Notifications: Weekly digest every Monday morning",
   ],
   "1.6.0": [
-    "Leaderboard: Full staff XP leaderboard page accessible from nav",
-    "Boss: Can now earn XP and participate in progression",
-    "Tasks: Repeat on specific days of week option",
-    "Boss: Can view all direct messages in Settings",
-    "Employees: New accounts now save directly to Supabase",
-    "Auth: Remember me option on login screen",
-    "Group Chat: Whole-team group chat channel added to Messages",
-    "Inventory: Employees can now adjust stock levels",
+    "Leaderboard: Full staff XP leaderboard page",
+    "Group Chat: Whole-team group chat added to Messages",
     "XP: Green pop-up toast shows XP gained after each action",
-    "Status: Users go offline automatically when leaving the app",
     "Employee of the Month: Shown on Home page based on XP",
     "Tech Admin: Can reset all XP for the month",
-    "Levels: Custom level logo shown on profile card",
-    "Employee of the Month: Star badge on leaderboard",
-    "New Staff: Saves to Supabase when added by managers",
   ],
   "1.5.1": [
-    "Finn: Fusion Integrated Neural Navigator — new name, v1.0.0",
-    "Finn: Version badge shown in chat panel header",
-    "Finn: Smart personalized intro based on your data",
-    "Finn: Can create tasks, announcements, inventory, DMs",
+    "Finn: Fusion Integrated Neural Navigator — v1.0.0",
+    "Finn: Can create tasks, announcements, inventory, and DMs",
     "Finn: Can change your settings (status, display, PIN)",
-    "Finn: Normal conversation mode with subtle work reminders",
-    "Finn: Processing indicator while thinking",
-    "Finn: Glow effects in chat panel",
-    "Finn: Much smarter fallback — guesses intent",
-    "Finn: Knows nicknames and real names",
-    "UI: Welcome portal stays until user taps Let's Go",
-    "UI: Header scales to device (mobile/tablet/desktop)",
-    "UI: ClaudeTag now says Powered by Finn",
-    "UI: Help modal includes Finn guidance",
-    "Notifications: Finn icon, smart context, action buttons",
-    "Sounds: AudioContext resumed on interaction for background",
   ],
   "1.5.0": [
-    "Finn: Ultra-efficient tone, fully rebuilt system prompt",
     "Finn: Navigate the app by asking Finn to take you somewhere",
-    "Finn: Fully Integrated Neural Navigator tagline in chat",
-    "Finn: Custom ascending arpeggio sound",
-    "Finn: Knows all your stats, XP, streak, and performance",
-    "Finn: Intro message updated to be concise",
-    "UI: First-time welcome portal animation (one time only per device)",
-    "UI: Offline banner moved to bottom floating pill",
-    "UI: Header search compact, Sign Out always visible",
-    "Fix: Swipe back now tracks recently viewed",
-    "Fix: Finn API error resolved — always responds now",
+    "UI: First-time welcome portal animation",
   ],
   "1.4.0": [
-    "Smart: Global search bar always visible in header — searches tasks, inventory, staff, announcements",
-    "Smart: Suggestions while typing in task title and inventory fields",
+    "Smart: Global search bar always visible in header",
     "Smart: Auto-categorizes task priority based on keywords",
-    "Smart: Smart reminders on home screen for overdue and unfinished tasks",
-    "Smart: Tooltips on key buttons and fields throughout the app",
-    "Smart: Confirm dialogs before destructive actions",
-    "Smart: Recently viewed section shows last page visited",
     "Offline: App detects offline status and queues actions",
   ],
   "1.3.0": [
     "Finn: Now knows your XP, level, title, and streak",
-    "Finn: Gives personalized tips on how to earn more XP",
     "Progression: Full system with 10 levels and daily streaks",
-    "Finn: Knows current date and time",
   ],
   "1.2.0": [
-    "Finn: AI assistant built into the app — access from nav menu or bottom-right button",
-    "Finn: Knows your tasks, inventory, announcements, and team in real time",
-    "Finn: Custom hex compass logo, slides up as a chat panel",
-    "UI: Version badge hides smoothly when Finn chat is open",
-    "Progression: Daily login streaks, XP system, and level titles for staff",
-    "Progression: 10 levels from Pioneer to Top Contributor with unique colors",
-    "Progression: Boss can see full staff leaderboard on home screen",
+    "Finn: AI assistant built into the app",
+    "Progression: Daily login streaks, XP system, and level titles",
+    "Progression: 10 levels from Pioneer to Top Contributor",
   ],
   "1.1.2": [
-    "Login: Demo logins removed — staff sign in with their MNU email",
+    "Login: Staff sign in with MNU email only",
     "Profile: Nickname field only visible to the user on their device",
   ],
   "1.1.1": [
-    "Profile: Email field removed — contact your manager to change your email",
     "Profile: Name field replaced with Nickname — only visible to you",
   ],
   "1.1.0": [
-    "Notifications: Push notifications for new tasks, announcements, and messages",
-    "Settings: Tablet UI scaling option added alongside Mobile, Desktop, Auto",
+    "Notifications: Push notifications for tasks, announcements, and messages",
+    "Settings: Tablet UI scaling option added",
   ],
   "1.0.4": [
     "Auth: Face ID / Touch ID / fingerprint login via WebAuthn passkeys",
-    "Settings: Managers and Asst. Managers can now manage team in Settings",
+    "Settings: Managers and Asst. Managers can manage team in Settings",
   ],
   "1.0.3": [
-    "DMs: Fixed messages not sending (saveDMs naming mismatch)",
+    "DMs: Fixed messages not sending",
     "Tasks: Fixed description not saving to Supabase",
-    "Status: Fixed users appearing online when they are not",
-    "Patch notes: Removed 0.4.0–0.4.7 entries to save space",
   ],
   "1.0.2": [
-    "Tasks: Description now saves correctly to Supabase and persists",
+    "Tasks: Description now saves correctly and persists",
     "Tasks: Tech admin can select and bulk-delete tasks",
     "DMs: Can now message anyone regardless of online status",
-    "Status: Fixed users appearing online when they are not",
-    "UI: Long text no longer overflows off screen",
-    "Announcements: Fixed oversized font in announcement cards",
-    "Header: Sign Out button and profile shifted left to stay on screen",
   ],
   "1.0.1": [
-    "Nav: Menu circle button now always appears above the header bar",
+    "Nav: Menu circle button always appears above the header bar",
   ],
   "1.0.0": [
-    "Tasks: Tap any task to expand and see full details — description, assignee, due date, creator",
-    "PWA: App icon and splash screen for iPhone and Android home screen",
-    "Navigation: Help banner and ? modal now include install instructions for iOS and Android",
-    "Header: Fixed overlap with phone status bar and notch on mobile",
+    "Tasks: Tap any task to expand and see full details",
+    "PWA: App icon and splash screen for iPhone and Android",
     "Version: 1.0.0 Beta — first full production release",
   ],
-
 };
 const TECH_EMAIL = "nrsmith2@mnu.edu";
 const TECH_PIN   = "0000";
@@ -4364,6 +4292,7 @@ export default function App() {
   // Tech PIN gate for viewing employee PINs
   const [techPinGate,setTechPinGate]=useState(false);
   const [selectedTasks,setSelectedTasks]=useState(new Set());
+  const [selPatchNotes,setSelPatchNotes]=useState(()=>new Set((PATCH_NOTES[VERSION]||[]).map((_,i)=>i)));
   const [showRating,setShowRating]=useState(false);
   const [showShop,setShowShop]=useState(false);
   const [showPfpUpload,setShowPfpUpload]=useState(false);
@@ -7081,15 +7010,35 @@ export default function App() {
 
             {/* Patch Notes */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <div style={{fontWeight:700,color:T.txt}}>📋 App Patch Notes — v{VERSION}</div>
-                <Btn T={T} sm onClick={()=>{
-                  const notes=PATCH_NOTES[VERSION]||[];
-                  if(!notes.length){toast("No patch notes for this version","warn");return;}
-                  const ann={id:uid(),msg:`📋 v${VERSION} ${BUILD_TAG} — MNU Neer Locker Update`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:notes,patchVersion:VERSION,patchBuild:BUILD_TAG};
-                  saveAnns([ann,...anns]);
-                  toast("Patch notes announced to all staff! ✅");
-                }}>📢 Announce to Staff</Btn>
+              <div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
+                  <div style={{fontWeight:700,color:T.txt}}>📋 App Patch Notes — v{VERSION}</div>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    <button onClick={()=>setSelPatchNotes(new Set((PATCH_NOTES[VERSION]||[]).map((_,i)=>i)))} style={{background:T.surfH,color:T.sub,border:`1px solid ${T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>All</button>
+                    <button onClick={()=>setSelPatchNotes(new Set())} style={{background:T.surfH,color:T.sub,border:`1px solid ${T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>None</button>
+                    <Btn T={T} sm onClick={()=>{
+                      const allNotes=PATCH_NOTES[VERSION]||[];
+                      const sel=allNotes.filter((_,i)=>selPatchNotes.has(i));
+                      if(!sel.length){toast("Select at least one note","warn");return;}
+                      const ann={id:uid(),msg:`📋 v${VERSION} ${BUILD_TAG} — MNU Neer Locker Update`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:sel,patchVersion:VERSION,patchBuild:BUILD_TAG};
+                      saveAnns([ann,...anns]);
+                      toast(`Announced ${sel.length} note${sel.length!==1?"s":""}! ✅`);
+                    }}>📢 Announce ({selPatchNotes.size})</Btn>
+                  </div>
+                </div>
+                {/* Selectable notes list */}
+                <div style={{background:T.bg,borderRadius:10,padding:"6px 4px",maxHeight:220,overflowY:"auto",marginBottom:12}}>
+                  {(PATCH_NOTES[VERSION]||[]).map((note,i)=>(
+                    <div key={i} onClick={()=>{setSelPatchNotes(prev=>{const n=new Set(prev);n.has(i)?n.delete(i):n.add(i);return n;});}}
+                      style={{display:"flex",alignItems:"flex-start",gap:8,padding:"5px 10px",cursor:"pointer",borderRadius:8,background:selPatchNotes.has(i)?T.accent+"14":"transparent",transition:"background .12s"}}>
+                      <div style={{width:15,height:15,borderRadius:4,border:`2px solid ${selPatchNotes.has(i)?T.accent:T.bor}`,background:selPatchNotes.has(i)?T.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
+                        {selPatchNotes.has(i)&&<span style={{color:"#fff",fontSize:9,fontWeight:900}}>✓</span>}
+                      </div>
+                      <span style={{fontSize:12,color:selPatchNotes.has(i)?T.txt:T.sub,lineHeight:1.5}}>{note}</span>
+                    </div>
+                  ))}
+                </div>
+
               </div>
               {Object.entries(PATCH_NOTES).map(([ver,notes])=>(
                 <details key={ver} style={{background:T.bg,borderRadius:10,marginBottom:6,overflow:"hidden"}} open={ver===VERSION}>
