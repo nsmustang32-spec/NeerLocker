@@ -693,13 +693,21 @@ function Modal({title,children,onClose,wide,T}) {
   );
 }
 
-function Avatar({email,color,size=36,avatarUrl}) {
+function Avatar({email,color,size=36,avatarUrl,frame}) {
+  // Frame styles
+  const frameMap={
+    pfp_frame_gold:   {border:`3px solid #eab308`, boxShadow:`0 0 0 2px #fef3c7, 0 0 12px #eab30866`},
+    pfp_frame_scarlet:{border:`3px solid #C8102E`, boxShadow:`0 0 0 2px #fee2e2, 0 0 12px #C8102E66`},
+    pfp_frame_blue:   {border:`3px solid #1e7fa8`, boxShadow:`0 0 0 2px #dbeafe, 0 0 12px #1e7fa866`},
+    pfp_frame_rainbow:{border:"3px solid transparent", backgroundImage:"linear-gradient(#fff,#fff),linear-gradient(90deg,#ef4444,#f59e0b,#eab308,#10b981,#3b82f6,#a855f7,#ef4444)", backgroundOrigin:"border-box", backgroundClip:"padding-box,border-box", boxShadow:"0 0 12px #a855f766", animation:"rainbowSpin 3s linear infinite"},
+  };
+  const frameStyle=frameMap[frame]||{border:`2px solid ${color}55`};
   if(avatarUrl){
-    return <div style={{width:size,height:size,borderRadius:"50%",border:`2px solid ${color}55`,overflow:"hidden",flexShrink:0,background:color+"22"}}>
-      <img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none";}}/>
+    return <div style={{width:size,height:size,borderRadius:"50%",...frameStyle,overflow:"hidden",flexShrink:0,background:color+"22"}}>
+      <img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}} onError={e=>{e.target.style.display="none";}}/>
     </div>;
   }
-  return <div style={{width:size,height:size,borderRadius:"50%",background:color+"22",border:`2px solid ${color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color,fontSize:size*0.42,flexShrink:0}}>{initial(email)}</div>;
+  return <div style={{width:size,height:size,borderRadius:"50%",background:color+"22",...frameStyle,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color,fontSize:size*0.42,flexShrink:0}}>{initial(email)}</div>;
 }
 
 function ToastList({items}) {
@@ -1681,7 +1689,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
               >
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <div style={{position:"relative",flexShrink:0}}>
-                    <Avatar email={e.email} color={ROLES[e.role]?.color||T.mut} size={36}/>
+                    <Avatar email={e.email} color={ROLES[e.role]?.color||T.mut} size={36} frame={e.equipped_frame}/>
                     <div style={{position:"absolute",bottom:0,right:0}}><StatusDot status={e.status||"offline"}/></div>
                   </div>
                   <div style={{flex:1,minWidth:0}}>
@@ -3745,12 +3753,13 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
     const newXP=pg.xp-item.cost;
     const info=getLevelInfo(newXP);
     // Keep highest title — spending XP never demotes rank
-    const maxXP=Math.max(newXP,pg.max_xp||pg.xp||0); // max_xp stays at peak
-    const keepInfo=getLevelInfo(pg.max_xp||pg.xp||0); // title from highest ever
+    // pg.max_xp may be undefined on first spend so fall back to the pre-purchase xp (pg.xp)
+    const highestEverXP=Math.max(pg.xp||0, pg.max_xp||0); // highest XP ever earned
+    const keepInfo=getLevelInfo(highestEverXP); // title/level from highest ever
     const keepLevel=keepInfo.level; const keepTitle=keepInfo.title;
-    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,max_xp:pg.max_xp||pg.xp||0,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
+    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,max_xp:highestEverXP,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
     // Update local progress state immediately so UI reflects new XP
-    onSpendXP&&onSpendXP(user.id,{xp:newXP,max_xp:pg.max_xp||pg.xp||0,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
+    onSpendXP&&onSpendXP(user.id,{xp:newXP,max_xp:highestEverXP,level:keepLevel,title:keepTitle,streak:pg.streak||0,last_login:pg.last_login||""});
     // Record purchase
     await SB.upsert("user_purchases",{
       id:uid(),
@@ -4293,7 +4302,7 @@ function StaffProfileModal({T,emp,progress,onClose}) {
           {/* Avatar */}
           <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
             <div style={{position:"relative",flexShrink:0}}>
-              <Avatar email={emp.email} color={ROLES[emp.role]?.color||"#6b7280"} size={72} avatarUrl={emp.avatar_url}/>
+              <Avatar email={emp.email} color={ROLES[emp.role]?.color||"#6b7280"} size={72} avatarUrl={emp.avatar_url} frame={emp.equipped_frame}/>
               <div style={{position:"absolute",bottom:-4,right:-4,background:lv.color,borderRadius:9999,padding:"2px 7px",fontSize:9,fontWeight:800,color:"#fff",border:`2px solid ${T.surf}`,whiteSpace:"nowrap"}}>{lv.title||"Pioneer"}</div>
             </div>
             <div style={{flex:1,minWidth:0,paddingTop:4}}>
@@ -4522,17 +4531,37 @@ export default function App() {
     try{return JSON.parse(localStorage.getItem("nl3-badges")||"[]");}catch{return [];}
   });
   const [nameColorId,setNameColorId]=useState(()=>localStorage.getItem("nl3-name-color")||"base");
+  const [equippedFrame,setEquippedFrame]=useState(()=>localStorage.getItem("nl3-equipped-frame")||"");
   const saveEquippedBadges=(badges)=>{
     setEquippedBadges(badges);
     localStorage.setItem("nl3-badges",JSON.stringify(badges));
-    // Persist to Supabase so all viewers see the badges
-    if(user?.id) SB.upsert("employees",{id:user.id,equipped_badges:JSON.stringify(badges)});
+    if(user?.id){
+      // Persist to Supabase AND update local emps so leaderboard sees it immediately
+      const badgesJson=JSON.stringify(badges);
+      SB.upsert("employees",{id:user.id,equipped_badges:badgesJson});
+      setEmps(prev=>prev.map(e=>e.id===user.id?{...e,equipped_badges:badgesJson}:e));
+      setUser(u=>u?{...u,equipped_badges:badgesJson}:u);
+    }
   };
   const saveNameColor=(id)=>{
     setNameColorId(id);
     localStorage.setItem("nl3-name-color",id);
-    // Persist to Supabase so everyone sees custom name color
-    if(user?.id) SB.upsert("employees",{id:user.id,name_color:id});
+    if(user?.id){
+      SB.upsert("employees",{id:user.id,name_color:id});
+      setEmps(prev=>prev.map(e=>e.id===user.id?{...e,name_color:id}:e));
+      setUser(u=>u?{...u,name_color:id}:u);
+    }
+  };
+  const saveEquippedFrame=(id)=>{
+    setEquippedFrame(id||"");
+    if(id) localStorage.setItem("nl3-equipped-frame",id);
+    else localStorage.removeItem("nl3-equipped-frame");
+    if(user?.id){
+      const val=id||"";
+      SB.upsert("employees",{id:user.id,equipped_frame:val});
+      setEmps(prev=>prev.map(e=>e.id===user.id?{...e,equipped_frame:val}:e));
+      setUser(u=>u?{...u,equipped_frame:val}:u);
+    }
   };
   const [showShop,setShowShop]=useState(false);
   const [showPfpUpload,setShowPfpUpload]=useState(false);
@@ -4617,7 +4646,7 @@ export default function App() {
       if(!alive) return;
       // Map Supabase rows back to app format
       const mappedEmps=empRows?.length>0
-        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at}))
+        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",equipped_frame:e.equipped_frame||"",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at}))
         :SEED;
       setEmps(mappedEmps);
       // Seed initial employees if none exist
@@ -4652,7 +4681,7 @@ export default function App() {
       // Load progression data
       const pgRows=await SB.select("user_progress","");
       const pgMap={};
-      for(const r of pgRows||[]) pgMap[r.user_id]={xp:r.xp||0,level:r.level||1,title:r.title||"Pioneer",streak:r.streak||0,last_login:r.last_login};
+      for(const r of pgRows||[]) pgMap[r.user_id]={xp:r.xp||0,max_xp:r.max_xp||r.xp||0,level:r.level||1,title:r.title||"Pioneer",streak:r.streak||0,last_login:r.last_login};
       setProgress(pgMap);
     })();
     return()=>{alive=false;};
@@ -4686,7 +4715,7 @@ export default function App() {
       SB.select("system_logs","?order=at.desc&limit=200"),
       SB.select("direct_messages","?order=at.asc"),
     ]);
-    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at})));
+    if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",equipped_frame:e.equipped_frame||"",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at})));
     if(taskRows?.length>=0){
       const newMapped=taskRows.map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:t.created_at}));
       setTasks(prev=>{
@@ -5166,6 +5195,11 @@ export default function App() {
       if(savedNameColor!=="base"){
         localStorage.setItem("nl3-name-color",savedNameColor);
         setNameColorId(savedNameColor);
+      }
+      const savedFrame=emp.equipped_frame||"";
+      if(savedFrame){
+        localStorage.setItem("nl3-equipped-frame",savedFrame);
+        setEquippedFrame(savedFrame);
       }
       // Load admin-granted badges from employee record
       const grantedBadges=JSON.parse(emp.badge_grants||"[]");
@@ -5731,7 +5765,7 @@ export default function App() {
                   onMouseLeave={e=>e.currentTarget.style.background="none"}
                   title="Profile Settings"
                 >
-                  <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={30} avatarUrl={user.avatar_url}/>
+                  <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={30} avatarUrl={user.avatar_url} frame={equippedFrame}/>
                   <div className="header-name" style={{display:"flex",flexDirection:"column",lineHeight:1.2,minWidth:0,textAlign:"left"}}>
                     <span style={{fontSize:13,color:T.txt,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:90}}>{user.name.split(" ")[0]}</span>
                     <span style={{fontSize:10,color:T.sub,fontWeight:500}}>{ROLES[user.role]?.label||""}</span>
@@ -6047,7 +6081,7 @@ export default function App() {
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>Profile</div>
                         <div style={{display:"flex",alignItems:"center",gap:14}}>
                           <div style={{position:"relative",cursor:"pointer"}} onClick={()=>{playSound("click");setShowPfpUpload(true);}} title="Change profile picture">
-                            <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={54} avatarUrl={user.avatar_url}/>
+                            <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={54} avatarUrl={user.avatar_url} frame={equippedFrame}/>
                             <div style={{position:"absolute",bottom:-2,right:-2,width:22,height:22,borderRadius:"50%",background:T.accent,border:`2px solid ${T.bg}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:800}}>{E("📸","+")}</div>
                           </div>
                           <div>
@@ -6159,7 +6193,7 @@ export default function App() {
                               )}
                               {/* Name color toggle */}
                               {hasNameColor&&(
-                                <div>
+                                <div style={{marginBottom:12}}>
                                   <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.04em",marginBottom:8}}>NAME COLOR</div>
                                   <div style={{display:"flex",gap:8}}>
                                     {["base","name_color"].map(id=>(
@@ -6172,6 +6206,39 @@ export default function App() {
                                   </div>
                                 </div>
                               )}
+                              {/* Avatar Frame picker */}
+                              {(()=>{
+                                const unlockedFrames=JSON.parse(localStorage.getItem("nl3-unlocked-frames")||"[]");
+                                if(!unlockedFrames.length) return null;
+                                const frameInfo={
+                                  pfp_frame_gold:   {label:"Gold",   color:"#eab308"},
+                                  pfp_frame_scarlet:{label:"Scarlet",color:"#C8102E"},
+                                  pfp_frame_blue:   {label:"Blue",   color:"#1e7fa8"},
+                                  pfp_frame_rainbow:{label:"Rainbow",color:"#a855f7"},
+                                };
+                                return (
+                                  <div>
+                                    <div style={{fontSize:11,color:T.sub,fontWeight:700,letterSpacing:"0.04em",marginBottom:8}}>AVATAR FRAME</div>
+                                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                                      <button onClick={()=>{playSound("click");saveEquippedFrame("");}}
+                                        style={{background:!equippedFrame?T.accent+"18":T.bg,border:`1.5px solid ${!equippedFrame?T.accent:T.bor}`,borderRadius:9999,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:T.txt,transition:"all .15s"}}>
+                                        None {!equippedFrame&&<span style={{color:T.accent,marginLeft:4}}>✓</span>}
+                                      </button>
+                                      {unlockedFrames.map(id=>{
+                                        const fi=frameInfo[id];if(!fi) return null;
+                                        const isEquipped=equippedFrame===id;
+                                        return (
+                                          <button key={id} onClick={()=>{playSound("click");saveEquippedFrame(id);}}
+                                            style={{background:isEquipped?fi.color+"22":T.bg,border:`1.5px solid ${isEquipped?fi.color:T.bor}`,borderRadius:9999,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:isEquipped?fi.color:T.txt,transition:"all .15s",display:"flex",alignItems:"center",gap:6}}>
+                                            <span style={{width:10,height:10,borderRadius:"50%",background:fi.color,boxShadow:`0 0 6px ${fi.color}`}}/>
+                                            {fi.label} {isEquipped&&<span>✓</span>}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           );
                         })()}
@@ -6968,6 +7035,15 @@ export default function App() {
                 if(!uc.includes("name_color")){uc.push("name_color");localStorage.setItem("nl3-unlocked-colors",JSON.stringify(uc));}
                 saveNameColor("name_color");
                 toast("Custom name color unlocked! Toggle it in Settings → Profile.");
+              }
+              else if(item.type==="frame"){
+                // Save unlocked frame + auto-equip
+                const uf=JSON.parse(localStorage.getItem("nl3-unlocked-frames")||"[]");
+                if(!uf.includes(item.id)){uf.push(item.id);localStorage.setItem("nl3-unlocked-frames",JSON.stringify(uf));}
+                localStorage.setItem("nl3-equipped-frame",item.id);
+                setEquippedFrame(item.id);
+                if(user?.id) SB.upsert("employees",{id:user.id,equipped_frame:item.id});
+                toast(`${item.name} equipped! Nice border. ✨`);
               }
               else toast(`${item.name} unlocked! Check Settings → Profile.`);
             }}/>}
