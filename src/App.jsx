@@ -3633,7 +3633,7 @@ function XPToastList({items}) {
 
 // ─── LEADERBOARD PAGE ─────────────────────────────────────────────────────────
 // ─── XP SHOP MODAL — spend XP on cosmetics & power-ups ───────────────────────
-function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
+function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
   const [category,setCategory]=useState("all");
   const [purchases,setPurchases]=useState([]);
   const [loading,setLoading]=useState(true);
@@ -3731,7 +3731,9 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
     const pg=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
     const newXP=pg.xp-item.cost;
     const info=getLevelInfo(newXP);
-    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:pg.streak,last_login:pg.last_login});
+    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:pg.streak||0,last_login:pg.last_login||""});
+    // Update local progress state immediately so UI reflects new XP
+    onSpendXP&&onSpendXP(user.id,{xp:newXP,level:info.level,title:info.title,streak:pg.streak||0,last_login:pg.last_login||""});
     // Record purchase
     await SB.upsert("user_purchases",{
       id:uid(),
@@ -3794,8 +3796,9 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
                 const isFree=item.free;
                 return (
                   <div key={item.id} style={{background:T.surfH,border:`1px solid ${isOwned?T.ok+"66":T.bor}`,borderRadius:T.minimal?12:10,padding:12,display:"flex",flexDirection:"column",gap:8,position:"relative",overflow:"hidden"}}>
-                    {isOwned&&!item.consumable&&<div style={{position:"absolute",top:6,right:6,background:T.ok,color:"#fff",fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999,letterSpacing:"0.04em"}}>OWNED</div>}
-                    {item.consumable&&<div style={{position:"absolute",top:6,right:6,background:T.warn+"33",color:T.warn,fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999}}>USE ONCE</div>}
+                    {isOwned&&!item.consumable&&<div style={{position:"absolute",top:6,right:6,background:T.ok,color:"#fff",fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999,letterSpacing:"0.04em",zIndex:1}}>OWNED</div>}
+                    {item.consumable&&!isOwned&&<div style={{position:"absolute",top:6,right:6,background:T.warn+"33",color:T.warn,fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999,zIndex:1}}>USE ONCE</div>}
+                    {item.consumable&&isOwned&&<div style={{position:"absolute",top:6,right:6,background:"#ef444420",color:"#ef4444",fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999,zIndex:1}}>USED</div>}
                     {/* Icon */}
                     <div style={{width:48,height:48,borderRadius:item.type==="color"||item.type==="rainbow"?"50%":10,background:item.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:item.type==="color"?0:22,color:"#fff",boxShadow:`0 2px 8px ${(item.color||"").startsWith("#")?item.color+"44":"rgba(0,0,0,.2)"}`,margin:"4px 0"}}>
                       {item.type!=="color"&&item.type!=="rainbow"&&item.icon}
@@ -3810,12 +3813,17 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
                       {isFree?(
                         <button onClick={()=>buy(item)} style={{width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"8px 12px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Upload →</button>
                       ):isOwned&&!item.consumable?(
-                        <button disabled style={{width:"100%",background:"none",color:T.ok,border:`1px solid ${T.ok}`,borderRadius:9999,padding:"8px 12px",fontSize:11,fontWeight:700,cursor:"default",fontFamily:"inherit"}}>✓ Owned</button>
+                        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                          <div style={{width:"100%",background:T.ok+"18",color:T.ok,border:`1.5px solid ${T.ok}55`,borderRadius:9999,padding:"6px 12px",fontSize:11,fontWeight:700,textAlign:"center"}}>✓ Owned</div>
+                          {item.type==="color"&&<button onClick={()=>{playSound("click");onPurchase&&onPurchase(item);}} style={{width:"100%",background:"none",color:T.accent,border:`1px solid ${T.accent}55`,borderRadius:9999,padding:"5px 12px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Apply Color →</button>}
+                        </div>
+                      ):isOwned&&item.consumable?(
+                        <div style={{width:"100%",background:"#ef444415",color:"#ef4444",border:"1.5px solid #ef444455",borderRadius:9999,padding:"6px 12px",fontSize:11,fontWeight:700,textAlign:"center"}}>Used</div>
                       ):(
                         <button onClick={()=>canAfford?setConfirming(item):null}
                           disabled={!canAfford}
                           style={{width:"100%",background:canAfford?T.accent:T.bor,color:canAfford?"#fff":T.sub,border:"none",borderRadius:9999,padding:"8px 12px",fontSize:11,fontWeight:700,cursor:canAfford?"pointer":"not-allowed",fontFamily:"inherit",opacity:canAfford?1:0.6,transition:"opacity .15s"}}>
-                          {item.cost} XP {canAfford?"→":"✕"}
+                          {item.cost} XP {canAfford?"→":"— need more XP"}
                         </button>
                       )}
                     </div>
@@ -6163,13 +6171,44 @@ export default function App() {
                           <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Accent Color</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Choose your preferred accent color for highlights and buttons.</div>
                           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                            {[{label:"Scarlet",value:"#C8102E"},{label:"Blue",value:"#1e7fa8"},{label:"Purple",value:"#7c3aed"},{label:"Green",value:"#15803d"},{label:"Orange",value:"#c2410c"},{label:"Pink",value:"#be185d"}].map(ac=>(
-                              <button key={ac.value} onClick={()=>{playSound("click");applyTheme(dark,compact,ac.value);}} title={ac.label}
-                                style={{width:30,height:30,borderRadius:"50%",background:ac.value,border:`3px solid ${T.scarlet===ac.value?"#000":"transparent"}`,cursor:"pointer",transition:"transform .15s,border-color .15s",boxShadow:T.scarlet===ac.value?`0 0 0 2px ${ac.value}`:"none"}}
-                                onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
-                                onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
-                              />
-                            ))}
+                            {(()=>{
+                              const unlockedIds=JSON.parse(localStorage.getItem("nl3-unlocked-colors")||"[]");
+                              const baseColors=[
+                                {id:"base",label:"Scarlet",value:"#C8102E",locked:false},
+                                {id:"base",label:"Blue",value:"#1e7fa8",locked:false},
+                                {id:"base",label:"Purple",value:"#7c3aed",locked:false},
+                                {id:"base",label:"Green",value:"#15803d",locked:false},
+                                {id:"base",label:"Orange",value:"#c2410c",locked:false},
+                                {id:"base",label:"Pink",value:"#be185d",locked:false},
+                              ];
+                              const shopColors=[
+                                {id:"color_teal",    label:"Teal",    value:"#0d9488"},
+                                {id:"color_indigo",  label:"Indigo",  value:"#4f46e5"},
+                                {id:"color_rose",    label:"Rose",    value:"#e11d48"},
+                                {id:"color_amber",   label:"Amber",   value:"#d97706"},
+                                {id:"color_emerald", label:"Emerald", value:"#059669"},
+                                {id:"color_violet",  label:"Violet",  value:"#9333ea"},
+                                {id:"color_slate",   label:"Slate",   value:"#475569"},
+                                {id:"color_cyan",    label:"Cyan",    value:"#0891b2"},
+                                {id:"color_lime",    label:"Lime",    value:"#65a30d"},
+                                {id:"color_fuchsia", label:"Fuchsia", value:"#c026d3"},
+                                {id:"color_midnight",label:"Midnight",value:"#1e1b4b"},
+                                {id:"color_gold",    label:"Gold",    value:"#b45309"},
+                              ].map(c=>({...c,locked:!unlockedIds.includes(c.id)}));
+                              return [...baseColors,...shopColors].map(ac=>{
+                                const isActive=T.accent===ac.value;
+                                return (
+                                  <div key={ac.label} style={{position:"relative"}} title={ac.locked?`${ac.label} — buy in XP Shop`:ac.label}>
+                                    <button onClick={()=>{if(ac.locked){setShowShop(true);toast("Buy this color in the XP Shop! 🛍","warn");return;}playSound("click");applyTheme(dark,compact,ac.value);}}
+                                      style={{width:30,height:30,borderRadius:"50%",background:ac.value,border:`3px solid ${isActive?"#000":"transparent"}`,cursor:ac.locked?"pointer":"pointer",transition:"transform .15s,border-color .15s",boxShadow:isActive?`0 0 0 2px ${ac.value}`:"none",opacity:ac.locked?0.35:1,filter:ac.locked?"grayscale(0.5)":"none"}}
+                                      onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
+                                      onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
+                                    />
+                                    {ac.locked&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",fontSize:10}}>🔒</div>}
+                                  </div>
+                                );
+                              });
+                            })()}
                           </div>
                         </div>
 
@@ -6543,18 +6582,33 @@ export default function App() {
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
             {showRating&&<RatingModal T={T} user={user} open={showRating} onClose={()=>setShowRating(false)}/>}
             {showPfpUpload&&<PfpUploadModal T={T} user={user} emps={emps} setEmps={setEmps} open={showPfpUpload} onClose={()=>setShowPfpUpload(false)} toast={toast}/>}
-            {showShop&&<XPShopModal T={T} user={user} progress={progress} open={showShop} onClose={()=>setShowShop(false)} onPurchase={(item)=>{
-              if(item.type==="color"){applyTheme(dark,compact,item.color);toast(`${item.name} applied!`);}
+            {showShop&&<XPShopModal T={T} user={user} progress={progress} open={showShop} onClose={()=>setShowShop(false)} onSpendXP={(uid,pg)=>setProgress(prev=>({...prev,[uid]:pg}))} onPurchase={(item)=>{
+              if(item.type==="color"||item.type==="rainbow"){
+                // Apply the color immediately
+                applyTheme(dark,compact,item.color==="linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7)"?"#C8102E":item.color);
+                // Save unlocked colors to localStorage so settings shows them
+                const saved=JSON.parse(localStorage.getItem("nl3-unlocked-colors")||"[]");
+                if(!saved.includes(item.id)){saved.push(item.id);localStorage.setItem("nl3-unlocked-colors",JSON.stringify(saved));}
+                toast(`${item.name} color applied! Find it in Settings → Display.`);
+              }
               else if(item.type==="pfp"){setShowPfpUpload(true);}
               else if(item.type==="streak_save"){
-                // Restore streak to 1 (or previous value if stored)
                 const pg=progress[user.id]||{};
-                SB.upsert("user_progress",{user_id:user.id,xp:pg.xp||0,level:pg.level||1,title:pg.title||"Pioneer",streak:Math.max(pg.streak||0,1),last_login:new Date().toISOString().slice(0,10)}).then(()=>{
-                  setProgress(prev=>({...prev,[user.id]:{...pg,streak:Math.max(pg.streak||0,1),last_login:new Date().toISOString().slice(0,10)}}));
+                const restoredStreak=Math.max((pg.streak||0)+1,1);
+                SB.upsert("user_progress",{user_id:user.id,xp:pg.xp||0,level:pg.level||1,title:pg.title||"Pioneer",streak:restoredStreak,last_login:new Date().toISOString().slice(0,10)}).then(()=>{
+                  setProgress(prev=>({...prev,[user.id]:{...pg,streak:restoredStreak,last_login:new Date().toISOString().slice(0,10)}}));
                 });
-                toast("Streak restored! 🔥");
+                toast("Streak restored to "+restoredStreak+"! 🔥");
               }
-              else toast(`${item.name} unlocked!`);
+              else if(item.type==="xp_gift"){
+                const pg=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+                const newXP=(pg.xp||0)+(item.amount||100);
+                const info=getLevelInfo(newXP);
+                SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:pg.streak||0,last_login:pg.last_login||""});
+                setProgress(prev=>({...prev,[user.id]:{...pg,xp:newXP,level:info.level,title:info.title}}));
+                toast(`+${item.amount} XP added! 🎁`);
+              }
+              else toast(`${item.name} unlocked! Check your profile.`);
             }}/>}
             {showOnboarding&&<OnboardingTour T={T} user={user} open={showOnboarding} onClose={()=>setShowOnboarding(false)} setPage={p=>{setPrevPage(page);setPage(p);}} setShowFinn={setShowFinn} setShowFeedback={setShowFeedback}/>}
 
