@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.8.4";
+const VERSION   = "1.9.0";
 const FINN_VERSION = "1.4.0";
 const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
@@ -79,7 +79,17 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.9.0": [
+    "New: Minimal Mode — clean Google-inspired UI, same features, different feel",
+    "Minimal Mode: toggleable in Settings → Display & Sound",
+    "Minimal Mode: supports light and dark variants",
+    "Minimal Mode: persists across sessions and app updates",
+    "Minimal Mode: Google Antigravity palette — white cards, pill buttons, Google Sans",
+    "Minimal Mode: Btn component switches to flat pill style",
+    "Minimal Mode: primary accent switches to dark/black Google-style",
+  ],
   "1.8.4": [
+
     "Fix: Notifications no longer fire twice — webhook + manual call conflict resolved",
     "Fix: Global 5-second notification rate limiter added to NOTIF object",
     "Fix: Tasks now save correctly to Supabase — repeat_days column conflict removed",
@@ -295,7 +305,38 @@ const LOCK_MS    = 5 * 60 * 1000;
 const AUTO_LOGOUT_MS = 30 * 60 * 1000;
 
 // ─── THEMES ───────────────────────────────────────────────────────────────────
-const mkTheme = (dark, compact, accent) => ({
+const // ── Google Antigravity exact minimal theme ──────────────────────────────────
+mkMinimalTheme = (dark, compact, accent) => ({
+  // Exact Google Antigravity palette
+  scarlet: dark?"#ffffff":"#202124",  // pill color = opposite of bg
+  sD:      dark?"#aecbfa":"#3c4043",
+  sG:      dark?"#8ab4f820":"#20212410",
+  blue:    dark?"#8ab4f8":"#1a73e8",  // link/accent blue
+  bD:      dark?"#aecbfa":"#1557b0",
+  bG:      dark?"#8ab4f812":"#1a73e810",
+  bg:      dark?"#000000":"#ffffff",  // pure black / pure white
+  surf:    dark?"#111111":"#ffffff",
+  surfH:   dark?"#1a1a1a":"#f8f9fa",
+  card:    dark?"#111111":"#ffffff",
+  bor:     dark?"#2a2a2a":"#e0e0e0",
+  borH:    dark?"#5f6368":"#bdc1c6",
+  txt:     dark?"#ffffff":"#000000",
+  sub:     dark?"#888888":"#666666",
+  faint:   dark?"#3c4043":"#e8eaed",
+  mut:     dark?"#5f6368":"#80868b",
+  ok:      dark?"#81c995":"#188038",
+  warn:    dark?"#fdd663":"#e37400",
+  err:     dark?"#f28b82":"#c5221f",
+  accent: accent || "#C8102E", // user-chosen accent color
+  dark, compact, minimal:true,
+  // Generous spacing — airy like Antigravity
+  sp: compact ? { xs:2, sm:4, md:8,  lg:12, xl:16, r:9999, card:12 }
+              : { xs:4, sm:8, md:16, lg:24, xl:32, r:9999, card:12 },
+  fs: compact ? { xs:9,  sm:10, md:12, lg:14, xl:16 }
+              : { xs:11, sm:13, md:15, lg:17, xl:21 },
+});
+
+mkTheme = (dark, compact, accent) => ({
   // accent overrides scarlet if provided
   scarlet:accent||"#C8102E", sD:accent?accent+"cc":"#9e0b23", sG:dark?(accent||"#C8102E")+"30":(accent||"#C8102E")+"20",
   blue: dark?"#5BBFDB":"#1e7fa8", bD:dark?"#3aa8c7":"#155f80", bG:dark?"#5BBFDB20":"#1e7fa818",
@@ -312,14 +353,16 @@ const mkTheme = (dark, compact, accent) => ({
   ok:   dark?"#22c55e":"#15803d",
   warn: dark?"#f59e0b":"#b45309",
   err:  dark?"#ef4444":"#dc2626",
+  accent: accent||"#C8102E",
   dark, compact,
   // Compact is VERY dramatic - nearly half the spacing/size
-  sp: compact ? { xs:1, sm:3, md:6,  lg:10, xl:14, r:8  }
-              : { xs:3, sm:8, md:14, lg:22, xl:30, r:16 },
+  sp: compact ? { xs:1, sm:3, md:6,  lg:10, xl:14, r:8,  card:8  }
+              : { xs:3, sm:8, md:14, lg:22, xl:30, r:16, card:16 },
   fs: compact ? { xs:9,  sm:10, md:11, lg:13, xl:15 }
               : { xs:11, sm:13, md:15, lg:17, xl:21 },
 });
-const T0 = mkTheme(false, false, "");
+const T0 = (()=>{ try{ const m=JSON.parse(localStorage.getItem("nl3-minimal")); const dk=JSON.parse(localStorage.getItem("nl3-dark")); const cp=JSON.parse(localStorage.getItem("nl3-compact")); const ac=localStorage.getItem("nl3-accent")||"";
+window._minimalMode=!!m; window._minimalSounds=(localStorage.getItem('nl3-minimal-sound')!==String(false)); window._showEmojis=(localStorage.getItem('nl3-emojis')!==String(false)); const se=localStorage.getItem("nl3-emojis")!==String(false); if(m) return {...mkMinimalTheme(!!dk,!!cp,ac),showEmojis:se}; return {...mkTheme(!!dk,!!cp,ac),showEmojis:se}; }catch(e){ window._minimalMode=false; window._showEmojis=true; window._minimalSounds=false; return mkTheme(false,false,""); } })();
 
 // ─── SOUND ENGINE ─────────────────────────────────────────────────────────────
 // Shared AudioContext — reused so browsers don't block it after first interaction
@@ -352,113 +395,96 @@ if (typeof document !== "undefined") {
   });
 }
 
-function playSound(type="click") {
+// Original rich sound engine — used in normal (non-minimal) mode
+function _playSoundRich(type="click") {
   if (!window._soundOn) return;
   const ctx = getCtx();
   if (!ctx) return;
   try {
     const now = ctx.currentTime;
+    const vol = window._soundVol ?? 0.22;
     const master = ctx.createGain();
+    master.gain.setValueAtTime(vol, now);
     master.connect(ctx.destination);
-    master.gain.value = window._soundVol ?? 0.22;
-
-    const note = (freq, start, dur, vol=1, wave="sine") => {
+    const note = (freq, startT, dur, vol2=0.6, wave="sine") => {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
+      o.type = wave;
+      o.frequency.setValueAtTime(freq, startT);
+      g.gain.setValueAtTime(0, startT);
+      g.gain.linearRampToValueAtTime(vol2, startT + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, startT + dur);
       o.connect(g); g.connect(master);
-      o.type = wave; o.frequency.value = freq;
-      g.gain.setValueAtTime(0.001, now + start);
-      g.gain.linearRampToValueAtTime(vol, now + start + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.001, now + start + Math.max(dur, 0.05));
-      o.start(now + start);
-      o.stop(now + start + dur + 0.06);
+      o.start(startT); o.stop(startT + dur + 0.05);
+    };
+    const sounds = {
+      click:   ()=>note(880,now,0.08,0.5),
+      open:    ()=>{note(523,now,0.1,0.4);note(659,now+0.06,0.12,0.35);},
+      close:   ()=>{note(659,now,0.08,0.35);note(523,now+0.05,0.1,0.3);},
+      notify:  ()=>{note(783,now,0.1,0.4);note(987,now+0.08,0.15,0.35);},
+      success: ()=>{note(523,now,0.08,0.4);note(659,now+0.06,0.08,0.35);note(783,now+0.12,0.15,0.4);},
+      delete:  ()=>note(220,now,0.12,0.5,"sawtooth"),
+      warn:    ()=>{note(440,now,0.1,0.4,"triangle");note(440,now+0.12,0.1,0.3,"triangle");},
+      dm:      ()=>{note(659,now,0.06,0.3);note(880,now+0.05,0.1,0.3);},
+      finn:    ()=>{[523,659,783,1046].forEach((f,i)=>note(f,now+i*0.06,0.1,0.3));},
+      backup:  ()=>{note(523,now,0.08,0.3);note(659,now+0.1,0.12,0.3);},
+      login:   ()=>{
+        // Cool ascending login chord — C → E → G → C → E (major triumph)
+        note(523, now,      0.12, 0.45);  // C5
+        note(659, now+0.08, 0.14, 0.40);  // E5
+        note(783, now+0.16, 0.16, 0.42);  // G5
+        note(1046,now+0.24, 0.20, 0.48);  // C6
+        note(1318,now+0.32, 0.30, 0.50);  // E6 — final shimmer
+        // Subtle sparkle on top
+        note(2093,now+0.40, 0.25, 0.18, "sine");
+      },
+      logout:  ()=>{note(659,now,0.1,0.3);note(523,now+0.08,0.12,0.25);},
+    };
+    (sounds[type]||sounds.click)();
+  } catch(e) {}
+}
+
+function playSound(type="click") {
+  if (!window._soundOn) return;
+  if (!window._minimalMode || window._minimalSounds===false) { _playSoundRich(type); return; }
+  // Minimal mode with minimal sounds on — clean short tones only
+  const ctx = getCtx();
+  if (!ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const vol = window._soundVol ?? 0.22;
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(vol * 0.7, now); // Minimal = slightly quieter
+    master.connect(ctx.destination);
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(master);
+
+    // Clean minimal sound map — short, soft, unobtrusive
+    const sounds = {
+      click:    { freq:880,  type:"sine",     dur:0.05, attack:0.003, decay:0.04  },
+      open:     { freq:1046, type:"sine",     dur:0.08, attack:0.004, decay:0.07  },
+      close:    { freq:784,  type:"sine",     dur:0.06, attack:0.002, decay:0.05  },
+      notify:   { freq:1174, type:"sine",     dur:0.12, attack:0.005, decay:0.10  },
+      success:  { freq:1318, type:"sine",     dur:0.14, attack:0.005, decay:0.12  },
+      delete:   { freq:392,  type:"sine",     dur:0.08, attack:0.002, decay:0.07  },
+      warn:     { freq:659,  type:"triangle", dur:0.10, attack:0.003, decay:0.09  },
+      dm:       { freq:1046, type:"sine",     dur:0.09, attack:0.004, decay:0.08  },
+      finn:     { freq:1318, type:"sine",     dur:0.10, attack:0.005, decay:0.09  },
+      backup:   { freq:880,  type:"sine",     dur:0.10, attack:0.004, decay:0.09  },
+      login:    { freq:1046, type:"sine",     dur:0.15, attack:0.005, decay:0.13  },
+      logout:   { freq:659,  type:"sine",     dur:0.10, attack:0.003, decay:0.09  },
     };
 
-    switch(type) {
-      case "click":
-        // Very subtle soft tick
-        note(440, 0,    0.06, 0.24, "sine");
-        note(550, 0.03, 0.05, 0.10, "sine");
-        break;
-      case "success":
-        // Gentle confirmation — calm rising notes
-        note(370, 0,    0.20, 0.32, "sine");
-        note(440, 0.14, 0.20, 0.26, "sine");
-        note(523, 0.28, 0.30, 0.22, "sine");
-        break;
-      case "error":
-        // Buzzy descending
-        note(320, 0,    0.14, 0.75, "sawtooth");
-        note(240, 0.12, 0.18, 0.65, "sawtooth");
-        note(190, 0.26, 0.22, 0.5,  "sawtooth");
-        break;
-      case "notify":
-        // Double bright ping
-        note(1046,0,    0.10, 0.45, "sine");
-        note(1318,0.13, 0.12, 0.38, "sine");
-        break;
-      case "open":
-        // Subtle soft open
-        note(300, 0,    0.08, 0.20, "sine");
-        note(370, 0.06, 0.08, 0.14, "sine");
-        break;
-      case "login":
-        // Soft welcome — gentle rising tones
-        note(330, 0,    0.22, 0.30, "sine");
-        note(415, 0.15, 0.22, 0.25, "sine");
-        note(494, 0.30, 0.28, 0.22, "sine");
-        note(523, 0.44, 0.35, 0.20, "sine");
-        break;
-      case "logout":
-        // Farewell descent G-E-C-Bb
-        note(784, 0,    0.14, 0.48, "sine");
-        note(659, 0.12, 0.14, 0.43, "sine");
-        note(523, 0.24, 0.18, 0.38, "sine");
-        note(440, 0.34, 0.24, 0.28, "sine");
-        break;
-      case "dm":
-        // Bubble pop
-        note(1400,0,    0.045,0.32, "sine");
-        note(1000,0.05, 0.07, 0.22, "sine");
-        break;
-      case "warn":
-        // Urgent siren
-        note(480, 0,    0.11, 0.58, "square");
-        note(600, 0.13, 0.11, 0.58, "square");
-        note(480, 0.27, 0.11, 0.48, "square");
-        break;
-      case "task":
-        // Rising tick-check
-        note(660, 0,    0.06, 0.38, "sine");
-        note(990, 0.07, 0.10, 0.48, "sine");
-        note(1320,0.16, 0.16, 0.35, "sine");
-        break;
-      case "backup":
-        // Tech beep sequence
-        note(440, 0,    0.05, 0.38, "square");
-        note(440, 0.09, 0.05, 0.38, "square");
-        note(880, 0.18, 0.13, 0.48, "square");
-        break;
-      case "delete":
-        // Short descending pop
-        note(500, 0,    0.06, 0.42, "sine");
-        note(350, 0.05, 0.10, 0.32, "sine");
-        break;
-      case "modal":
-        // Light open swoosh
-        note(600, 0,    0.08, 0.30, "sine");
-        note(800, 0.06, 0.10, 0.22, "sine");
-        break;
-      case "finn":
-        // Finn signature — ascending hex arpeggio, ethereal
-        note(523,  0,    0.12, 0.18, "sine");
-        note(659,  0.08, 0.12, 0.22, "sine");
-        note(784,  0.16, 0.14, 0.26, "sine");
-        note(1047, 0.26, 0.22, 0.30, "sine");
-        note(1319, 0.38, 0.28, 0.22, "sine");
-        note(1047, 0.52, 0.18, 0.14, "sine");
-        break;
-    }
+    const s = sounds[type] || sounds.click;
+    osc.type = s.type;
+    osc.frequency.setValueAtTime(s.freq, now);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.9, now + s.attack);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + s.dur);
+    osc.start(now);
+    osc.stop(now + s.dur + 0.01);
   } catch(e) {}
 }
 
@@ -536,6 +562,13 @@ const DB = {
 };
 
 // LS — localStorage for per-device display preferences (never shared)
+// Emoji helper — minimal mode only. Normal mode ALWAYS shows emoji.
+const E = (emoji, fallback="") => {
+  // Only suppress emojis if: minimal mode is ON AND emoji toggle is OFF
+  if (!window._minimalMode || window._showEmojis!==false) return emoji;
+  return fallback||emoji;
+};
+
 const LS = {
   get: k => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):null; } catch { return null; } },
   set: (k,v) => { try { localStorage.setItem(k,JSON.stringify(v)); } catch {} },
@@ -649,7 +682,15 @@ const StatusDot = ({status}) => {
 
 function Btn({children,onClick,variant,sm,xs,disabled,full,flex,T,style:sx={},sound}) {
   const [p,setP]=useState(false);
-  const V={
+  const mn=T.minimal;
+  const V= mn ? {
+    // Google Antigravity pill style — primary is ALWAYS red #C8102E (MNU brand)
+    primary:{bg:T.accent,color:"#fff",border:"none"},
+    blue:   {bg:"#1a73e8",color:"#fff",border:"none"},
+    ghost:  {bg:"transparent",color:T.txt,border:`1.5px solid ${T.txt}`},
+    danger: {bg:"transparent",color:"#c5221f",border:"1px solid #f28b8288"},
+    success:{bg:"#188038",color:"#fff",border:"none"},
+  } : {
     primary:{bg:`linear-gradient(135deg,${T.scarlet},${T.sD})`,color:"#fff",border:"none"},
     blue:   {bg:`linear-gradient(135deg,${T.blue},${T.bD})`,   color:"#fff",border:"none"},
     ghost:  {bg:T.surfH,color:T.sub,border:`1px solid ${T.bor}`},
@@ -659,18 +700,15 @@ function Btn({children,onClick,variant,sm,xs,disabled,full,flex,T,style:sx={},so
   const v=V[variant||"primary"];
   const pad=xs?"4px 10px":sm?"6px 14px":"10px 20px";
   const fs=xs?11:sm?12:14;
-  // Auto pick sound based on variant if not specified
+  const radius=mn?9999:T.sp.r;
   const snd=sound||(variant==="danger"?"delete":variant==="success"?"success":"click");
-  const handleClick=e=>{
-    if(!disabled){playSound(snd);}
-    onClick?.(e);
-  };
+  const handleClick=e=>{ if(!disabled){playSound(snd);} onClick?.(e); };
   return (
     <button onClick={handleClick} disabled={disabled} className="btn-press"
       onMouseDown={()=>setP(true)} onMouseUp={()=>setP(false)} onMouseLeave={()=>setP(false)}
-      style={{background:v.bg,color:v.color,border:v.border,borderRadius:T.sp.r,padding:pad,fontWeight:700,fontSize:fs,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.5:1,transform:p?"scale(0.95)":"scale(1)",transition:"filter .15s,transform .12s cubic-bezier(.23,1,.32,1)",fontFamily:"inherit",width:full?"100%":undefined,flex:flex||undefined,...sx}}
-      onMouseEnter={e=>{if(!disabled)e.currentTarget.style.filter="brightness(1.08)";}}
-      onMouseLeave={e=>{e.currentTarget.style.filter="none";}}
+      style={{background:v.bg,color:v.color,border:v.border,borderRadius:radius,padding:pad,fontWeight:mn?500:700,fontSize:fs,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.5:1,transform:p?"scale(0.97)":"scale(1)",transition:"all .15s",letterSpacing:mn?"0.01em":undefined,fontFamily:"inherit",width:full?"100%":undefined,flex:flex||undefined,...sx}}
+      onMouseEnter={e=>{if(!disabled)e.currentTarget.style.opacity=mn?"0.85":"1";e.currentTarget.style.filter=mn?"none":"brightness(1.08)";}}
+      onMouseLeave={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.filter="none";}}
     >{children}</button>
   );
 }
@@ -701,7 +739,7 @@ function Textarea({label,T,...rest}) {
   return (
     <div>
       {label&&<div style={{fontSize:11,color:T.sub,marginBottom:4,fontWeight:700,letterSpacing:"0.05em"}}>{label}</div>}
-      <textarea {...rest} style={{width:"100%",background:T.bg,border:`1px solid ${f?T.blue:T.bor}`,borderRadius:T.sp.r,color:T.txt,padding:`${T.sp.md-2}px 14px`,fontSize:T.fs.md,fontFamily:"inherit",outline:"none",resize:"vertical",transition:"border-color .2s",...(rest.style||{})}}
+      <textarea {...rest} style={{width:"100%",background:T.bg,border:`1px solid ${f?T.blue:T.bor}`,borderRadius:T.sp.card||Math.min(T.sp.r,16),color:T.txt,padding:`${T.sp.md-2}px 14px`,fontSize:T.fs.md,fontFamily:"inherit",outline:"none",resize:"vertical",transition:"border-color .2s",...(rest.style||{})}}
         onFocus={e=>{setF(true);rest.onFocus?.(e);}} onBlur={e=>{setF(false);rest.onBlur?.(e);}}/>
     </div>
   );
@@ -727,7 +765,12 @@ function Modal({title,children,onClose,wide,T}) {
   );
 }
 
-function Avatar({email,color,size=36}) {
+function Avatar({email,color,size=36,avatarUrl}) {
+  if(avatarUrl){
+    return <div style={{width:size,height:size,borderRadius:"50%",border:`2px solid ${color}55`,overflow:"hidden",flexShrink:0,background:color+"22"}}>
+      <img src={avatarUrl} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>{e.target.style.display="none";}}/>
+    </div>;
+  }
   return <div style={{width:size,height:size,borderRadius:"50%",background:color+"22",border:`2px solid ${color}55`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color,fontSize:size*0.42,flexShrink:0}}>{initial(email)}</div>;
 }
 
@@ -744,11 +787,11 @@ function ToastList({items}) {
 function VersionBadge({T,hide}) {
   return (
     <div style={{position:"fixed",bottom:12,right:8,zIndex:499,background:T.surf,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:"0.03em",userSelect:"none",display:"flex",gap:5,alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)",opacity:hide?0:1,transform:hide?"translateY(12px)":"translateY(0)",transition:"opacity .25s ease,transform .25s ease",pointerEvents:hide?"none":"auto"}}>
-      <span style={{color:T.scarlet,fontWeight:800}}>MNU</span>
+      <span style={{color:T.accent,fontWeight:800}}>MNU</span>
       <span style={{color:T.faint}}>·</span>
       <span style={{color:T.sub}}>Neer Locker</span>
       <span style={{color:T.faint}}>·</span>
-      <span style={{color:T.scarlet}}>v{VERSION}</span>
+      <span style={{color:T.accent}}>v{VERSION}</span>
       <span style={{color:T.mut,fontWeight:600}}>{BUILD_TAG}</span>
     </div>
   );
@@ -906,7 +949,7 @@ function TechExitAnim({T}) {
         {lines.map((line,i)=>(
           <div key={i} style={{opacity:0,animation:`fadeUp .25s ${i*30}ms ease both`,display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
             <span style={{color:i===lines.length-1&&progress>=1?T.scarlet:T.warn,fontWeight:700}}>{i===lines.length-1&&progress>=1?"✕":"‹"}</span>
-            <span style={{color:i===lines.length-1&&progress>=1?T.scarlet+"cc":T.warn+"cc"}}>{line}</span>
+            <span style={{color:i===lines.length-1&&progress>=1?T.accent+"cc":T.warn+"cc"}}>{line}</span>
           </div>
         ))}
         {progress<1&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:2}}>
@@ -997,7 +1040,7 @@ function WelcomeAnim({name,role,T,onDone}) {
       {/* Name + rotating tagline */}
       <div style={{textAlign:"center",opacity:step>=1?1:0,transform:step>=1?"translateY(0)":"translateY(14px)",transition:"opacity .4s ease,transform .4s ease",maxWidth:300}}>
         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:24,fontWeight:800,color:T.txt,lineHeight:1.2}}>Welcome back, {name.split(" ")[0]}.</div>
-        <div style={{color:T.scarlet,fontSize:13,fontWeight:600,marginTop:7,fontStyle:"italic",animation:"fadeUp .35s ease both"}}>
+        <div style={{color:T.accent,fontSize:13,fontWeight:600,marginTop:7,fontStyle:"italic",animation:"fadeUp .35s ease both"}}>
           {quote}
         </div>
         <div style={{color:T.sub,fontSize:12,marginTop:8}}>{rc.label} &middot; MNU&apos;s Neer Locker</div>
@@ -1086,17 +1129,18 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
   const totalBadge=myTasks+myAnns+unreadDMs;
 
   const items=[
-    {key:"home",        icon:"🏠", label:"Home"},
-    {key:"tasks",       icon:"✅", label:"Tasks",         badge:myTasks,   perm:"tasks"},
-    {key:"inv",         icon:"📦", label:"Inventory",      perm:"inv"},
-    {key:"anns",        icon:"🔔", label:"Announcements",  badge:myAnns,    perm:"ann"},
-    {key:"dms",         icon:"💬", label:"Messages",       badge:unreadDMs, perm:"dms"},
-    {key:"leaderboard", icon:"🏆", label:"Leaderboard",    perm:"leaderboard"},
-    {key:"act",         icon:"📊", label:"Activity",       perm:"act"},
-    {key:"schedule",    icon:"📅", label:"Schedule"},
-    {key:"set",         icon:"⚙️", label:"Settings"},
+    {key:"home",        icon:E("🏠","⌂"), label:"Home"},
+    {key:"tasks",       icon:E("✅","✓"), label:"Tasks",         badge:myTasks,   perm:"tasks"},
+    {key:"inv",         icon:E("📦","□"), label:"Inventory",      perm:"inv"},
+    {key:"anns",        icon:E("🔔","○"), label:"Announcements",  badge:myAnns,    perm:"ann"},
+    {key:"dms",         icon:E("💬","≡"), label:"Messages",       badge:unreadDMs, perm:"dms"},
+    {key:"leaderboard", icon:E("🏆","◆"), label:"Leaderboard",    perm:"leaderboard"},
+    {key:"act",         icon:E("📊","▦"), label:"Activity",       perm:"act"},
+    {key:"schedule",    icon:E("📅","◷"), label:"Schedule"},
+    {key:"set",         icon:E("⚙️","◎"), label:"Settings"},
     {key:"finn",        icon:"finn",label:"Ask Finn",      finn:true},
-  ].filter(i=>!i.perm||can(user,i.perm));
+  ].filter(i=>!i.perm||can(user,i.perm))
+  ;
 
   // Close on outside click
   useEffect(()=>{
@@ -1111,10 +1155,10 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
     <div ref={ref} style={{position:"relative"}}>
       {/* Circle nav button */}
       <button onClick={()=>{setOpen(o=>!o);playSound("open");}}
-        title="Navigation Menu"
+        title="Navigation Menu" data-tour="nav-button"
         className="nav-circle-btn"
-        style={{width:48,height:48,borderRadius:"50%",background:open?T.scarlet:T.surf,border:`2px solid ${open?T.scarlet:T.bor}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,padding:0,transition:"all .2s",boxShadow:open?"0 4px 20px "+T.scarlet+"55":"0 2px 10px rgba(0,0,0,.14)",position:"relative",flexShrink:0,touchAction:"manipulation"}}
-        onMouseEnter={e=>{if(!open){e.currentTarget.style.background=T.scarlet+"18";e.currentTarget.style.borderColor=T.scarlet+"88";e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.18)";}}}
+        style={{width:48,height:48,borderRadius:"50%",background:open?T.scarlet:T.surf,border:`${T.minimal?"1.5px":"2px"} solid ${open?T.scarlet:T.bor}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,padding:0,transition:"all .2s",boxShadow:open?"0 4px 20px "+T.accent+"55":"0 2px 10px rgba(0,0,0,.14)",position:"relative",flexShrink:0,touchAction:"manipulation"}}
+        onMouseEnter={e=>{if(!open){e.currentTarget.style.background=T.accent+"18";e.currentTarget.style.borderColor=T.scarlet+"88";e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.18)";}}}
         onMouseLeave={e=>{if(!open){e.currentTarget.style.background=T.surf;e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.boxShadow="0 2px 10px rgba(0,0,0,.14)";}}}
       >
         {/* Animated 3-line → X icon */}
@@ -1149,7 +1193,7 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
             const active=page===item.key;
             return (
               <button key={item.key} onClick={()=>go(item.key,item.finn)}
-                style={{width:"100%",background:active?T.scarlet+"18":"transparent",color:active?T.scarlet:T.sub,border:"none",borderRadius:12,padding:"13px 16px",fontWeight:700,fontSize:16,fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:12,cursor:"pointer",borderLeft:active?`4px solid ${T.scarlet}`:"4px solid transparent",transition:"all .15s",animation:`slideRight .18s ${i*25}ms ease both`}}
+                style={{width:"100%",background:active?T.accent+"18":"transparent",color:active?T.accent:T.sub,border:"none",borderRadius:12,padding:"13px 16px",fontWeight:700,fontSize:16,fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:12,cursor:"pointer",borderLeft:active?`4px solid ${T.scarlet}`:"4px solid transparent",transition:"all .15s",animation:`slideRight .18s ${i*25}ms ease both`}}
                 onMouseEnter={e=>{if(!active){e.currentTarget.style.background=T.surfH;e.currentTarget.style.color=T.txt;}}}
                 onMouseLeave={e=>{if(!active){e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.sub;}}}
               >
@@ -1170,7 +1214,7 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
                     <circle cx="11" cy="11" r="1" fill="#fff"/>
                   </svg>
                 ):(
-                  <span style={{fontSize:22,width:28,textAlign:"center",flexShrink:0}}>{item.icon}</span>
+                  <span style={{fontSize:window._showEmojis===false?16:22,width:28,textAlign:"center",flexShrink:0,fontWeight:window._showEmojis===false?"700":"normal",color:active?T.accent:T.sub}}>{item.icon}</span>
                 )}
                 <span style={{flex:1}}>{item.label}</span>
                 {(item.badge||0)>0&&<NumBadge count={item.badge} color={T.scarlet}/>}
@@ -1188,106 +1232,95 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn}) {
 
 // ─── ANIMATED HERO BANNER ─────────────────────────────────────────────────────
 function HeroBanner({user,T,onProfileClick}) {
-  const [tick,setTick]=useState(0);
   const [time,setTime]=useState(new Date());
   const [greet,setGreet]=useState("Hey");
-  const [wavePhase,setWavePhase]=useState(0);
-
   useEffect(()=>{
     const h=new Date().getHours();
     setGreet(h<12?"Good morning":h<17?"Good afternoon":"Good evening");
-    const i=setInterval(()=>{
-      setTick(t=>t+1);
-      setTime(new Date());
-      setWavePhase(w=>w+0.08);
-    },100);
+    const i=setInterval(()=>setTime(new Date()),1000);
     return()=>clearInterval(i);
   },[]);
-
   const rc=ROLES[user.role];
-  const timeStr=time.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  const timeStr=time.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
   const dateStr=time.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  if(T.minimal) {
+    // Animated minimal banner — breathing underline + color sweep + scan
+    const [phase,setPhase]=useState(0);
+    useEffect(()=>{const i=setInterval(()=>setPhase(p=>p+0.025),50);return()=>clearInterval(i);},[]);
+    const lineW=48+Math.sin(phase)*16; // breathing underline width 32–64px
+    const lineOpacity=0.4+Math.sin(phase*0.7)*0.25;
 
-  // Richer floating orbs — larger, more varied, slower drift
-  const orbs=[
-    {size:120,x:78,baseY:15,speed:0.7,color:T.scarlet,opacity:0.12},
-    {size:80, x:88,baseY:55,speed:1.1,color:T.blue,   opacity:0.10},
-    {size:60, x:5, baseY:20,speed:0.9,color:T.blue,   opacity:0.08},
-    {size:90, x:60,baseY:70,speed:0.6,color:T.scarlet,opacity:0.07},
-    {size:50, x:40,baseY:5, speed:1.3,color:T.scarlet,opacity:0.06},
-  ];
+    // Color animation — cycle through red, blue, cyan
+    const colorPhase = (phase * 0.3) % (Math.PI * 2);
+    const gradAngle = (phase * 3) % 360;
+    // Compute animated gradient color stops
+    const c1 = `hsla(${(phase*20)%360}, 75%, ${T.dark?60:48}%, 0.08)`;
+    const c2 = `hsla(${(phase*20+120)%360}, 75%, ${T.dark?60:48}%, 0.06)`;
+    const c3 = `hsla(${(phase*20+240)%360}, 75%, ${T.dark?60:48}%, 0.08)`;
 
-  // Floating emoji particles with more variety
-  const particles=["🎓","⭐","📚","🏫","✨","🎯","🏆","💡"].map((e,i)=>({
-    emoji:e, x:5+i*12,
-    y:10+Math.sin(wavePhase*speed(i)+i)*18,
-    opacity:0.05+Math.abs(Math.sin(wavePhase*0.7+i))*0.07,
-    scale:0.7+Math.abs(Math.sin(wavePhase*0.5+i))*0.5,
-    rot:(wavePhase*20+i*45)%360,
-  }));
-  function speed(i){return [0.6,0.9,0.7,1.1,0.8,0.65,1.0,0.75][i]||0.8;}
-
-  // Wave SVG path
+    return (
+      <div className="fu" style={{borderRadius:16,marginBottom:20,background:T.surf,border:`1px solid ${T.bor}`,padding:"28px 28px 24px",position:"relative",overflow:"hidden"}}>
+        {/* Animated color gradient background */}
+        <div style={{position:"absolute",inset:0,background:`linear-gradient(${gradAngle}deg, ${c1}, ${c2}, ${c3})`,transition:"none",pointerEvents:"none"}}/>
+        {/* Floating color orbs — very subtle */}
+        <div style={{position:"absolute",top:`${20+Math.sin(phase*0.5)*15}%`,left:`${75+Math.cos(phase*0.4)*10}%`,width:120,height:120,borderRadius:"50%",background:`radial-gradient(circle,hsla(${(phase*15)%360},80%,${T.dark?60:50}%,0.12) 0%,transparent 70%)`,filter:"blur(20px)",pointerEvents:"none",transition:"none"}}/>
+        <div style={{position:"absolute",top:`${60+Math.sin(phase*0.6+1)*12}%`,left:`${20+Math.cos(phase*0.5+2)*10}%`,width:90,height:90,borderRadius:"50%",background:`radial-gradient(circle,hsla(${(phase*15+180)%360},80%,${T.dark?60:50}%,0.10) 0%,transparent 70%)`,filter:"blur(18px)",pointerEvents:"none",transition:"none"}}/>
+        {/* Animated scan line — very subtle */}
+        <div style={{position:"absolute",top:0,left:0,right:0,height:"1px",background:`linear-gradient(90deg,transparent,${T.scarlet}${T.dark?"66":"33"},transparent)`,transform:`translateX(${(Math.sin(phase*0.4)*50)+25}%)`,transition:"none",pointerEvents:"none"}}/>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,flexWrap:"wrap",position:"relative",zIndex:2}}>
+          <div style={{flex:1,minWidth:200}}>
+            <div style={{fontSize:11,fontWeight:500,color:T.sub,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>{dateStr}</div>
+            <div style={{fontSize:28,fontWeight:400,color:T.txt,lineHeight:1.1,marginBottom:6,letterSpacing:"-0.5px"}}>
+              {greet},
+            </div>
+            <div style={{fontSize:28,fontWeight:700,color:T.txt,lineHeight:1.1,marginBottom:4,letterSpacing:"-0.5px"}}>{user.name}</div>
+            {/* Breathing animated underline */}
+            <div style={{width:lineW,height:2,background:`linear-gradient(90deg, hsl(${(phase*25)%360},80%,55%), hsl(${(phase*25+120)%360},80%,55%))`,borderRadius:9999,opacity:lineOpacity,marginBottom:18,transition:"none"}}/>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button onClick={onProfileClick} style={{background:"none",border:`1.5px solid ${T.bor}`,borderRadius:9999,padding:"5px 16px",fontSize:12,fontWeight:500,color:T.sub,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet;e.currentTarget.style.color=T.scarlet;}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
+              >{rc?.label}</button>
+              <button onClick={onProfileClick} style={{background:"none",border:`1.5px solid ${T.bor}`,borderRadius:9999,padding:"5px 14px",fontSize:12,fontWeight:500,color:T.sub,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.txt;e.currentTarget.style.color=T.txt;}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
+              ><StatusDot status={user.status||"online"}/><span style={{textTransform:"capitalize"}}>{user.status||"online"}</span></button>
+            </div>
+          </div>
+          {/* Clock — large, lightweight with color sweep */}
+          <div style={{textAlign:"right",flexShrink:0,paddingTop:4}}>
+            <div style={{fontSize:38,fontWeight:200,color:T.txt,letterSpacing:"-1px",fontVariantNumeric:"tabular-nums",lineHeight:1}}>{timeStr}</div>
+            <div style={{fontSize:10,color:T.sub,marginTop:6,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase"}}>Local time</div>
+            {/* Color breathing dot indicator */}
+            <div style={{width:6,height:6,borderRadius:"50%",background:`hsl(${(phase*25)%360},80%,55%)`,opacity:0.5+Math.sin(phase)*0.5,margin:"10px 0 0 auto",transition:"none",boxShadow:`0 0 8px hsl(${(phase*25)%360},80%,55%)`}}/>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  // Original hero
+  const orbs=[{size:120,x:78,baseY:15,speed:0.7,color:T.scarlet,opacity:0.12},{size:80,x:88,baseY:55,speed:1.1,color:T.blue,opacity:0.10},{size:60,x:5,baseY:20,speed:0.9,color:T.blue,opacity:0.08},{size:90,x:60,baseY:70,speed:0.6,color:T.scarlet,opacity:0.07},{size:50,x:40,baseY:5,speed:1.3,color:T.scarlet,opacity:0.06}];
+  const [wavePhase,setWavePhase]=useState(0);
+  useEffect(()=>{const i=setInterval(()=>setWavePhase(w=>w+0.08),100);return()=>clearInterval(i);},[]);
   const W=800,H=40;
-  const pts=Array.from({length:20},(_,i)=>{
-    const x=i*(W/19);
-    const y=H/2+Math.sin(wavePhase+i*0.5)*10+Math.sin(wavePhase*1.3+i*0.8)*6;
-    return `${i===0?"M":"L"}${x},${y}`;
-  }).join(" ");
-
+  const pts=Array.from({length:20},(_,i)=>{const x=i*(W/19);const y=H/2+Math.sin(wavePhase+i*0.5)*10+Math.sin(wavePhase*1.3+i*0.8)*6;return `${i===0?"M":"L"}${x},${y}`;}).join(" ");
   return (
     <div className="fu" style={{position:"relative",overflow:"hidden",borderRadius:20,marginBottom:20,minHeight:160,background:T.dark?`linear-gradient(145deg,#200810 0%,#0e0508 40%,#060d1a 100%)`:`linear-gradient(145deg,#fff0f0 0%,#fff5f5 40%,#f0f4ff 100%)`,border:`1px solid ${T.bor}`,boxShadow:`0 8px 40px ${T.scarlet}20,0 2px 0 ${T.scarlet}40 inset`}}>
-
-      {/* Animated color orbs */}
-      {orbs.map((o,i)=>(
-        <div key={i} style={{position:"absolute",left:`${o.x}%`,top:`${o.baseY+Math.sin(wavePhase*o.speed+i)*14}%`,width:o.size,height:o.size,borderRadius:"50%",background:`radial-gradient(circle,${o.color} 0%,transparent 70%)`,opacity:o.opacity,transform:"translate(-50%,-50%)",transition:"top .05s ease",pointerEvents:"none",filter:"blur(8px)"}}/>
-      ))}
-
-      {/* Shimmer sweep overlay */}
+      {orbs.map((o,i)=>(<div key={i} style={{position:"absolute",left:`${o.x}%`,top:`${o.baseY+Math.sin(wavePhase*o.speed+i)*14}%`,width:o.size,height:o.size,borderRadius:"50%",background:`radial-gradient(circle,${o.color} 0%,transparent 70%)`,opacity:o.opacity,transform:"translate(-50%,-50%)",pointerEvents:"none",filter:"blur(8px)"}}/>))}
       <div style={{position:"absolute",inset:0,background:`linear-gradient(110deg,transparent 20%,${T.scarlet}08 45%,${T.blue}06 55%,transparent 80%)`,animation:"shimmer 5s ease-in-out infinite",backgroundSize:"300% 100%",pointerEvents:"none"}}/>
-
-      {/* Animated wave at bottom */}
-      <svg style={{position:"absolute",bottom:0,left:0,right:0,width:"100%",height:40,pointerEvents:"none",opacity:0.18}} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
-        <path d={pts} stroke={T.scarlet} strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-      </svg>
-
-      {/* Floating emoji particles */}
-      {particles.map((p,i)=>(
-        <div key={i} style={{position:"absolute",left:`${p.x}%`,top:`${p.y}%`,fontSize:22,opacity:p.opacity,transform:`scale(${p.scale}) rotate(${p.rot}deg)`,transition:"all .05s linear",pointerEvents:"none",userSelect:"none"}}>{p.emoji}</div>
-      ))}
-
-      {/* Top gradient bar — animated */}
+      <svg style={{position:"absolute",bottom:0,left:0,right:0,width:"100%",height:40,pointerEvents:"none",opacity:0.18}} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"><path d={pts} stroke={T.scarlet} strokeWidth="2.5" fill="none" strokeLinecap="round"/></svg>
       <div style={{position:"absolute",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,${T.scarlet},${T.blue},${T.scarlet},${T.blue})`,backgroundSize:"400% 100%",animation:"shimmer 4s linear infinite",borderRadius:"20px 20px 0 0"}}/>
-
-      {/* Content */}
       <div style={{position:"relative",zIndex:2,padding:"26px 26px 22px"}}>
         <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
           <div style={{flex:1,minWidth:200}}>
-            <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:28,fontWeight:800,color:T.txt,lineHeight:1.1,marginBottom:6,letterSpacing:"-0.5px"}}>
-              {greet}, <span style={{color:T.scarlet,textShadow:`0 0 20px ${T.scarlet}50`}}>{user.name}</span>! 👋
-            </div>
+            <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:28,fontWeight:800,color:T.txt,lineHeight:1.1,marginBottom:6,letterSpacing:"-0.5px"}}>{greet}, <span style={{color:T.scarlet,textShadow:`0 0 20px ${T.scarlet}50`}}>{user.name}!</span></div>
             <div style={{color:T.sub,fontSize:13,marginBottom:12}}>{dateStr}</div>
             <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              <button onClick={onProfileClick} style={{background:rc?.color+"28",border:`1px solid ${rc?.color}55`,borderRadius:8,padding:"4px 14px",fontWeight:700,fontSize:12,color:rc?.color,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}
-                onMouseEnter={e=>e.currentTarget.style.opacity="0.75"}
-                onMouseLeave={e=>e.currentTarget.style.opacity="1"}
-                title="Go to Profile Settings"
-              >
-                {rc?.label} ⚙️
-              </button>
-              <button onClick={onProfileClick} style={{display:"flex",alignItems:"center",gap:6,background:T.dark?"rgba(0,0,0,0.35)":"rgba(255,255,255,0.65)",backdropFilter:"blur(6px)",borderRadius:8,padding:"4px 12px",border:`1px solid ${T.bor}`,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}
-                onMouseEnter={e=>e.currentTarget.style.opacity="0.75"}
-                onMouseLeave={e=>e.currentTarget.style.opacity="1"}
-                title="Go to Settings"
-              >
-                <StatusDot status={user.status||"online"}/>
-                <span style={{fontSize:12,color:T.sub,textTransform:"capitalize",fontWeight:600}}>{user.status||"online"}</span>
-              </button>
+              <button onClick={onProfileClick} style={{background:rc?.color+"28",border:`1px solid ${rc?.color}55`,borderRadius:8,padding:"4px 14px",fontWeight:700,fontSize:12,color:rc?.color,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{rc?.label} ⚙️</button>
+              <button onClick={onProfileClick} style={{display:"flex",alignItems:"center",gap:6,background:T.dark?"rgba(0,0,0,0.35)":"rgba(255,255,255,0.65)",backdropFilter:"blur(6px)",borderRadius:8,padding:"4px 12px",border:`1px solid ${T.bor}`,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}><StatusDot status={user.status||"online"}/><span style={{fontSize:12,color:T.sub,textTransform:"capitalize",fontWeight:600}}>{user.status||"online"}</span></button>
             </div>
           </div>
-
-          {/* Live clock card */}
-          <div style={{background:T.dark?"rgba(0,0,0,0.5)":"rgba(255,255,255,0.75)",backdropFilter:"blur(12px)",border:`1px solid ${T.bor}`,borderRadius:16,padding:"14px 20px",textAlign:"center",flexShrink:0,boxShadow:`0 4px 20px rgba(0,0,0,0.12)`}}>
+          <div style={{background:T.dark?"rgba(0,0,0,0.5)":"rgba(255,255,255,0.75)",backdropFilter:"blur(12px)",border:`1px solid ${T.bor}`,borderRadius:16,padding:"14px 20px",textAlign:"center",flexShrink:0}}>
             <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:26,fontWeight:800,color:T.scarlet,letterSpacing:"0.04em",textShadow:`0 0 16px ${T.scarlet}40`}}>{timeStr}</div>
             <div style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.08em",marginTop:3}}>LIVE CLOCK</div>
           </div>
@@ -1296,6 +1329,7 @@ function HeroBanner({user,T,onProfileClick}) {
     </div>
   );
 }
+
 
 function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
@@ -1306,11 +1340,11 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
   const unreadDMs=dms.filter(d=>d.to===user.id&&!d.read).length;
 
   const quickStats=[
-    {icon:"✅",label:"Open Tasks",val:myTasks.length,color:T.blue,page:"tasks"},
-    {icon:"🔔",label:"Announcements",val:myAnns.length,color:T.scarlet,page:"anns"},
-    {icon:"💬",label:"Unread DMs",val:unreadDMs,color:"#7c3aed",page:"dms"},
-    {icon:"⚠️",label:"Overdue",val:overdueTasks.length,color:T.err,page:"tasks"},
-    ...(scheduleUrl?[{icon:"📅",label:"Schedule",val:"View",color:"#16a34a",page:"schedule"}]:[]),
+    {icon:E("✅","✓"),label:"Open Tasks",val:myTasks.length,color:T.blue,page:"tasks"},
+    {icon:E("🔔","○"),label:"Announcements",val:myAnns.length,color:T.scarlet,page:"anns"},
+    {icon:E("💬","≡"),label:"Unread DMs",val:unreadDMs,color:"#7c3aed",page:"dms"},
+    {icon:E("⚠️","△"),label:"Overdue",val:overdueTasks.length,color:T.err,page:"tasks"},
+    ...(scheduleUrl?[{icon:E("📅","◷"),label:"Schedule",val:"View",color:"#16a34a",page:"schedule"}]:[]),
   ];
 
   const myProgress=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
@@ -1353,7 +1387,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
 </span>
                 {myProgress.streak>0&&(
                   <div style={{display:"flex",alignItems:"center",gap:4,background:"#ff6b0022",border:"1px solid #ff6b0044",borderRadius:20,padding:"2px 8px"}}>
-                    <span style={{fontSize:12}}>🔥</span>
+                    <span style={{fontSize:12}}>{E("🔥","")}</span>
                     <span style={{fontSize:11,fontWeight:800,color:"#ff6b00"}}>{myProgress.streak} day streak</span>
                   </div>
                 )}
@@ -1391,7 +1425,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
       {/* Staff Levels — visible to boss only */}
       {can(user,"boss")&&XP_ELIGIBLE_ROLES.some(r=>emps.find(e=>e.role===r))&&(
         <div className="fu card" style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginTop:14}}>
-          <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:12,fontFamily:"'Clash Display',sans-serif",display:"flex",alignItems:"center",gap:8}}>🏆 Staff Progression <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
+          <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:12,fontFamily:"'Clash Display',sans-serif",display:"flex",alignItems:"center",gap:8}}>{E("🏆","")} Staff Progression <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
     <rect width="22" height="22" rx="6" fill="#0f2744"/>
     <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
@@ -1460,7 +1494,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
 </span></div>
           <button onClick={()=>{setPrevPage(null);setPage(prevPage);playSound("click");}}
             style={{display:"flex",alignItems:"center",gap:8,background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"10px 14px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",width:"100%",textAlign:"left"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"66";e.currentTarget.style.background=T.surfH;}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accent+"66";e.currentTarget.style.background=T.surfH;}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.background=T.card;}}
           >
             <span style={{fontSize:16}}>{({"tasks":"✅","inv":"📦","anns":"🔔","dms":"💬","act":"📊","set":"⚙️"})[prevPage]||"📄"}</span>
@@ -1508,7 +1542,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
       {/* Smart reminders */}
       {isEligible&&overdueTasks.length>0&&(
         <div className="fu" style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s ease both"}}>
-          <span style={{fontSize:20,flexShrink:0}}>⚠️</span>
+          <span style={{fontSize:20,flexShrink:0}}>{E("⚠️","!")}</span>
           <div>
             <div style={{fontWeight:800,fontSize:13,color:"#991b1b"}}>You have {overdueTasks.length} overdue task{overdueTasks.length>1?"s":""}{"!"}</div>
             <div style={{fontSize:12,color:"#b91c1c",marginTop:2}}>{overdueTasks.slice(0,2).map(t=>t.title).join(", ")}{overdueTasks.length>2?` +${overdueTasks.length-2} more`:""}</div>
@@ -1518,7 +1552,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
       )}
       {isEligible&&myTasks.length>0&&overdueTasks.length===0&&(
         <div className="fu" style={{background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s .1s ease both"}}>
-          <span style={{fontSize:20,flexShrink:0}}>💡</span>
+          <span style={{fontSize:20,flexShrink:0}}>{E("💡","i")}</span>
           <div style={{flex:1}}>
             <div style={{fontWeight:700,fontSize:13,color:T.txt,display:"flex",alignItems:"center",gap:6}}>You have {myTasks.length} open task{myTasks.length>1?"s":""}. Keep it up{"!"} <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
   <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
@@ -1562,23 +1596,31 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
       )}
 
       {/* Help section */}
-      <div className="fu" style={{background:`${T.blue}12`,border:`1px solid ${T.blue}33`,borderRadius:14,padding:16,marginTop:14,display:"flex",gap:12,alignItems:"flex-start"}}>
-        <span style={{fontSize:24,flexShrink:0}}>❓</span>
-        <div>
-          <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:4}}>Need help navigating?</div>
-          <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>
-            Tap the <strong>circle button</strong> (top-left) to open the menu — it stays visible while you scroll.<br/>
-            Tap <strong>🎓 MNU&apos;s Neer Locker</strong> in the header to return home anytime.<br/>
-            Use the <strong style={{color:T.scarlet}}>?</strong> button (bottom-right) for a full guide and the <strong style={{color:"#b45309"}}>💡</strong> button to send ideas to your Technical Administrator.
-          </div>
-          <div style={{marginTop:10,padding:"10px 14px",background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:12}}>
-            <div style={{fontWeight:700,fontSize:13,color:T.txt,marginBottom:6}}>📲 Add to your home screen</div>
-            <div style={{fontSize:12,color:T.sub,lineHeight:1.7}}>
-              <strong>iPhone:</strong> Open in <strong>Safari</strong> {"→"} tap the Share button {"→"} <strong>&quot;Add to Home Screen&quot;</strong><br/>
-              <strong>Android:</strong> Open in <strong>Chrome</strong> {"→"} tap ⋮ menu {"→"} <strong>&quot;Add to Home Screen&quot;</strong>
+      <div className="fu" style={{background:T.minimal?T.surf:`${T.blue}12`,border:`1px solid ${T.minimal?T.bor:T.blue+"33"}`,borderRadius:T.minimal?16:14,padding:T.minimal?20:16,marginTop:14}}>
+        <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
+          <span style={{fontSize:T.minimal?20:24,flexShrink:0}}>{E("❓","?")}</span>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:T.minimal?600:800,fontSize:T.minimal?15:14,color:T.txt,marginBottom:6,letterSpacing:T.minimal?"-0.2px":"normal"}}>Need help navigating?</div>
+            <div style={{fontSize:13,color:T.sub,lineHeight:1.65}}>
+              Tap the <strong style={{color:T.txt}}>circle button</strong> (top-left) to open the menu.<br/>
+              Tap <strong style={{color:T.txt}}>MNU{"'"}s Neer Locker</strong> in the header to return home.<br/>
+              Ask <strong style={{color:T.accent}}>Finn</strong> (bottom-right robot button) for help with anything.<br/>
+              Tap the <strong style={{color:T.accent}}>?</strong> button for a full guide · tap <strong style={{color:"#b45309"}}>{E("💡","i")}</strong> to send feedback.
             </div>
           </div>
         </div>
+        <div style={{padding:"12px 14px",background:T.minimal?T.surfH:`${T.blue}10`,border:`1px solid ${T.minimal?T.bor:T.blue+"33"}`,borderRadius:T.minimal?12:12}}>
+          <div style={{fontWeight:T.minimal?600:700,fontSize:13,color:T.txt,marginBottom:6,display:"flex",alignItems:"center",gap:6}}>{E("📲","↗")} Add to home screen</div>
+          <div style={{fontSize:12,color:T.sub,lineHeight:1.7}}>
+            <strong style={{color:T.txt}}>iPhone:</strong> Open in Safari → Share → <strong>Add to Home Screen</strong><br/>
+            <strong style={{color:T.txt}}>Android:</strong> Open in Chrome → ⋮ menu → <strong>Add to Home Screen</strong>
+          </div>
+        </div>
+        <button onClick={()=>{playSound("open");window._startOnboarding&&window._startOnboarding();}}
+          style={{marginTop:12,width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:T.minimal?9999:12,padding:T.minimal?"10px 20px":"12px 20px",fontWeight:T.minimal?500:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s",letterSpacing:T.minimal?"0.01em":"normal"}}
+          onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
+          onMouseLeave={e=>e.currentTarget.style.opacity="1"}
+        >{E("✨","→")} Start guided tour</button>
       </div>
     </div>
   );
@@ -1662,7 +1704,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
         <div style={{flex:1,overflowY:"auto"}}>
           {/* Group Chat */}
           <div onClick={()=>{setSelected({id:GROUP_ID,name:GROUP_NAME,email:"team",role:"group"});}}
-            style={{padding:"12px 14px",cursor:"pointer",background:selected?.id===GROUP_ID?T.scarlet+"18":"transparent",borderBottom:`1px solid ${T.bor}`,borderLeft:selected?.id===GROUP_ID?`3px solid ${T.scarlet}`:"3px solid transparent",transition:"background .18s"}}
+            style={{padding:"12px 14px",cursor:"pointer",background:selected?.id===GROUP_ID?T.accent+"18":"transparent",borderBottom:`1px solid ${T.bor}`,borderLeft:selected?.id===GROUP_ID?`3px solid ${T.scarlet}`:"3px solid transparent",transition:"background .18s"}}
             onMouseEnter={ev=>{if(selected?.id!==GROUP_ID)ev.currentTarget.style.background=T.surfH;}}
             onMouseLeave={ev=>{if(selected?.id!==GROUP_ID)ev.currentTarget.style.background="transparent";}}
           >
@@ -1683,7 +1725,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
             const last=thread[thread.length-1];
             return (
               <div key={e.id} onClick={()=>selectConvo(e)}
-                style={{padding:"12px 14px",cursor:"pointer",background:selected?.id===e.id?T.scarlet+"18":"transparent",borderBottom:`1px solid ${T.bor}`,transition:"background .18s",borderLeft:selected?.id===e.id?`3px solid ${T.scarlet}`:"3px solid transparent"}}
+                style={{padding:"12px 14px",cursor:"pointer",background:selected?.id===e.id?T.accent+"18":"transparent",borderBottom:`1px solid ${T.bor}`,transition:"background .18s",borderLeft:selected?.id===e.id?`3px solid ${T.scarlet}`:"3px solid transparent"}}
                 onMouseEnter={ev=>{if(selected?.id!==e.id)ev.currentTarget.style.background=T.surfH;}}
                 onMouseLeave={ev=>{if(selected?.id!==e.id)ev.currentTarget.style.background="transparent";}}
               >
@@ -1746,7 +1788,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
                       {isGroupChat&&!mine&&senderEmp&&(
                         <div style={{fontSize:11,fontWeight:700,color:ROLES[senderEmp.role]?.color||T.sub,marginBottom:3,paddingLeft:4}}>{senderEmp.name}</div>
                       )}
-                      <div style={{background:mine?T.scarlet:T.surfH,color:mine?"#fff":T.txt,borderRadius:mine?"18px 18px 5px 18px":"18px 18px 18px 5px",padding:"11px 16px",fontSize:15,fontWeight:500,lineHeight:1.6,boxShadow:"0 2px 8px rgba(0,0,0,.08)",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:320,overflowY:"auto"}}>
+                      <div style={{background:mine?(T.minimal?T.accent:T.scarlet):T.surfH,color:mine?"#fff":T.txt,borderRadius:mine?"18px 18px 5px 18px":"18px 18px 18px 5px",padding:"11px 16px",fontSize:15,fontWeight:500,lineHeight:1.6,boxShadow:"0 2px 8px rgba(0,0,0,.08)",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:320,overflowY:"auto"}}>
                         <div>{msg.text}</div>
                         <div style={{fontSize:11,opacity:0.65,marginTop:4,textAlign:mine?"right":"left",fontWeight:400,display:"flex",alignItems:"center",justifyContent:mine?"flex-end":"flex-start",gap:4}}>
                           <span>{fmtT(msg.at)}</span>
@@ -1863,7 +1905,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
             onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
             onTouchStart={startLongPress} onTouchEnd={cancelLongPress} onTouchMove={cancelLongPress}
             onContextMenu={e=>{e.preventDefault();setShowCtx(true);}}
-            style={{background:isDone?T.bg:T.card,border:"1px solid "+(expanded?T.scarlet+"66":overdue?T.scarlet+"55":hov?T.borH:T.bor),borderRadius:14,opacity:isDone?0.55:1,overflow:"hidden",transition:"border-color .2s"}}>
+            style={{background:isDone?T.bg:T.card,border:"1px solid "+(expanded?T.accent+"66":overdue?T.accent+"55":hov?T.borH:T.bor),borderRadius:14,opacity:isDone?0.55:1,overflow:"hidden",transition:"border-color .2s"}}>
             <div style={{padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"flex-start",gap:12}}>
               <button onClick={e=>{e.stopPropagation();onToggle(task.id);}}
                 style={{width:22,height:22,borderRadius:6,border:"2px solid "+(isDone?T.blue:hov?T.blue:T.bor),background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
@@ -1874,16 +1916,23 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
                 <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
                   <span style={{fontWeight:700,fontSize:T.fs.lg,textDecoration:isDone?"line-through":"none",color:isDone?T.mut:T.txt,transition:"color .18s"}}>{task.title}</span>
                   <Tag label={task.priority} color={pc[task.priority]||T.mut}/>
-                  {overdue&&<Tag label="OVERDUE" color={T.scarlet}/>}
-                  {task.repeat&&<Tag label="🔁" color={T.blue}/>}
+                  {overdue&&<Tag label="OVERDUE" color={T.accent}/>}
+                  {task.repeat&&<Tag label={E("🔁","↻")} color={T.blue}/>}
                 </div>
+                {isDone&&task.doneByName&&(
+                  <div style={{fontSize:11,color:T.sub,fontWeight:500,marginTop:4,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                    <span style={{color:T.ok,fontWeight:700}}>{E("✅","✓")}</span>
+                    <span>Completed by <strong style={{color:T.txt,fontWeight:700}}>{task.doneByName}</strong></span>
+                    {task.doneAt&&<span style={{color:T.mut,fontSize:10}}>· {new Date(task.doneAt).toLocaleDateString("en-US",{month:"short",day:"numeric"})} at {new Date(task.doneAt).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</span>}
+                  </div>
+                )}
                 <div style={{display:"flex",gap:10,marginTop:4,fontSize:11,color:T.mut,flexWrap:"wrap",alignItems:"center"}}>
                   <span>👤 {assignee?assignee.name:"Everyone"}</span>
                   {task.dueDate&&<span style={{color:overdue?T.scarlet:dl!==null&&dl<=2?T.warn:T.mut}}>📅 {fmtD(task.dueDate)}</span>}
                 </div>
               </div>
               <button onClick={()=>setExpanded(e=>!e)}
-                style={{background:expanded?T.scarlet+"18":"none",border:"1px solid "+(expanded?T.scarlet+"55":T.bor),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:expanded?T.scarlet:T.sub,fontFamily:"inherit",flexShrink:0,transition:"all .15s"}}
+                style={{background:expanded?T.accent+"18":"none",border:"1px solid "+(expanded?T.accent+"55":T.bor),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:expanded?T.scarlet:T.sub,fontFamily:"inherit",flexShrink:0,transition:"all .15s"}}
               >{expanded?"▲":"▼"}</button>
               {canManage&&<button onClick={e=>{e.stopPropagation();onDelete(task.id);}}
                 style={{background:"none",border:"none",color:T.faint,cursor:"pointer",fontSize:16,padding:"2px 4px",transition:"color .15s",flexShrink:0}}
@@ -1906,7 +1955,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
                     <div style={{fontSize:13,fontWeight:600,color:pc[task.priority]||T.mut}}>{task.priority||"Medium"}</div>
                   </div>
                   {task.dueDate&&(
-                    <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+(overdue?T.scarlet+"55":T.bor)}}>
+                    <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+(overdue?T.accent+"55":T.bor)}}>
                       <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>DUE DATE</div>
                       <div style={{fontSize:13,fontWeight:600,color:overdue?T.scarlet:T.txt}}>📅 {fmtD(task.dueDate)}</div>
                     </div>
@@ -3606,7 +3655,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
               {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:"💬",label:"Messages",page:"dms"}].map(s=>(
                 <button key={s.page} onClick={()=>{setPage(s.page);onClose();playSound("click");}}
                   style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit",color:T.txt,fontSize:13,fontWeight:600,transition:"all .15s"}}
-                  onMouseEnter={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.borderColor=T.scarlet+"66";}}
+                  onMouseEnter={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.borderColor=T.accent+"66";}}
                   onMouseLeave={e=>{e.currentTarget.style.background=T.bg;e.currentTarget.style.borderColor=T.bor;}}>
                   <span style={{fontSize:18}}>{s.icon}</span>{s.label}
                 </button>
@@ -3646,6 +3695,202 @@ function XPToastList({items}) {
 }
 
 // ─── LEADERBOARD PAGE ─────────────────────────────────────────────────────────
+// ─── XP SHOP MODAL — spend XP on cosmetics & power-ups ───────────────────────
+function XPShopModal({T,user,progress,open,onClose,onPurchase}) {
+  const [category,setCategory]=useState("all");
+  const [purchases,setPurchases]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [confirming,setConfirming]=useState(null); // item being confirmed
+  const [celebrating,setCelebrating]=useState(null); // just purchased
+
+  const userXP=progress[user?.id]?.xp||0;
+
+  // Load purchases
+  useEffect(()=>{
+    if(!open||!user) return;
+    (async()=>{
+      setLoading(true);
+      const rows=await SB.select("user_purchases",`?user_id=eq.${user.id}`);
+      setPurchases(rows||[]);
+      setLoading(false);
+    })();
+  },[open,user?.id]);
+
+  // Shop catalog
+  const items=[
+    // Accent color unlocks (beyond default 6)
+    {id:"color_teal",cat:"colors",name:"Teal Accent",desc:"Calm ocean vibe",cost:500,icon:"●",color:"#0d9488",type:"color"},
+    {id:"color_indigo",cat:"colors",name:"Indigo Accent",desc:"Deep and focused",cost:500,icon:"●",color:"#4f46e5",type:"color"},
+    {id:"color_rose",cat:"colors",name:"Rose Accent",desc:"Soft and modern",cost:500,icon:"●",color:"#e11d48",type:"color"},
+    {id:"color_amber",cat:"colors",name:"Amber Accent",desc:"Warm and energetic",cost:500,icon:"●",color:"#d97706",type:"color"},
+    {id:"color_emerald",cat:"colors",name:"Emerald Accent",desc:"Fresh and vibrant",cost:600,icon:"●",color:"#059669",type:"color"},
+    {id:"color_violet",cat:"colors",name:"Violet Accent",desc:"Creative and bold",cost:600,icon:"●",color:"#9333ea",type:"color"},
+    {id:"color_slate",cat:"colors",name:"Slate Accent",desc:"Minimalist classic",cost:400,icon:"●",color:"#475569",type:"color"},
+    {id:"color_rainbow",cat:"colors",name:"Rainbow Accent",desc:"Animated cycling color 🌈",cost:2500,icon:"◈",color:"linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7)",type:"rainbow"},
+    // Power-ups
+    {id:"streak_saver",cat:"powerups",name:"Streak Saver",desc:"Restore your lost streak (one-time use)",cost:300,icon:E("🔥","·"),color:"#ea580c",type:"streak_save",consumable:true},
+    {id:"xp_boost_1h",cat:"powerups",name:"2× XP Boost — 1 Hour",desc:"Double XP on all tasks for 1 hour",cost:400,icon:E("⚡","↯"),color:"#eab308",type:"xp_boost",consumable:true,duration:3600000},
+    {id:"xp_boost_24h",cat:"powerups",name:"2× XP Boost — 24 Hours",desc:"Double XP on all tasks for a full day",cost:1200,icon:E("⚡","↯"),color:"#ca8a04",type:"xp_boost_long",consumable:true,duration:86400000},
+    // Profile / Badges
+    {id:"badge_pioneer",cat:"badges",name:"Pioneer Badge",desc:"Display on your profile",cost:800,icon:E("🚀","▲"),color:"#6366f1",type:"badge"},
+    {id:"badge_legend",cat:"badges",name:"Legend Badge",desc:"Shows on leaderboard",cost:2000,icon:E("👑","♛"),color:"#eab308",type:"badge"},
+    {id:"badge_sparkle",cat:"badges",name:"Sparkle Trail",desc:"Little sparkles on your profile",cost:1500,icon:E("✨","★"),color:"#a855f7",type:"badge"},
+    // Custom profile pic (always available — no cost needed)
+    {id:"pfp_custom",cat:"profile",name:"Custom Profile Picture",desc:"Upload your own picture — saves to cloud across all devices",cost:0,icon:E("📸","◎"),color:T.accent,type:"pfp",free:true},
+    {id:"pfp_frame_gold",cat:"profile",name:"Gold Profile Frame",desc:"Shiny gold border around your avatar",cost:1000,icon:E("⚙","◎"),color:"#eab308",type:"frame"},
+    {id:"pfp_frame_scarlet",cat:"profile",name:"Scarlet Frame",desc:"MNU scarlet border around your avatar",cost:800,icon:E("⚙","◎"),color:"#C8102E",type:"frame"},
+    // Fun / misc
+    {id:"fun_confetti",cat:"fun",name:"Task Confetti",desc:"Confetti burst when you complete any task",cost:700,icon:E("🎊","✦"),color:"#ec4899",type:"confetti"},
+    {id:"fun_sound_pack",cat:"fun",name:"Premium Sound Pack",desc:"New richer sound effects throughout the app",cost:900,icon:E("🔊","♪"),color:"#0891b2",type:"sounds"},
+  ];
+
+  const owned=id=>purchases.some(p=>p.item_id===id&&!p.consumed);
+  const filtered=category==="all"?items:items.filter(i=>i.cat===category);
+  const cats=[
+    {key:"all",label:"All",icon:E("🛍","◇")},
+    {key:"colors",label:"Colors",icon:E("🎨","●")},
+    {key:"powerups",label:"Power-ups",icon:E("⚡","↯")},
+    {key:"badges",label:"Badges",icon:E("🏅","♛")},
+    {key:"profile",label:"Profile",icon:E("👤","◎")},
+    {key:"fun",label:"Fun",icon:E("✨","★")},
+  ];
+
+  const buy=async(item)=>{
+    if(item.free){
+      setConfirming(null);
+      onPurchase&&onPurchase(item);
+      onClose();
+      return;
+    }
+    if(userXP<item.cost){ playSound("warn"); return; }
+    // Deduct XP
+    const pg=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
+    const newXP=pg.xp-item.cost;
+    const info=getLevelInfo(newXP);
+    await SB.upsert("user_progress",{user_id:user.id,xp:newXP,level:info.level,title:info.title,streak:pg.streak,last_login:pg.last_login});
+    // Record purchase
+    await SB.upsert("user_purchases",{
+      id:uid(),
+      user_id:user.id,
+      item_id:item.id,
+      item_name:item.name,
+      cost:item.cost,
+      consumed:false,
+      purchased_at:Date.now(),
+    });
+    setPurchases(p=>[...p,{item_id:item.id,user_id:user.id,consumed:false}]);
+    playSound("success");
+    haptic&&haptic("heavy");
+    setCelebrating(item);
+    onPurchase&&onPurchase(item);
+    setTimeout(()=>setCelebrating(null),1800);
+    setConfirming(null);
+  };
+
+  if(!open) return null;
+
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:800,padding:16,animation:"fadeUp .25s ease both"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:620,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.5)"}}>
+        {/* Header */}
+        <div style={{padding:"18px 22px 14px",borderBottom:`1px solid ${T.bor}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+          <div>
+            <div style={{fontSize:T.minimal?19:18,fontWeight:T.minimal?600:800,color:T.txt,display:"flex",alignItems:"center",gap:8,fontFamily:T.minimal?"'Google Sans',sans-serif":"'Clash Display',sans-serif",letterSpacing:"-0.3px"}}>
+              <span style={{fontSize:22}}>{E("🛍","◇")}</span> XP Shop
+            </div>
+            <div style={{fontSize:11,color:T.sub,marginTop:2}}>Spend your XP on cosmetics and power-ups</div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{background:T.accent+"18",border:`1px solid ${T.accent}44`,borderRadius:9999,padding:"6px 14px",display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:14}}>{E("⭐","★")}</span>
+              <span style={{fontWeight:800,color:T.accent,fontSize:14}}>{userXP.toLocaleString()}</span>
+              <span style={{fontSize:10,color:T.sub,fontWeight:600}}>XP</span>
+            </div>
+            <button onClick={onClose} style={{background:T.surfH,border:`1px solid ${T.bor}`,color:T.txt,width:32,height:32,borderRadius:"50%",fontSize:18,cursor:"pointer",fontFamily:"inherit"}}>×</button>
+          </div>
+        </div>
+        {/* Category tabs */}
+        <div style={{padding:"10px 18px",borderBottom:`1px solid ${T.bor}`,display:"flex",gap:6,overflowX:"auto"}}>
+          {cats.map(c=>(
+            <button key={c.key} onClick={()=>{setCategory(c.key);playSound("click");}}
+              style={{background:category===c.key?T.accent:T.surfH,color:category===c.key?"#fff":T.sub,border:`1px solid ${category===c.key?T.accent:T.bor}`,borderRadius:9999,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,transition:"all .15s"}}>
+              {c.icon} {c.label}
+            </button>
+          ))}
+        </div>
+        {/* Items grid */}
+        <div style={{flex:1,overflowY:"auto",padding:"16px 18px"}}>
+          {loading?(
+            <div style={{padding:40,textAlign:"center",color:T.sub,fontSize:13}}>Loading shop…</div>
+          ):(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:10}}>
+              {filtered.map(item=>{
+                const isOwned=owned(item.id);
+                const canAfford=userXP>=item.cost;
+                const isFree=item.free;
+                return (
+                  <div key={item.id} style={{background:T.surfH,border:`1px solid ${isOwned?T.ok+"66":T.bor}`,borderRadius:T.minimal?12:10,padding:12,display:"flex",flexDirection:"column",gap:8,position:"relative",overflow:"hidden"}}>
+                    {isOwned&&!item.consumable&&<div style={{position:"absolute",top:6,right:6,background:T.ok,color:"#fff",fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999,letterSpacing:"0.04em"}}>OWNED</div>}
+                    {item.consumable&&<div style={{position:"absolute",top:6,right:6,background:T.warn+"33",color:T.warn,fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999}}>USE ONCE</div>}
+                    {/* Icon */}
+                    <div style={{width:48,height:48,borderRadius:item.type==="color"||item.type==="rainbow"?"50%":10,background:item.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:item.type==="color"?0:22,color:"#fff",boxShadow:`0 2px 8px ${(item.color||"").startsWith("#")?item.color+"44":"rgba(0,0,0,.2)"}`,margin:"4px 0"}}>
+                      {item.type!=="color"&&item.type!=="rainbow"&&item.icon}
+                    </div>
+                    {/* Name */}
+                    <div>
+                      <div style={{fontSize:13,fontWeight:700,color:T.txt,marginBottom:2,letterSpacing:T.minimal?"-0.15px":"normal"}}>{item.name}</div>
+                      <div style={{fontSize:11,color:T.sub,lineHeight:1.4}}>{item.desc}</div>
+                    </div>
+                    {/* Cost + buy */}
+                    <div style={{marginTop:"auto",paddingTop:6}}>
+                      {isFree?(
+                        <button onClick={()=>buy(item)} style={{width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"8px 12px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Upload →</button>
+                      ):isOwned&&!item.consumable?(
+                        <button disabled style={{width:"100%",background:"none",color:T.ok,border:`1px solid ${T.ok}`,borderRadius:9999,padding:"8px 12px",fontSize:11,fontWeight:700,cursor:"default",fontFamily:"inherit"}}>✓ Owned</button>
+                      ):(
+                        <button onClick={()=>canAfford?setConfirming(item):null}
+                          disabled={!canAfford}
+                          style={{width:"100%",background:canAfford?T.accent:T.bor,color:canAfford?"#fff":T.sub,border:"none",borderRadius:9999,padding:"8px 12px",fontSize:11,fontWeight:700,cursor:canAfford?"pointer":"not-allowed",fontFamily:"inherit",opacity:canAfford?1:0.6,transition:"opacity .15s"}}>
+                          {item.cost} XP {canAfford?"→":"✕"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {/* Confirm purchase overlay */}
+        {confirming&&(
+          <div onClick={()=>setConfirming(null)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",animation:"fadeUp .2s ease both"}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:16,padding:24,maxWidth:340,width:"90%",textAlign:"center",animation:"tourCardIn .3s cubic-bezier(.34,1.56,.64,1) both"}}>
+              <div style={{fontSize:36,marginBottom:10}}>{confirming.icon}</div>
+              <div style={{fontWeight:700,fontSize:17,color:T.txt,marginBottom:4}}>{confirming.name}</div>
+              <div style={{fontSize:12,color:T.sub,marginBottom:14,lineHeight:1.5}}>{confirming.desc}</div>
+              <div style={{background:T.accent+"12",border:`1px solid ${T.accent}44`,borderRadius:10,padding:"8px 14px",marginBottom:14,fontSize:12,color:T.txt}}>Spend <strong style={{color:T.accent}}>{confirming.cost} XP</strong>? You'll have <strong>{(userXP-confirming.cost).toLocaleString()}</strong> left.</div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>setConfirming(null)} style={{flex:1,background:"none",color:T.sub,border:`1px solid ${T.bor}`,borderRadius:9999,padding:"9px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Cancel</button>
+                <button onClick={()=>buy(confirming)} style={{flex:1.4,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Confirm Purchase</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Celebration overlay */}
+        {celebrating&&(
+          <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+            <div style={{background:T.surf,border:`2px solid ${T.accent}`,borderRadius:16,padding:"28px 40px",textAlign:"center",animation:"tourIconPop .45s cubic-bezier(.34,1.85,.64,1)"}}>
+              <div style={{fontSize:48,marginBottom:8}}>{E("🎉","★")}</div>
+              <div style={{fontWeight:800,color:T.txt,fontSize:17,marginBottom:4}}>{celebrating.name} unlocked!</div>
+              <div style={{fontSize:12,color:T.sub}}>Enjoy!</div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function LeaderboardPage({emps,progress,user,T}) {
   const eligible=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role));
   const ranked=eligible.map(e=>{
@@ -3661,6 +3906,23 @@ function LeaderboardPage({emps,progress,user,T}) {
 
   return (
     <div className="fu" style={{marginTop:8}}>
+      {/* Top action bar — Shop + your stats */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,background:T.accent+"12",border:`1px solid ${T.accent}33`,borderRadius:9999,padding:"8px 14px 8px 10px"}}>
+          <div style={{fontSize:18}}>{E("⭐","★")}</div>
+          <div>
+            <div style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.06em"}}>YOUR XP</div>
+            <div style={{fontSize:16,fontWeight:800,color:T.accent,lineHeight:1}}>{(progress[user?.id]?.xp||0).toLocaleString()}</div>
+          </div>
+        </div>
+        <button onClick={()=>{playSound("open");onShop&&onShop();}}
+          style={{background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 20px",fontWeight:T.minimal?500:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8,transition:"transform .15s,opacity .15s",boxShadow:`0 4px 14px ${T.accent}55`}}
+          onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.opacity="0.95";}}
+          onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.opacity="1";}}
+        >
+          <span style={{fontSize:16}}>{E("🛍","◇")}</span> Open Shop
+        </button>
+      </div>
       {/* Employee of the Month */}
       {eotm&&(
         <div style={{background:`linear-gradient(135deg,${eotm.lv.color}22,${eotm.lv.color}11)`,border:`2px solid ${eotm.lv.color}55`,borderRadius:18,padding:20,marginBottom:20,textAlign:"center",position:"relative",overflow:"hidden"}}>
@@ -3872,7 +4134,7 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
           </div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
             <div key={tagLine} style={{animation:"fadeUp .4s ease both"}}>
-              <span style={{fontSize:12,color:T.scarlet,fontWeight:700,fontStyle:"italic"}}>{taglines[tagLine]}</span>
+              <span style={{fontSize:12,color:T.accent,fontWeight:700,fontStyle:"italic"}}>{taglines[tagLine]}</span>
             </div>
             <div style={{width:1,height:10,background:T.bor,flexShrink:0}}/>
             <div style={{display:"inline-flex",alignItems:"center",gap:5,background:T.dark?"rgba(0,0,0,0.35)":"rgba(0,0,0,0.05)",border:`1px solid ${T.bor}`,borderRadius:20,padding:"3px 10px"}}>
@@ -3895,7 +4157,7 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
           )}
           {!showPin&&(
             <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>{playSound("click");setRememberMe&&setRememberMe(r=>!r);}}>
-              <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${T.bor}`,background:rememberMe?T.scarlet:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s"}}>
+              <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${T.bor}`,background:rememberMe?(T.minimal?T.accent:T.scarlet):"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s"}}>
                 {rememberMe&&<span style={{color:"#fff",fontSize:11,fontWeight:900,lineHeight:1}}>✓</span>}
               </div>
               <span style={{fontSize:13,color:T.sub,fontWeight:600,userSelect:"none"}}>Remember me</span>
@@ -4005,7 +4267,9 @@ const VIGIL = {
 export default function App() {
   const [T,setT]=useState(T0);
   const [dark,setDk]=useState(LS.get('nl3-dark')!==null?LS.get('nl3-dark'):window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const [compact,setCompact]=useState(false);
+  const [compact,setCompact]=useState(()=>!!LS.get('nl3-compact'));
+  const [minimalMode,setMinimalMode]=useState(()=>{const v=!!LS.get('nl3-minimal');window._minimalMode=v;return v;});
+  const [showEmojis,setShowEmojis]=useState(()=>LS.get('nl3-emojis')!==false);
   const [voiceOnGlobal,setVoiceOnGlobal]=useState(()=>LS.get("nl3-finn-voice")!==false);
   const [accent,setAccent]=useState("");
   const [soundOn,setSoundOn]=useState(true);
@@ -4064,6 +4328,21 @@ export default function App() {
   // Tech PIN gate for viewing employee PINs
   const [techPinGate,setTechPinGate]=useState(false);
   const [selectedTasks,setSelectedTasks]=useState(new Set());
+  const [showRating,setShowRating]=useState(false);
+  const [showShop,setShowShop]=useState(false);
+  const [showPfpUpload,setShowPfpUpload]=useState(false);
+  // Monthly rating check — show once per calendar month per user
+  useEffect(()=>{
+    if(!user) return;
+    const last=LS.get("nl3-last-rating");
+    const now=new Date();
+    const monthKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+    if(last===monthKey) return; // already rated this month
+    const t=setTimeout(()=>setShowRating(true),15000);
+    return()=>clearTimeout(t);
+  },[user?.id]);
+  const [showOnboarding,setShowOnboarding]=useState(false);
+  useEffect(()=>{window._startOnboarding=()=>setShowOnboarding(true);return()=>{delete window._startOnboarding;};},[]);
   const [showFeedback,setShowFeedback]=useState(false);
   const [showFinn,setShowFinn]=useState(false);
   const [xpToasts,setXpToasts]=useState([]);
@@ -4489,7 +4768,7 @@ export default function App() {
     return()=>mq.removeEventListener('change',handler);
   },[compact,accent]);
 
-  const applyTheme=useCallback(async(d,c,a)=>{const ac=a!==undefined?a:accent;setDk(d);setCompact(c);setAccent(ac);setT(mkTheme(d,c,ac));LS.set("nl3-dark",d);LS.set("nl3-compact",c);if(a!==undefined)LS.set("nl3-accent",a);},[accent]);
+  const applyTheme=useCallback(async(d,c,a,mn)=>{const ac=a!==undefined?a:accent;setDk(d);setCompact(c);setAccent(ac);const useMn=mn!==undefined?mn:minimalMode;setMinimalMode(useMn);window._minimalMode=useMn;setT(useMn?{...mkMinimalTheme(d,c,ac),showEmojis}:{...mkTheme(d,c,ac),showEmojis});LS.set("nl3-minimal",useMn?1:null);LS.set("nl3-dark",d);LS.set("nl3-compact",c);if(a!==undefined)LS.set("nl3-accent",a);},[accent]);
 
   const applySoundSettings=useCallback(async(on,vol)=>{
     setSoundOn(on);setSoundVol(vol);
@@ -4755,8 +5034,14 @@ export default function App() {
   const toggleTask=async id=>{
     const task=tasks.find(t=>t.id===id);if(!task) return;
     const completing=!task.done;
-    const updated={...task,done:completing};
-    setTasks(prev=>prev.map(t=>t.id===id?{...t,done:completing}:t));
+    const updated={
+      ...task,
+      done:completing,
+      doneBy: completing ? user?.id : null,
+      doneByName: completing ? user?.name : null,
+      doneAt: completing ? Date.now() : null,
+    };
+    setTasks(prev=>prev.map(t=>t.id===id?updated:t));
     await upsertTask(updated);
     if(completing){
       addAct("task_done",`"${task.title}" completed by ${user?.name}`,user?.id);
@@ -5119,7 +5404,7 @@ export default function App() {
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
   return (
-    <div style={{fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:T.bg,color:T.txt}}>
+    <div style={{fontFamily:T.minimal?"'Google Sans','Segoe UI',sans-serif":"'DM Sans',sans-serif",minHeight:"100vh",background:T.bg,color:T.txt}}>
       <style>{buildCSS(T)}</style>
       <ToastList items={toasts}/>
       <XPToastList items={xpToasts}/>
@@ -5175,16 +5460,16 @@ export default function App() {
         <div style={{display:"flex",minHeight:"100vh"}}>
           <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflowX:"hidden"}}>
             {/* Top bar */}
-            <header style={{background:T.surf,borderBottom:"1px solid "+T.bor,padding:"env(safe-area-inset-top, 0px) 8px 0",position:"sticky",top:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.06)"}}>
-              <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.scarlet},${T.blue})`}}/>
+            <header style={{background:T.surf,borderBottom:"1px solid "+T.bor,padding:"env(safe-area-inset-top, 0px) 8px 0",position:"sticky",top:0,zIndex:300,boxShadow:T.minimal?"none":"0 2px 10px rgba(0,0,0,.06)"}}>
+              {!T.minimal&&<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.scarlet},${T.blue})`}}/>}
               <div style={{display:"flex",alignItems:"center",gap:12,minHeight:56,padding:"0 4px"}}>
                 {/* Brand — tappable, goes home */}
-                <button onClick={()=>{setSearch("");setPrevPage(page);setPage("home");playSound("click");}} style={{background:"none",border:"none",fontFamily:"'Clash Display',sans-serif",fontSize:15,fontWeight:800,color:T.txt,cursor:"pointer",display:"flex",alignItems:"center",gap:5,padding:0,transition:"opacity .15s",flexShrink:0,whiteSpace:"nowrap"}}
+                <button data-tour="logo" onClick={()=>{setSearch("");setPrevPage(page);setPage("home");playSound("click");}} style={{background:"none",border:"none",fontFamily:T.minimal?"'Google Sans',sans-serif":"'Clash Display',sans-serif",fontSize:15,fontWeight:T.minimal?500:800,color:T.txt,cursor:"pointer",display:"flex",alignItems:"center",gap:5,padding:0,transition:"opacity .15s",flexShrink:0,whiteSpace:"nowrap"}}
                   onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
                   onMouseLeave={e=>e.currentTarget.style.opacity="1"}
                 >
                   <span style={{fontSize:17}}>🎓</span>
-                  <span style={{display:"flex",gap:4}}>{"MNU's"} <span style={{color:T.scarlet}}>Neer Locker</span></span>
+                  <span style={{display:"flex",gap:4}}>{"MNU's"} <span style={{color:T.accent}}>Neer Locker</span></span>
                 </button>
 
                 {/* Responsive right section */}
@@ -5194,7 +5479,7 @@ export default function App() {
                   title="Search (⌘K)"
                   className="search-full"
                   style={{display:"flex",alignItems:"center",gap:5,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"5px 10px",cursor:"pointer",color:T.sub,fontSize:12,fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap"}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"66";e.currentTarget.style.color=T.txt;}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accent+"66";e.currentTarget.style.color=T.txt;}}
                   onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
                 >
                   <span style={{fontSize:14}}>🔍</span>
@@ -5209,7 +5494,7 @@ export default function App() {
                   onMouseLeave={e=>e.currentTarget.style.background="none"}
                   title="Profile Settings"
                 >
-                  <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={30}/>
+                  <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={30} avatarUrl={user.avatar_url}/>
                   <div className="header-name" style={{display:"flex",flexDirection:"column",lineHeight:1.2,minWidth:0,textAlign:"left"}}>
                     <span style={{fontSize:13,color:T.txt,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:90}}>{user.name.split(" ")[0]}</span>
                     <span style={{fontSize:10,color:T.sub,fontWeight:500}}>{ROLES[user.role]?.label||""}</span>
@@ -5323,7 +5608,7 @@ export default function App() {
                     {can(user,"assign")&&<Btn T={T} sm onClick={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}}>+ New Task</Btn>}
                   </div>
                   <SLabel T={T}>OPEN · {openT.length}</SLabel>
-                  {openT.length===0&&dataLoaded&&<Empty icon="🎉" msg="All caught up!" T={T}/>}
+                  {openT.length===0&&dataLoaded&&<Empty icon={E("🎉","")} msg="All caught up!" T={T}/>}
                   {!dataLoaded&&[1,2,3].map(i=><SkeletonCard key={i} T={T}/>)}
                   <div style={{display:"grid",gap:T.compact?6:8,marginBottom:20}}>
                     {openT.map((t,i)=><TaskCard key={t.id} task={t} emps={emps} canManage={can(user,"assign")} onToggle={toggleTask} onDelete={deleteTask} T={T} delay={i*35}/>)}
@@ -5344,10 +5629,10 @@ export default function App() {
                     <div style={{fontSize:T.fs.md,color:T.sub}}>{inv.length} items · {inv.reduce((a,i)=>a+i.stock,0)} in stock</div>
                     <Btn T={T} sm onClick={()=>{setForm({});setModal("item");}}>+ Add Item</Btn>
                   </div>
-                  {inv.length===0?<Empty icon="📦" msg="No items yet" T={T}/>:(
+                  {inv.length===0?<Empty icon={E("📦","")} msg="No items yet" T={T}/>:(
                     <div style={{display:"grid",gap:T.compact?6:8}}>
                       {inv.map((item,i)=>(
-                        <div key={item.id} className="card" style={{background:T.card,border:`1px solid ${item.stock===0?T.scarlet+"55":T.bor}`,borderRadius:14,padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",animation:`fadeUp .25s ${i*30}ms ease both`}}>
+                        <div key={item.id} className="card" style={{background:T.card,border:`1px solid ${item.stock===0?T.accent+"55":T.bor}`,borderRadius:14,padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",animation:`fadeUp .25s ${i*30}ms ease both`}}>
                           <div style={{flex:1,minWidth:110}}>
                             <div style={{fontWeight:700,fontSize:T.fs.lg,color:T.txt}}>{item.name}</div>
                             <div style={{fontSize:T.fs.xs+1,color:T.sub,marginTop:2}}>{item.category}{item.note&&` · ${item.note}`} · {fmtD(item.createdAt)}</div>
@@ -5376,7 +5661,7 @@ export default function App() {
                     <div style={{fontSize:T.fs.md,color:T.sub}}>{myAnns.length} active</div>
                     {can(user,"assign")&&<Btn T={T} sm onClick={()=>{setForm({aLvl:"info"});setModal("ann");}}>+ Send Announcement</Btn>}
                   </div>
-                  {myAnns.length===0?<Empty icon="🔔" msg="No announcements" T={T}/>:(
+                  {myAnns.length===0?<Empty icon={E("🔔","")} msg="No announcements" T={T}/>:(
                     <div style={{display:"grid",gap:10}}>
                       {myAnns.map((a,i)=>{
                         const lc={info:T.blue,warn:T.warn,danger:T.scarlet}[a.level]||T.blue;
@@ -5444,7 +5729,7 @@ export default function App() {
               {page==="dms"&&<DMSection user={user} emps={emps} dms={dms} setDms={saveDms} T={T} toast={toast} onXP={()=>grantXP(5,"dm sent")}/>}
 
               {/* LEADERBOARD */}
-              {page==="leaderboard"&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T}/>}
+              {page==="leaderboard"&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T} onShop={()=>setShowShop(true)}/>}
 
               {/* SCHEDULE */}
               {page==="schedule"&&(
@@ -5494,11 +5779,11 @@ export default function App() {
                       </button>
                     ))}
                   </div>
-                  {filtAct.length===0?<Empty icon="📊" msg="No activity yet" T={T}/>:(
+                  {filtAct.length===0?<Empty icon={E("📊","")} msg="No activity yet" T={T}/>:(
                     <div style={{display:"grid",gap:T.compact?5:8}}>
                       {filtAct.slice(0,80).map((entry,i)=>(
                         <div key={entry.id} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"11px 14px",display:"flex",gap:10,alignItems:"center",animation:`fadeUp .2s ${i*12}ms ease both`}}>
-                          <span style={{fontSize:15}}>{({"login":"🟢","logout":"🔴","task_done":"✅","task_created":"📝","employee added":"👤","employee removed":"🗑️"})[entry.type]||"📋"}</span>
+                          <span style={{fontSize:15}}>{({"login":E("🟢","●"),"logout":E("🔴","●"),"task_done":E("✅","✓"),"task_created":E("📝","·"),"employee added":E("👤","·"),"employee removed":E("🗑️","·")})[entry.type]||"📋"}</span>
                           <div style={{flex:1}}>
                             <div style={{fontSize:T.fs.md,color:T.txt,fontWeight:600}}>{entry.msg}</div>
                             <div style={{fontSize:T.fs.xs+1,color:T.sub,marginTop:2}}>{fmtDT(entry.at)}</div>
@@ -5515,7 +5800,7 @@ export default function App() {
                 <div className="fu set-grid" style={{display:"grid",gridTemplateColumns:"155px 1fr",gap:16,marginTop:54}}>
                   <div style={{display:"flex",flexDirection:"column",gap:4}}>
                     {SET_TABS.map(s=>(
-                      <button key={s.key} onClick={()=>{playSound("click");setSettingsTab(s.key);}} style={{background:setTab2===s.key?T.scarlet+"18":"none",color:setTab2===s.key?T.scarlet:T.sub,border:`1px solid ${setTab2===s.key?T.scarlet+"44":"transparent"}`,borderRadius:T.sp.r,padding:"9px 14px",fontWeight:700,fontSize:13,fontFamily:"inherit",cursor:"pointer",textAlign:"left",transition:"all .18s"}}>{s.label}</button>
+                      <button key={s.key} onClick={()=>{playSound("click");setSettingsTab(s.key);}} style={{background:setTab2===s.key?T.accent+"18":"none",color:setTab2===s.key?T.scarlet:T.sub,border:`1px solid ${setTab2===s.key?T.scarlet+"44":"transparent"}`,borderRadius:T.sp.r,padding:"9px 14px",fontWeight:700,fontSize:13,fontFamily:"inherit",cursor:"pointer",textAlign:"left",transition:"all .18s"}}>{s.label}</button>
                     ))}
                   </div>
                   <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:16,padding:T.sp.xl}}>
@@ -5524,7 +5809,10 @@ export default function App() {
                       <div style={{display:"grid",gap:18}}>
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>Profile</div>
                         <div style={{display:"flex",alignItems:"center",gap:14}}>
-                          <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={54}/>
+                          <div style={{position:"relative",cursor:"pointer"}} onClick={()=>{playSound("click");setShowPfpUpload(true);}} title="Change profile picture">
+                            <Avatar email={user.email} color={ROLES[user.role]?.color||T.scarlet} size={54} avatarUrl={user.avatar_url}/>
+                            <div style={{position:"absolute",bottom:-2,right:-2,width:22,height:22,borderRadius:"50%",background:T.accent,border:`2px solid ${T.bg}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,color:"#fff",fontWeight:800}}>{E("📸","+")}</div>
+                          </div>
                           <div>
                             <div style={{fontWeight:700,fontSize:T.fs.xl,color:T.txt}}>{user.name}</div>
                             <div style={{color:T.sub,fontSize:T.fs.sm}}>{user.email}</div>
@@ -5575,6 +5863,19 @@ export default function App() {
                             </div>
                           </div>
                         </div>
+                        {/* Guided tour button */}
+                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:14,padding:20,display:"flex",gap:14,alignItems:"center"}}>
+                          <div style={{width:44,height:44,borderRadius:T.minimal?"50%":12,background:T.accent+"18",border:`1px solid ${T.accent}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22}}>{E("✨","★")}</div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{fontWeight:T.minimal?600:700,fontSize:T.minimal?15:14,color:T.txt,marginBottom:2,letterSpacing:T.minimal?"-0.2px":"normal"}}>New here?</div>
+                            <div style={{fontSize:12,color:T.sub,lineHeight:1.5}}>Take a quick guided tour of Neer Locker — under a minute.</div>
+                          </div>
+                          <button onClick={()=>{playSound("open");setShowOnboarding(true);}}
+                            style={{background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 20px",fontWeight:T.minimal?500:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s",flexShrink:0,whiteSpace:"nowrap"}}
+                            onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
+                            onMouseLeave={e=>e.currentTarget.style.opacity="1"}
+                          >Start tour</button>
+                        </div>
                       </div>
                     )}
 
@@ -5613,7 +5914,7 @@ export default function App() {
                           {WA.supported()&&!localStorage.getItem("nl3-passkey-cred-"+user?.id)&&(
                             <div style={{background:`${T.blue}12`,border:`1px solid ${T.blue}33`,borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:T.sub,lineHeight:1.7}}>
                               <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>📱 Before you set this up:</div>
-                              <div><strong>iPhone:</strong> You must have the app <strong>added to your home screen from Safari</strong> and be using it from there — Face ID / Touch ID will not work in a regular browser tab. <a href="https://support.apple.com/guide/iphone/bookmark-a-website-iph42ab2f3a7/ios" target="_blank" style={{color:T.scarlet}}>How to add to home screen →</a></div>
+                              <div><strong>iPhone:</strong> You must have the app <strong>added to your home screen from Safari</strong> and be using it from there — Face ID / Touch ID will not work in a regular browser tab. <a href="https://support.apple.com/guide/iphone/bookmark-a-website-iph42ab2f3a7/ios" target="_blank" style={{color:T.accent}}>How to add to home screen →</a></div>
                               <div style={{marginTop:4}}><strong>Android:</strong> Works great in Chrome — no extra steps needed. ✅</div>
                             </div>
                           )}
@@ -5708,11 +6009,11 @@ export default function App() {
                                   } else {
                                     applyTheme(opt.key==="dark",compact);
                                   }
-                                }} style={{background:active?T.scarlet+"18":"none",border:`2px solid ${active?T.scarlet:T.bor}`,borderRadius:12,padding:"12px 8px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",transition:"all .2s"}}>
+                                }} style={{background:active?T.accent+"18":"none",border:`2px solid ${active?T.accent:T.bor}`,borderRadius:12,padding:"12px 8px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",transition:"all .2s"}}>
                                   <div style={{fontSize:20,marginBottom:4}}>{opt.icon}</div>
-                                  <div style={{fontWeight:700,color:active?T.scarlet:T.txt,fontSize:13}}>{opt.label}</div>
+                                  <div style={{fontWeight:700,color:active?T.accent:T.txt,fontSize:13}}>{opt.label}</div>
                                   <div style={{fontSize:10,color:T.sub,marginTop:2}}>{opt.desc}</div>
-                                  {active&&<div style={{fontSize:10,color:T.scarlet,fontWeight:800,marginTop:4}}>✓ Active</div>}
+                                  {active&&<div style={{fontSize:10,color:T.accent,fontWeight:800,marginTop:4}}>✓ Active</div>}
                                 </button>
                               );
                             })}
@@ -5725,13 +6026,42 @@ export default function App() {
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>How much information is shown on screen at once.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                             {[{k:false,label:"Comfortable",icon:"🛋️",desc:"More spacing, easier to read"},{k:true,label:"Compact",icon:"📊",desc:"More data, tighter layout"}].map(opt=>(
-                              <button key={String(opt.k)} onClick={()=>{playSound("click");applyTheme(dark,opt.k);}} style={{background:compact===opt.k?T.scarlet+"18":"none",border:`2px solid ${compact===opt.k?T.scarlet:T.bor}`,borderRadius:12,padding:"12px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all .2s"}}>
+                              <button key={String(opt.k)} onClick={()=>{playSound("click");applyTheme(dark,opt.k);}} style={{background:compact===opt.k?T.accent+"18":"none",border:`2px solid ${compact===opt.k?T.scarlet:T.bor}`,borderRadius:12,padding:"12px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all .2s"}}>
                                 <div style={{fontSize:20,marginBottom:4}}>{opt.icon}</div>
                                 <div style={{fontWeight:700,color:compact===opt.k?T.scarlet:T.txt,fontSize:13}}>{opt.label}</div>
                                 <div style={{fontSize:11,color:T.sub,marginTop:3}}>{opt.desc}</div>
                               </button>
                             ))}
                           </div>
+                        </div>
+
+                        {/* Minimal Mode */}
+                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                            <div>
+                              <div style={{fontWeight:700,color:T.txt,display:"flex",alignItems:"center",gap:8}}>
+                                ✦ Minimal Mode
+                                {minimalMode&&<span style={{fontSize:10,fontWeight:700,background:T.accent+"20",color:T.accent,borderRadius:100,padding:"2px 8px"}}>ACTIVE</span>}
+                              </div>
+                              <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2,lineHeight:1.5}}>Google Antigravity-inspired look. Clean white cards, pill buttons, sans-serif. Same features.</div>
+                            </div>
+                            <button onClick={()=>{
+                              const next=!minimalMode;
+                              applyTheme(dark,compact,undefined,next);
+                              playSound("click");
+                            }} style={{width:50,height:27,borderRadius:14,background:minimalMode?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                              <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?(minimalMode?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:minimalMode?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                            </button>
+                          </div>
+                          {minimalMode&&(
+                            <div style={{marginTop:12,padding:"10px 12px",background:T.bg,borderRadius:8,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                              <div style={{fontSize:11,color:T.sub}}>Preview:</div>
+                              <div style={{background:T.dark?"#ffffff":"#202124",color:T.dark?"#000":"#fff",borderRadius:9999,padding:"4px 12px",fontSize:11,fontWeight:500,fontFamily:"'Google Sans',sans-serif"}}>Primary</div>
+                              <div style={{background:"transparent",color:T.txt,border:"1.5px solid "+T.txt,borderRadius:9999,padding:"4px 12px",fontSize:11,fontWeight:500}}>Ghost</div>
+                              <div style={{background:T.surf,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:11,color:T.txt}}>Card</div>
+                            </div>
+                          )}
+
                         </div>
 
                         {/* Device / UI Scaling */}
@@ -5748,17 +6078,17 @@ export default function App() {
                               const active=deviceMode===opt.mode;
                               return (
                                 <button key={opt.mode} onClick={()=>applyDeviceMode(opt.mode)}
-                                  style={{background:active?T.scarlet+"18":"none",border:`2px solid ${active?T.scarlet:T.bor}`,borderRadius:12,padding:"12px 8px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",transition:"all .2s"}}>
+                                  style={{background:active?T.accent+"18":"none",border:`2px solid ${active?T.accent:T.bor}`,borderRadius:12,padding:"12px 8px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",transition:"all .2s"}}>
                                   <div style={{fontSize:22,marginBottom:4}}>{opt.icon}</div>
-                                  <div style={{fontWeight:700,color:active?T.scarlet:T.txt,fontSize:13}}>{opt.label}</div>
+                                  <div style={{fontWeight:700,color:active?T.accent:T.txt,fontSize:13}}>{opt.label}</div>
                                   <div style={{fontSize:10,color:T.sub,marginTop:3,lineHeight:1.4}}>{opt.desc}</div>
-                                  {active&&<div style={{marginTop:6,fontSize:10,color:T.scarlet,fontWeight:800}}>✓ Active</div>}
+                                  {active&&<div style={{marginTop:6,fontSize:10,color:T.accent,fontWeight:800}}>✓ Active</div>}
                                 </button>
                               );
                             })}
                           </div>
                           <div style={{marginTop:10,fontSize:11,color:T.sub,background:T.bg,borderRadius:8,padding:"8px 12px"}}>
-                            Current: <strong style={{color:T.scarlet}}>{deviceMode==="auto"?(window.innerWidth<=768?"Auto (Mobile)":window.innerWidth<=1024?"Auto (Tablet)":"Auto (Desktop)"):deviceMode==="mobile"?"Mobile":deviceMode==="tablet"?"Tablet":"Desktop"}</strong>
+                            Current: <strong style={{color:T.accent}}>{deviceMode==="auto"?(window.innerWidth<=768?"Auto (Mobile)":window.innerWidth<=1024?"Auto (Tablet)":"Auto (Desktop)"):deviceMode==="mobile"?"Mobile":deviceMode==="tablet"?"Tablet":"Desktop"}</strong>
                             {" · "}Base font: <strong>{deviceMode==="mobile"?"18px":deviceMode==="tablet"?"15px":"13px"}</strong>
                           </div>
                         </div>
@@ -5804,7 +6134,7 @@ export default function App() {
                                     playSound("click");
                                     toast("Notifications disabled","warn");
                                   }
-                                }} style={{flexShrink:0,width:48,height:26,borderRadius:13,background:notifEnabled?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s"}}>
+                                }} style={{flexShrink:0,width:48,height:26,borderRadius:13,background:notifEnabled?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s"}}>
                                   <div style={{position:"absolute",top:3,left:notifEnabled?24:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
                                 </button>
                               </div>
@@ -5833,6 +6163,35 @@ export default function App() {
                             </div>
                           )}
                         </div>
+
+                        {/* Emoji toggle — minimal mode only */}
+                        {minimalMode&&(
+                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:16,padding:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontWeight:700,color:T.txt}}>Emoji Icons</div>
+                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Show emoji icons throughout the app</div>
+                          </div>
+                          <button onClick={()=>{const next=!showEmojis;setShowEmojis(next);window._showEmojis=next;LS.set("nl3-emojis",next);setT(prev=>({...prev,showEmojis:next}));playSound("click");}} style={{width:50,height:27,borderRadius:14,background:showEmojis?T.scarlet:(T.dark?"#505050":"#909090"),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                            <div style={{width:21,height:21,borderRadius:"50%",position:"absolute",top:3,left:showEmojis?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)",background:showEmojis?"#fff":(T.dark?"#e0e0e0":"#202124")}}/>
+                          </button>
+                        </div>
+                        )}
+                        {/* Minimal sound toggle */}
+                        {minimalMode&&<div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:12,padding:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{fontWeight:700,color:T.txt}}>Minimal Sounds</div>
+                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Clean short tones in minimal mode</div>
+                          </div>
+                          <button onClick={()=>{
+                            const next=!window._minimalSounds;
+                            window._minimalSounds=next;
+                            LS.set("nl3-minimal-sound",next);
+                            setT(prev=>({...prev}));
+                            playSound("click");
+                          }} style={{width:50,height:27,borderRadius:14,background:(window._minimalSounds!==false)?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                            <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?((window._minimalSounds!==false)?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:(window._minimalSounds!==false)?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                          </button>
+                        </div>}
 
                         {/* Accent color */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
@@ -5869,7 +6228,7 @@ export default function App() {
                         {/* Voice toggle */}
                         <div style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                           <div>
-                            <div style={{fontWeight:700,color:T.txt}}>🔊 Finn Voice</div>
+                            <div style={{fontWeight:700,color:T.txt}}>{E("🔊","♪")} Finn Voice</div>
                             <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Finn reads replies aloud — works on all devices</div>
                           </div>
                           <button onClick={()=>{
@@ -5878,8 +6237,8 @@ export default function App() {
                             LS.set("nl3-finn-voice",next);
                             if(!next){ window.speechSynthesis.cancel(); }
                             setForm(p=>({...p}));
-                          }} style={{width:50,height:27,borderRadius:14,background:voiceOnGlobal?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                            <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:voiceOnGlobal?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                          }} style={{width:50,height:27,borderRadius:14,background:voiceOnGlobal?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                            <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?(voiceOnGlobal?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:voiceOnGlobal?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
                           </button>
                         </div>
                         {/* Haptics toggle */}
@@ -5899,8 +6258,8 @@ export default function App() {
                               LS.set("nl3-haptics-off",next);
                               if(!next) setTimeout(()=>haptic("success"),50);
                               setForm(p=>({...p,_h:Date.now()}));
-                            }} style={{width:50,height:27,borderRadius:14,background:!window._hapticsOff?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                              <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:!window._hapticsOff?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                            }} style={{width:50,height:27,borderRadius:14,background:!window._hapticsOff?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                              <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?(!window._hapticsOff?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:!window._hapticsOff?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
                             </button>
                           </div>
                         </div>
@@ -5912,8 +6271,8 @@ export default function App() {
                               <div style={{fontWeight:600,fontSize:T.fs.md,color:T.txt}}>Sound Effects</div>
                               <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:1}}>Click sounds, notifications, and feedback tones</div>
                             </div>
-                            <button onClick={()=>{const next=!soundOn;applySoundSettings(next,soundVol);if(next)setTimeout(()=>playSound("click"),50);}} style={{width:50,height:27,borderRadius:14,background:soundOn?T.scarlet:T.bor,border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                              <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:soundOn?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                            <button onClick={()=>{const next=!soundOn;applySoundSettings(next,soundVol);if(next)setTimeout(()=>playSound("click"),50);}} style={{width:50,height:27,borderRadius:14,background:soundOn?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                              <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?(soundOn?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:soundOn?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
                             </button>
                           </div>
                           {/* Volume */}
@@ -5932,7 +6291,7 @@ export default function App() {
                               </div>
                               <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
                                 {[{label:"Quiet",vol:0.08},{label:"Normal",vol:0.22},{label:"Loud",vol:0.44}].map(opt=>(
-                                  <button key={opt.label} onClick={()=>{applySoundSettings(true,opt.vol);setTimeout(()=>playSound("click"),50);}} style={{background:Math.abs(soundVol-opt.vol)<0.03?T.scarlet+"18":"none",border:`1px solid ${Math.abs(soundVol-opt.vol)<0.03?T.scarlet:T.bor}`,borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:700,color:Math.abs(soundVol-opt.vol)<0.03?T.scarlet:T.sub,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{opt.label}</button>
+                                  <button key={opt.label} onClick={()=>{applySoundSettings(true,opt.vol);setTimeout(()=>playSound("click"),50);}} style={{background:Math.abs(soundVol-opt.vol)<0.03?T.accent+"18":"none",border:`1px solid ${Math.abs(soundVol-opt.vol)<0.03?T.scarlet:T.bor}`,borderRadius:8,padding:"4px 12px",fontSize:12,fontWeight:700,color:Math.abs(soundVol-opt.vol)<0.03?T.scarlet:T.sub,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{opt.label}</button>
                                 ))}
                               </div>
                             </div>
@@ -6065,7 +6424,7 @@ export default function App() {
                         <button key={day} type="button" onClick={()=>{
                           const curr=form.tRepeatDays||[];
                           setForm(p=>({...p,tRepeatDays:active?curr.filter(d=>d!==day):[...curr,day],tRepeat:false}));
-                        }} style={{background:active?T.scarlet:T.bg,color:active?"#fff":T.sub,border:`1px solid ${active?T.scarlet:T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                        }} style={{background:active?(T.minimal?T.accent:T.scarlet):T.bg,color:active?"#fff":T.sub,border:`1px solid ${active?T.accent:T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
                           {day}
                         </button>
                       );
@@ -6133,7 +6492,7 @@ export default function App() {
           {showBriefing&&<LoginBriefing user={user} tasks={tasks} anns={anns} dms={dms} emps={emps} T={T} onClose={()=>setShowBriefing(false)}/>}
 
           {/* Finn button — bottom right above ideas */}
-          <button onClick={()=>{playSound("finn");openFinn();}} title="Ask Finn"
+          <button onClick={()=>{playSound("finn");openFinn();}} title="Ask Finn" data-tour="finn-button"
             className="float-action-btn" style={{position:"fixed",bottom:page==="dms"?222:148,right:14,zIndex:9998,background:"#0f2744",border:"2px solid #1e7fa8aa",borderRadius:"50%",width:40,height:40,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.28)",transition:"transform .15s,box-shadow .15s,bottom .25s",touchAction:"manipulation",padding:0}}
             onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.14)";e.currentTarget.style.boxShadow="0 5px 18px rgba(0,0,0,.3)";}}
             onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 14px rgba(0,0,0,.28)";}}
@@ -6217,9 +6576,25 @@ export default function App() {
           {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} act={act} onClose={()=>setShowFinn(false)} setPage={p=>{setPrevPage(page);setPage(p);}} toast={toast} saveTask={(t)=>{setTasks(prev=>{const exists=prev.find(x=>x.id===t.id);return exists?prev.map(x=>x.id===t.id?t:x):[t,...prev];});upsertTask(t);}} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact} upsertTask={upsertTask} dismissAnn={dismissAnn} voiceOnGlobal={voiceOnGlobal} setVoiceOnGlobal={setVoiceOnGlobal}/>}
 
           <HelpModal T={T} bottom={page==="dms"?120:52}/>
+            {showRating&&<RatingModal T={T} user={user} open={showRating} onClose={()=>setShowRating(false)}/>}
+            {showPfpUpload&&<PfpUploadModal T={T} user={user} emps={emps} setEmps={setEmps} open={showPfpUpload} onClose={()=>setShowPfpUpload(false)} toast={toast}/>}
+            {showShop&&<XPShopModal T={T} user={user} progress={progress} open={showShop} onClose={()=>setShowShop(false)} onPurchase={(item)=>{
+              if(item.type==="color"){applyTheme(dark,compact,item.color);toast(`${item.name} applied!`);}
+              else if(item.type==="pfp"){setShowPfpUpload(true);}
+              else if(item.type==="streak_save"){
+                // Restore streak to 1 (or previous value if stored)
+                const pg=progress[user.id]||{};
+                SB.upsert("user_progress",{user_id:user.id,xp:pg.xp||0,level:pg.level||1,title:pg.title||"Pioneer",streak:Math.max(pg.streak||0,1),last_login:new Date().toISOString().slice(0,10)}).then(()=>{
+                  setProgress(prev=>({...prev,[user.id]:{...pg,streak:Math.max(pg.streak||0,1),last_login:new Date().toISOString().slice(0,10)}}));
+                });
+                toast("Streak restored! 🔥");
+              }
+              else toast(`${item.name} unlocked!`);
+            }}/>}
+            {showOnboarding&&<OnboardingTour T={T} user={user} open={showOnboarding} onClose={()=>setShowOnboarding(false)} setPage={p=>{setPrevPage(page);setPage(p);}} setShowFinn={setShowFinn} setShowFeedback={setShowFeedback}/>}
 
           {/* Feedback / Ideas button — higher in DMs to clear send bar */}
-          <button onClick={()=>{playSound("open");setShowFeedback(true);}} title="Send an idea or report a bug"
+          <button onClick={()=>{playSound("open");setShowFeedback(true);}} title="Send an idea or report a bug" data-tour="feedback-button"
             className="float-action-btn" style={{position:"fixed",bottom:page==="dms"?170:100,right:14,zIndex:9998,background:T.dark?"#1a1020":"#fffbeb",color:"#b45309",border:`2px solid #f59e0baa`,borderRadius:"50%",width:40,height:40,fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.18)",transition:"transform .15s,box-shadow .15s,bottom .25s",touchAction:"manipulation"}}
             onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.14)";e.currentTarget.style.boxShadow="0 5px 18px rgba(0,0,0,.2)";}}
             onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 3px 12px rgba(0,0,0,.15)";}}
@@ -6227,7 +6602,7 @@ export default function App() {
 
           {/* Feedback modal */}
           {showFeedback&&(
-            <Modal T={T} title="💡 Send Feedback" onClose={()=>{setShowFeedback(false);setFeedbackForm({type:"feature",msg:""});}}>
+            <Modal T={T} title={`${E("💡","i")} Send Feedback`} onClose={()=>{setShowFeedback(false);setFeedbackForm({type:"feature",msg:""});}}>
               <div style={{display:"grid",gap:14}}>
                 <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>Have a feature idea or found a bug? Your message goes directly to the Technical Administrator.</div>
                 <Sel T={T} label="TYPE" value={feedbackForm.type} onChange={e=>setFeedbackForm(p=>({...p,type:e.target.value}))}>
@@ -6653,8 +7028,8 @@ export default function App() {
                     const assignee=t.assignedTo==="all"?"Everyone":emps.find(e=>e.id===t.assignedTo)?.name||"Unknown";
                     return (
                       <div key={t.id} onClick={()=>{setSelectedTasks(prev=>{const n=new Set(prev);checked?n.delete(t.id):n.add(t.id);return n;});}}
-                        style={{display:"flex",alignItems:"center",gap:10,background:checked?T.scarlet+"18":T.bg,border:`1px solid ${checked?T.scarlet+"66":T.bor}`,borderRadius:10,padding:"8px 12px",cursor:"pointer",transition:"all .15s"}}>
-                        <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${checked?T.scarlet:T.bor}`,background:checked?T.scarlet:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        style={{display:"flex",alignItems:"center",gap:10,background:checked?T.accent+"18":T.bg,border:`1px solid ${checked?T.accent+"66":T.bor}`,borderRadius:10,padding:"8px 12px",cursor:"pointer",transition:"all .15s"}}>
+                        <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${checked?T.scarlet:T.bor}`,background:checked?(T.minimal?T.accent:T.scarlet):"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                           {checked&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
                         </div>
                         <div style={{flex:1,minWidth:0}}>
@@ -6782,6 +7157,9 @@ export default function App() {
               ))}
             </div>
 
+            {/* Monthly ratings from staff */}
+            <RatingsPanel T={T}/>
+
             {/* Feedback from staff */}
             <FeedbackPanel T={T} toast={toast}/>
 
@@ -6877,37 +7255,557 @@ export default function App() {
 // ─── QTY BUTTON ───────────────────────────────────────────────────────────────
 
 // ─── HELP MODAL ───────────────────────────────────────────────────────────────
+
+// ─── DRAGGABLE MINIMIZED TOUR PILL ──────────────────────────────────────────
+function DraggableMinimizedPill({T,s,step,total,onExpand,onClose}) {
+  // Edge snap zones — pill can only rest on top/bottom (horizontal) or left/right (vertical)
+  const [edge,setEdge]=useState("bottom");
+  const [offset,setOffset]=useState(0.5); // 0..1 along the edge
+  const [dragging,setDragging]=useState(false);
+  const [dragPos,setDragPos]=useState({x:0,y:0});
+  const [entering,setEntering]=useState(true);
+  const dragOrigin=useRef({dx:0,dy:0});
+
+  // Entry animation flag
+  useEffect(()=>{
+    const t=setTimeout(()=>setEntering(false),350);
+    return()=>clearTimeout(t);
+  },[]);
+
+  const startDrag=(clientX,clientY)=>{
+    const vw=window.innerWidth, vh=window.innerHeight;
+    // Compute current pill position for accurate drag offset
+    let cx, cy;
+    if(edge==="top"){cx=vw*offset;cy=10+22;}
+    else if(edge==="bottom"){cx=vw*offset;cy=vh-10-22;}
+    else if(edge==="left"){cx=10+22;cy=vh*offset;}
+    else {cx=vw-10-22;cy=vh*offset;}
+    dragOrigin.current={dx:clientX-cx, dy:clientY-cy};
+    setDragPos({x:cx,y:cy});
+    setDragging(true);
+  };
+  const moveDrag=(clientX,clientY)=>{
+    if(!dragging) return;
+    // Free follow cursor — no snapping while dragging
+    setDragPos({x:clientX-dragOrigin.current.dx, y:clientY-dragOrigin.current.dy});
+  };
+  const endDrag=(clientX,clientY)=>{
+    if(!dragging) return;
+    const vw=window.innerWidth, vh=window.innerHeight;
+    const x=clientX-dragOrigin.current.dx;
+    const y=clientY-dragOrigin.current.dy;
+    const distTop=y;
+    const distBottom=vh-y;
+    const distLeft=x;
+    const distRight=vw-x;
+    const m=Math.min(distTop,distBottom,distLeft,distRight);
+    let ne,no;
+    if(m===distTop){ne="top";no=Math.max(0.08,Math.min(0.92,x/vw));}
+    else if(m===distBottom){ne="bottom";no=Math.max(0.08,Math.min(0.92,x/vw));}
+    else if(m===distLeft){ne="left";no=Math.max(0.1,Math.min(0.9,y/vh));}
+    else {ne="right";no=Math.max(0.1,Math.min(0.9,y/vh));}
+    setEdge(ne);
+    setOffset(no);
+    setDragging(false);
+    playSound("click");
+    haptic&&haptic("light");
+  };
+
+  // Mouse
+  useEffect(()=>{
+    if(!dragging) return;
+    const onMove=e=>moveDrag(e.clientX,e.clientY);
+    const onUp=e=>endDrag(e.clientX,e.clientY);
+    window.addEventListener("mousemove",onMove);
+    window.addEventListener("mouseup",onUp);
+    return()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);};
+  },[dragging]);
+
+  // Touch
+  useEffect(()=>{
+    if(!dragging) return;
+    const onMove=e=>{if(e.touches[0])moveDrag(e.touches[0].clientX,e.touches[0].clientY);};
+    const onEnd=e=>{const t=e.changedTouches[0];if(t)endDrag(t.clientX,t.clientY);};
+    window.addEventListener("touchmove",onMove,{passive:false});
+    window.addEventListener("touchend",onEnd);
+    return()=>{window.removeEventListener("touchmove",onMove);window.removeEventListener("touchend",onEnd);};
+  },[dragging]);
+
+  const horizontal = edge==="top"||edge==="bottom";
+
+  // Compute layout based on state
+  let style;
+  if(dragging){
+    style={position:"fixed",left:dragPos.x-60,top:dragPos.y-22,zIndex:9999,transform:"scale(1.05)",opacity:0.9};
+  } else if(edge==="top"){
+    style={position:"fixed",top:10,left:`${offset*100}%`,transform:"translateX(-50%)",zIndex:9999};
+  } else if(edge==="bottom"){
+    style={position:"fixed",bottom:10,left:`${offset*100}%`,transform:"translateX(-50%)",zIndex:9999};
+  } else if(edge==="left"){
+    style={position:"fixed",left:10,top:`${offset*100}%`,transform:"translateY(-50%)",zIndex:9999};
+  } else {
+    style={position:"fixed",right:10,top:`${offset*100}%`,transform:"translateY(-50%)",zIndex:9999};
+  }
+
+  // Title text — truncate for vertical mode
+  const shortTitle = (s.title||"").length>14?(s.title.slice(0,13)+"…"):s.title;
+
+  const pillStyle={
+    ...style,
+    background:T.surf,
+    border:`1.5px solid ${T.accent}`,
+    borderRadius:9999,
+    padding:horizontal?"8px 14px 8px 10px":"10px 8px",
+    display:"flex",
+    flexDirection:horizontal?"row":"column",
+    alignItems:"center",
+    gap:horizontal?8:8,
+    boxShadow:dragging?"0 20px 50px rgba(0,0,0,.45)":"0 6px 24px rgba(0,0,0,.22)",
+    cursor:dragging?"grabbing":"grab",
+    transition:dragging?"none":"top .4s cubic-bezier(.34,1.56,.64,1),bottom .4s cubic-bezier(.34,1.56,.64,1),left .4s cubic-bezier(.34,1.56,.64,1),right .4s cubic-bezier(.34,1.56,.64,1),padding .3s,flex-direction .3s,transform .25s,opacity .25s,box-shadow .25s",
+    userSelect:"none",
+    touchAction:"none",
+    minWidth:horizontal?undefined:48,
+    animation:entering?"tourPillIn .35s cubic-bezier(.34,1.56,.64,1)":undefined,
+  };
+
+  return (
+    <>
+      {/* Drop-zone indicators visible during drag */}
+      {dragging&&<DropZoneHints T={T} dragPos={dragPos}/>}
+      <div style={pillStyle}
+        onMouseDown={e=>{if(e.target.tagName==="BUTTON")return;startDrag(e.clientX,e.clientY);e.preventDefault();}}
+        onTouchStart={e=>{if(e.target.tagName==="BUTTON")return;if(e.touches[0])startDrag(e.touches[0].clientX,e.touches[0].clientY);}}
+      >
+        {/* Grip handle — orients with axis */}
+        <div style={{display:"flex",flexDirection:horizontal?"column":"row",gap:2,padding:"0 1px",color:T.mut,flexShrink:0}}>
+          {[0,1,2].map(i=>(
+            <div key={i} style={{display:"flex",flexDirection:horizontal?"row":"column",gap:2}}>
+              <div style={{width:2,height:2,borderRadius:"50%",background:"currentColor"}}/>
+              <div style={{width:2,height:2,borderRadius:"50%",background:"currentColor"}}/>
+            </div>
+          ))}
+        </div>
+        {/* Pulsing accent dot */}
+        <div style={{width:horizontal?8:10,height:horizontal?8:10,borderRadius:"50%",background:T.accent,flexShrink:0,animation:"pulse 2s infinite",boxShadow:`0 0 0 0 ${T.accent}`}}/>
+        {/* Content — horizontal shows title+counter, vertical shows just counter stacked */}
+        {horizontal?(
+          <div style={{fontSize:12,color:T.txt,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:160}}>{shortTitle} · {step+1}/{total}</div>
+        ):(
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+            <div style={{fontSize:13,fontWeight:800,color:T.txt,letterSpacing:"-0.02em",lineHeight:1}}>{step+1}</div>
+            <div style={{fontSize:8,color:T.sub,fontWeight:600,letterSpacing:"0.04em"}}>of {total}</div>
+          </div>
+        )}
+        {/* Expand button — label when horizontal, icon when vertical */}
+        <button onClick={onExpand} title="Expand tour"
+          style={{background:T.accent,border:"none",color:"#fff",borderRadius:9999,padding:horizontal?"4px 10px":"5px 6px",fontSize:horizontal?11:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",flexShrink:0,whiteSpace:"nowrap",lineHeight:1,minWidth:horizontal?undefined:26,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {horizontal?"Expand":"⤢"}
+        </button>
+        {/* Close */}
+        <button onClick={onClose} title="Close tour"
+          style={{background:"none",border:"none",color:T.mut,fontSize:16,cursor:"pointer",fontFamily:"inherit",padding:"0 4px",flexShrink:0,lineHeight:1}}>×</button>
+      </div>
+    </>
+  );
+}
+
+// Drop zone hints — shown while dragging to indicate snap areas
+function DropZoneHints({T,dragPos}){
+  const vw=window.innerWidth, vh=window.innerHeight;
+  const distTop=dragPos.y;
+  const distBottom=vh-dragPos.y;
+  const distLeft=dragPos.x;
+  const distRight=vw-dragPos.x;
+  const m=Math.min(distTop,distBottom,distLeft,distRight);
+  const activeEdge = m===distTop?"top":m===distBottom?"bottom":m===distLeft?"left":"right";
+  const zones=[
+    {key:"top",    s:{position:"fixed",top:0,   left:0,    width:"100%", height:40}},
+    {key:"bottom", s:{position:"fixed",bottom:0,left:0,    width:"100%", height:40}},
+    {key:"left",   s:{position:"fixed",left:0,  top:0,     width:40,     height:"100%"}},
+    {key:"right",  s:{position:"fixed",right:0, top:0,     width:40,     height:"100%"}},
+  ];
+  return <>{zones.map(z=>(
+    <div key={z.key} style={{...z.s,zIndex:9998,pointerEvents:"none",background:activeEdge===z.key?T.accent+"33":T.accent+"0c",border:`2px dashed ${activeEdge===z.key?T.accent:T.accent+"55"}`,transition:"background .15s,border-color .15s"}}/>
+  ))}</>;
+}
+
+
+
+
+// ─── ONBOARDING TOUR — interactive spotlight walkthrough ────────────────────
+function OnboardingTour({T,user,open,onClose,setPage,setShowFinn,setShowFeedback}) {
+  const [step,setStep]=useState(0);
+  const [minimized,setMinimized]=useState(false);
+  const [exiting,setExiting]=useState(false);
+  const [anchor,setAnchor]=useState(null); // {x,y,w,h} of highlighted element
+  const [cardPos,setCardPos]=useState({left:null,top:null,bottom:20,center:true});
+
+  // Each step tells the tour: where to navigate, what to highlight, what to say
+  const steps=[
+    {
+      navigate: ()=>setPage("home"),
+      target: null,
+      icon: E("👋","●"),
+      title: `Welcome, ${user?.name||"there"}`,
+      subtitle: "I'll take you on a quick tour",
+      body: "I'll highlight each part of the app with a red outline and an arrow. Tap Next when ready, or Skip anytime. You can also minimize me (−) to explore freely.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("home"),
+      target: '[data-tour="logo"]',
+      icon: E("🎓","◈"),
+      title: "The brand — your home button",
+      subtitle: "Tap to go home from anywhere",
+      body: "This is your logo. Tap it anytime to return to the Home dashboard — works from every page.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("home"),
+      target: '[data-tour="nav-button"]',
+      icon: E("⊙","○"),
+      title: "Navigation menu",
+      subtitle: "Your gateway to every page",
+      body: "This circle button is always fixed in the top-left. Tap it anytime to jump between Home, Tasks, Inventory, Messages, and everything else.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("tasks"),
+      target: '[data-tour="nav-button"]',
+      icon: E("✅","✓"),
+      title: "Tasks page",
+      subtitle: "I took you here",
+      body: "Here are all your assigned tasks. Tap a task to expand details, then check the box to complete it. You'll earn XP — high priority = 50, normal = 25. Completed tasks show who finished them.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("inv"),
+      target: '[data-tour="nav-button"]',
+      icon: E("📦","□"),
+      title: "Inventory",
+      subtitle: "Real-time stock tracking",
+      body: "Tap + or − to adjust stock instantly. Everyone on staff sees the change within seconds. No refresh needed.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("anns"),
+      target: '[data-tour="nav-button"]',
+      icon: E("🔔","○"),
+      title: "Announcements",
+      subtitle: "Messages from management",
+      body: "Important updates land here. Tap × to dismiss — dismissed ones go to a 'recently dismissed' list at the bottom so you can restore them.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("dms"),
+      target: '[data-tour="nav-button"]',
+      icon: E("💬","≡"),
+      title: "Messages",
+      subtitle: "1-on-1 and team chat",
+      body: "Pick a teammate to DM them, or use Team Chat for the whole group. Group messages show who sent each one with their role color.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("leaderboard"),
+      target: '[data-tour="nav-button"]',
+      icon: E("🏆","◆"),
+      title: "Leaderboard",
+      subtitle: "Climb the ranks",
+      body: "Every task earns XP. Top performers sit at the top. Keep completing tasks to unlock ranks and move up the board.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("set"),
+      target: '[data-tour="nav-button"]',
+      icon: E("⚙️","◎"),
+      title: "Settings",
+      subtitle: "Make it yours",
+      body: "Edit profile, change display mode (try Minimal Mode ✦), pick an accent color, adjust sounds, enable notifications. Everything lives here.",
+      action: null,
+    },
+    {
+      navigate: ()=>{setPage("home");setShowFinn&&setShowFinn(false);},
+      target: '[data-tour="finn-button"]',
+      icon: E("🤖","⬡"),
+      title: "Ask Finn",
+      subtitle: "Your AI assistant",
+      body: "Tap Finn anytime to chat. Ask questions, create tasks by typing, or say 'take me to tasks' and Finn will navigate for you.",
+      action: {label:"Open Finn", fn:()=>setShowFinn&&setShowFinn(true)},
+    },
+    {
+      navigate: ()=>{setPage("home");setShowFinn&&setShowFinn(false);},
+      target: '[data-tour="help-button"]',
+      icon: E("❓","?"),
+      title: "The help button",
+      subtitle: "Always available",
+      body: "Need a refresher? The ? button (bottom-right) opens the full help guide with every feature explained.",
+      action: null,
+    },
+    {
+      navigate: ()=>{setPage("home");setShowFinn&&setShowFinn(false);},
+      target: '[data-tour="feedback-button"]',
+      icon: E("💡","i"),
+      title: "Send feedback",
+      subtitle: "Shape the app",
+      body: "Have an idea or found a bug? Tap the lightbulb to send feedback directly to the Tech Admin.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("set"),
+      target: null,
+      icon: E("🔒","⊡"),
+      title: "Set up your PIN",
+      subtitle: "Secure your account",
+      body: "You can set a 4-digit PIN in Settings → Profile → Change PIN. Your PIN lets you sign in quickly and protects your account. We took you to Settings — scroll to Profile to set one up.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("set"),
+      target: null,
+      icon: E("👆","◉"),
+      title: "Enable Biometric ID",
+      subtitle: "Face ID or Touch ID",
+      body: "On supported devices, enable Biometric ID in Settings → Security to sign in with just your face or fingerprint. Much faster than typing a PIN every time.",
+      action: null,
+    },
+    {
+      navigate: ()=>setPage("set"),
+      target: null,
+      icon: E("🔔","○"),
+      title: "Enable notifications",
+      subtitle: "Required to continue",
+      body: "Before we finish, please enable notifications so you don't miss tasks, messages, or announcements. Tap the button below to turn them on.",
+      action: {label:"Enable notifications now", fn:()=>{
+        if("Notification" in window){
+          Notification.requestPermission().then(p=>{
+            if(p==="granted"){
+              try{window._notifGranted=true;}catch(e){}
+              playSound("success");
+            }
+          });
+        }
+      }},
+      requireNotif: true,
+    },
+    {
+      navigate: ()=>setPage("home"),
+      target: null,
+      icon: E("🎉","★"),
+      title: "You're all set",
+      subtitle: "Welcome to the team",
+      body: "That's the full tour. Revisit anytime from Settings → Profile → Start tour. Now let's get to work.",
+      action: null,
+    },
+  ];
+
+  // Find target element and compute anchor position
+  useEffect(()=>{
+    if(!open||minimized) return;
+    const s=steps[step];
+    if(s?.navigate) s.navigate();
+    if(!s?.target) { setAnchor(null); return; }
+    // Wait a tick for navigation/render to settle
+    const timer=setTimeout(()=>{
+      const el=document.querySelector(s.target);
+      if(el){
+        const r=el.getBoundingClientRect();
+        setAnchor({x:r.left,y:r.top,w:r.width,h:r.height});
+        // Scroll element into view if off-screen
+        if(r.top<0||r.bottom>window.innerHeight){
+          el.scrollIntoView({behavior:"smooth",block:"center"});
+        }
+      } else setAnchor(null);
+    },350);
+    return()=>clearTimeout(timer);
+  },[step,open,minimized]);
+
+  // Recompute on resize/scroll
+  useEffect(()=>{
+    if(!open||!anchor||!steps[step]?.target) return;
+    const recompute=()=>{
+      const el=document.querySelector(steps[step].target);
+      if(el){
+        const r=el.getBoundingClientRect();
+        setAnchor({x:r.left,y:r.top,w:r.width,h:r.height});
+      }
+    };
+    window.addEventListener("scroll",recompute,{passive:true});
+    window.addEventListener("resize",recompute);
+    return()=>{window.removeEventListener("scroll",recompute);window.removeEventListener("resize",recompute);};
+  },[open,anchor,step]);
+
+  // Position tour card to not overlap anchor
+  useEffect(()=>{
+    if(!anchor){setCardPos({center:true});return;}
+    const vh=window.innerHeight, vw=window.innerWidth;
+    const cardH=280, cardW=Math.min(420,vw-32);
+    // Put card opposite anchor — if anchor in top half, card goes bottom
+    const anchorMidY=anchor.y+anchor.h/2;
+    if(anchorMidY<vh/2){
+      // Card goes to bottom
+      setCardPos({top:null,bottom:20,left:(vw-cardW)/2,center:false});
+    } else {
+      // Card goes to top
+      setCardPos({top:20,bottom:null,left:(vw-cardW)/2,center:false});
+    }
+  },[anchor]);
+
+  if(!open) return null;
+  const s=steps[step];
+  const last=step===steps.length-1;
+  const progress=((step+1)/steps.length)*100;
+
+    // Horizontal arrow — always points LEFT or RIGHT toward anchor
+  let arrowInfo=null;
+  if(anchor){
+    const anchorMidX=anchor.x+anchor.w/2;
+    const anchorMidY=anchor.y+anchor.h/2;
+    const vw=window.innerWidth;
+    // If anchor is in left half → arrow on right side of anchor pointing LEFT (←)
+    // If anchor is in right half → arrow on left side of anchor pointing RIGHT (→)
+    const pointsLeft = anchorMidX < vw/2;
+    const startX = pointsLeft ? anchor.x + anchor.w + 12 : anchor.x - 60;
+    const startY = anchorMidY - 24; // vertically centered on anchor
+    arrowInfo = {startX, startY, pointsLeft};
+  }
+
+  if(minimized) {
+    return <DraggableMinimizedPill T={T} s={s} step={step} total={steps.length} onExpand={()=>{setMinimized(false);playSound("click");}} onClose={()=>{playSound("click");onClose();}}/>;
+  }
+
+  return (
+    <>
+      {/* SPOTLIGHT OVERLAY — dimmed everything except the anchor */}
+      {anchor?(
+        <svg style={{position:"fixed",inset:0,width:"100%",height:"100%",zIndex:999,pointerEvents:"none"}}>
+          <defs>
+            <mask id="tour-spotlight-mask">
+              <rect width="100%" height="100%" fill="#fff"/>
+              <rect x={anchor.x-8} y={anchor.y-8} width={anchor.w+16} height={anchor.h+16} rx={Math.max(anchor.w,anchor.h)/2+8} fill="#000"/>
+            </mask>
+          </defs>
+          <rect width="100%" height="100%" fill="rgba(0,0,0,0.65)" mask="url(#tour-spotlight-mask)"/>
+          {/* Red pulsing outline around anchor */}
+          <rect x={anchor.x-6} y={anchor.y-6} width={anchor.w+12} height={anchor.h+12} rx={Math.max(anchor.w,anchor.h)/2+6} fill="none" stroke={T.accent} strokeWidth="3" style={{filter:`drop-shadow(0 0 8px ${T.accent})`,animation:"spotlightPulse 1.5s ease-in-out infinite"}}/>
+        </svg>
+      ):(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(4px)",zIndex:999,pointerEvents:"none"}}/>
+      )}
+
+      {/* BOUNCING ARROW pointing at anchor */}
+      {arrowInfo&&(
+        <svg width="56" height="48" viewBox="0 0 56 48" style={{position:"fixed",left:arrowInfo.startX,top:arrowInfo.startY,zIndex:1002,pointerEvents:"none",animation:arrowInfo.pointsLeft?"tourArrowLeft 1s ease-in-out infinite":"tourArrowRight 1s ease-in-out infinite",filter:`drop-shadow(0 3px 10px ${T.accent}bb)`}}>
+          {arrowInfo.pointsLeft?(
+            <path d="M 48 24 L 10 24 M 22 12 L 10 24 L 22 36" stroke={T.accent} strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          ):(
+            <path d="M 8 24 L 46 24 M 34 12 L 46 24 L 34 36" stroke={T.accent} strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+          )}
+        </svg>
+      )}
+
+      {/* "PRESS HERE" label next to anchor */}
+      {anchor&&(
+        <div style={{position:"fixed",left:anchor.x+anchor.w+10,top:anchor.y+anchor.h/2-14,background:T.accent,color:"#fff",padding:"4px 12px",borderRadius:9999,fontSize:11,fontWeight:700,letterSpacing:"0.06em",textTransform:"uppercase",zIndex:1002,pointerEvents:"none",boxShadow:`0 2px 10px ${T.accent}88`,whiteSpace:"nowrap",animation:"fadeUp .25s ease both"}}>{s.action?"Try it":(s.title.includes("page")||s.title.includes("Settings")||s.title.includes("Messages")||s.title.includes("Inventory")||s.title.includes("Announcements")||s.title.includes("Leaderboard")||s.title.includes("Tasks"))?"Opened via":"Look here"} →</div>
+      )}
+
+      {/* TOUR CARD — floats off to one side so anchor stays visible */}
+      <div style={{
+        position:"fixed",
+        ...(cardPos.center?{inset:0,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:16}:{left:cardPos.left,top:cardPos.top,bottom:cardPos.bottom}),
+        zIndex:1000,
+        pointerEvents:"none"
+      }}>
+        <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:420,padding:0,animation:exiting?"tourCardOut .24s ease both":"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.4)",pointerEvents:"auto"}}>
+          {/* Progress bar */}
+          <div style={{height:3,background:T.bor,position:"relative"}}>
+            <div style={{position:"absolute",inset:0,right:"auto",width:`${progress}%`,background:T.accent,transition:"width .35s cubic-bezier(.23,1,.32,1)"}}/>
+          </div>
+          {/* Top bar */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 16px 0"}}>
+            <div style={{fontSize:10,fontWeight:600,color:T.sub,letterSpacing:"0.1em",textTransform:"uppercase"}}>Tour · {step+1} of {steps.length}</div>
+            <div style={{display:"flex",gap:4}}>
+              <button onClick={()=>{playSound("click");setExiting(true);setTimeout(()=>{setMinimized(true);setExiting(false);},240);}} title="Minimize" style={{background:"none",border:"none",color:T.sub,fontSize:20,cursor:"pointer",fontFamily:"inherit",padding:"0 8px",lineHeight:1}}>−</button>
+              <button onClick={()=>{if(s.requireNotif&&Notification.permission!=="granted")return;playSound("click");onClose();}} title="Close" style={{background:"none",border:"none",color:(s.requireNotif&&Notification.permission!=="granted")?T.mut:T.sub,fontSize:20,cursor:(s.requireNotif&&Notification.permission!=="granted")?"not-allowed":"pointer",fontFamily:"inherit",padding:"0 8px",lineHeight:1,opacity:(s.requireNotif&&Notification.permission!=="granted")?0.4:1}}>×</button>
+            </div>
+          </div>
+          {/* Content */}
+          <div style={{padding:"4px 22px 18px",textAlign:"center"}}>
+            <div key={step} style={{width:52,height:52,borderRadius:T.minimal?"50%":14,background:T.minimal?T.surfH:T.accent+"18",border:T.minimal?`1px solid ${T.bor}`:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,margin:"6px auto 12px",animation:"tourIconPop .45s cubic-bezier(.34,1.85,.64,1)"}}>{s.icon}</div>
+            <div key={`t-${step}`} style={{fontSize:T.minimal?21:19,fontWeight:T.minimal?600:700,color:T.txt,letterSpacing:"-0.4px",marginBottom:3,fontFamily:T.minimal?"'Google Sans',sans-serif":"inherit",animation:"tourFadeSlide .4s ease both"}}>{s.title}</div>
+            <div key={`s-${step}`} style={{fontSize:12,color:T.accent,fontWeight:500,letterSpacing:"0.02em",marginBottom:10,animation:"tourFadeSlide .4s ease both .05s",animationFillMode:"both"}}>{s.subtitle}</div>
+            <div key={`b-${step}`} style={{fontSize:13,color:T.sub,lineHeight:1.6,maxWidth:340,margin:"0 auto",animation:"tourFadeSlide .4s ease both .1s",animationFillMode:"both"}}>{s.body}</div>
+            {s.action&&(
+              <button onClick={()=>{playSound("click");s.action.fn();}}
+                style={{marginTop:14,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"8px 18px",fontWeight:T.minimal?500:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s"}}
+                onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
+                onMouseLeave={e=>e.currentTarget.style.opacity="1"}
+              >{E("✨","→")} {s.action.label}</button>
+            )}
+          </div>
+          {/* Footer buttons */}
+          <div style={{display:"flex",gap:8,padding:"0 14px 14px"}}>
+            <button onClick={()=>{if(s.requireNotif&&Notification.permission!=="granted")return;playSound("click");onClose();}} style={{flex:1,background:"none",color:T.sub,border:`1px solid ${T.bor}`,borderRadius:9999,padding:"10px 14px",fontWeight:500,fontSize:12,cursor:(s.requireNotif&&Notification.permission!=="granted")?"not-allowed":"pointer",fontFamily:"inherit",opacity:(s.requireNotif&&Notification.permission!=="granted")?0.4:1}}>{last?"Close":(s.requireNotif&&Notification.permission!=="granted"?"Required":"Skip")}</button>
+            {step>0&&<button onClick={()=>{playSound("click");setStep(st=>st-1);}} style={{background:"none",color:T.txt,border:`1px solid ${T.bor}`,borderRadius:9999,padding:"10px 14px",fontWeight:500,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>← Back</button>}
+            <button disabled={s.requireNotif&&(typeof Notification!=="undefined"&&Notification.permission!=="granted")} onClick={()=>{
+              if(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted") return;
+              playSound(last?"success":"click");
+              if(last){onClose();LS.set("nl3-onboarded",1);}
+              else setStep(st=>st+1);
+            }} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 14px",fontWeight:T.minimal?500:700,fontSize:12,cursor:(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted")?"not-allowed":"pointer",fontFamily:"inherit",transition:"opacity .15s",opacity:(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted")?0.4:1}}
+              onMouseEnter={e=>{if(!(s.requireNotif&&Notification.permission!=="granted"))e.currentTarget.style.opacity="0.88";}}
+              onMouseLeave={e=>{if(!(s.requireNotif&&Notification.permission!=="granted"))e.currentTarget.style.opacity="1";}}
+            >{last?(E("✓","")+" Finish"):(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted"?"Enable first":"Next →")}</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Embedded keyframes */}
+      <style>{`
+        @keyframes spotlightPulse { 0%,100% { stroke-opacity:1; } 50% { stroke-opacity:0.5; } }
+        @keyframes tourArrowLeft { 0%,100% { transform:translateX(0); } 50% { transform:translateX(-8px); } }
+        @keyframes tourArrowRight { 0%,100% { transform:translateX(0); } 50% { transform:translateX(8px); } }
+        @keyframes tourCardIn { 0% { opacity:0; transform:translateY(20px) scale(0.95); } 100% { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes tourIconPop { 0% { transform:scale(0.3) rotate(-20deg); opacity:0; } 60% { transform:scale(1.15) rotate(5deg); opacity:1; } 100% { transform:scale(1) rotate(0); opacity:1; } }
+        @keyframes tourFadeSlide { 0% { opacity:0; transform:translateY(10px); } 100% { opacity:1; transform:translateY(0); } }
+        @keyframes tourPillIn { 0% { opacity:0; transform:scale(0.3) translateX(-50%); } 70% { opacity:1; transform:scale(1.1) translateX(-50%); } 100% { opacity:1; transform:scale(1) translateX(-50%); } }
+        @keyframes tourCardOut { 0% { opacity:1; transform:translateY(0) scale(1); } 100% { opacity:0; transform:translateY(30px) scale(0.85); } }
+      `}</style>
+    </>
+  );
+}
+
 function HelpModal({T,bottom}) {
   const [open,setOpen]=useState(false);
   const items=[
-    {icon:"⊙",title:"Circle Menu Button (top-left)",desc:"The floating circle button fixed below the logo — always visible as you scroll. Tap it to open navigation from any page."},
-    {icon:"🤖",title:"Ask Finn — Your AI Assistant",desc:"Tap the Finn button (bottom-right hex icon) to chat with Finn, your Fusion Integrated Neural Navigator. Ask about tasks, inventory, XP, or say \'take me to tasks\' to navigate. Finn can also create tasks and announcements for you!"},
-    {icon:"🏠",title:"Home",desc:"Your personal dashboard — quick stats, online team, and announcements."},
-    {icon:"✅",title:"Tasks",desc:"View and complete tasks assigned to you. Managers can create, assign, and delete tasks."},
-    {icon:"📦",title:"Inventory",desc:"Track stock levels in real time. Tap + or − to adjust quantities."},
-    {icon:"🔔",title:"Announcements",desc:"Messages from management. Tap ✕ to dismiss once you've read them."},
-    {icon:"💬",title:"Messages",desc:"One-on-one direct messages with any team member. Messages may be reviewed by management."},
-    {icon:"📊",title:"Activity",desc:"Full log of logins, task completions, and team changes. Visible to managers and above."},
-    {icon:"⚙️",title:"Settings",desc:"Update your name, email, PIN, status, display preferences, and sound settings."},
-    {icon:"📱",title:"Device & UI Scaling",desc:"Go to Settings → Display & Sound → Device & UI Scaling to switch between Mobile, Desktop, or Auto mode. This resizes the whole app for your screen."},
-    {icon:"🎓",title:"Logo — Go Home",desc:"Click 'MNU\'s Neer Locker' in the header anytime to return to the Home page."},
-    {icon:"📲",title:"Add to Home Screen (iPhone)",desc:"Open neer-locker.vercel.app in Safari → tap the Share button (box with arrow) → tap 'Add to Home Screen' → tap Add. Opens like a real app with no browser bar."},
-    {icon:"📲",title:"Add to Home Screen (Android)",desc:"Open in Chrome → tap the three-dot menu (⋮) → tap 'Add to Home Screen' → tap Add. Works like a native app icon on your home screen."},
-    {icon:"💡",title:"Feedback Button",desc:"Use the 💡 button (bottom-right area) to send feature requests or report bugs to the Tech Admin."},
+    {icon:E("⊙","○"),title:"Circle Menu Button (top-left)",desc:"The floating circle button fixed below the logo — always visible as you scroll. Tap it to open navigation from any page."},
+    {icon:E("🤖","⬡"),title:"Ask Finn — Your AI Assistant",desc:"Tap the Finn button (bottom-right hex icon) to chat with Finn, your Fusion Integrated Neural Navigator. Ask about tasks, inventory, XP, or say 'take me to tasks' to navigate. Finn can also create tasks and announcements for you!"},
+    {icon:E("🏠","⌂"),title:"Home",desc:"Your personal dashboard — quick stats, online team, and announcements."},
+    {icon:E("✅","✓"),title:"Tasks",desc:"View and complete tasks assigned to you. Managers can create, assign, and delete tasks. Completed tasks show who finished them."},
+    {icon:E("📦","□"),title:"Inventory",desc:"Track stock levels in real time. Tap + or − to adjust quantities."},
+    {icon:E("🔔","○"),title:"Announcements",desc:"Messages from management. Tap ✕ to dismiss once you've read them — they stay in the recently dismissed list for quick restore."},
+    {icon:E("💬","≡"),title:"Messages",desc:"One-on-one DMs or group chat with the whole team. Messages may be reviewed by management."},
+    {icon:E("🏆","◆"),title:"Leaderboard & XP",desc:"Earn XP by completing tasks. High priority = 50 XP, Medium/Low = 25. Climb the leaderboard and unlock ranks."},
+    {icon:E("📊","▦"),title:"Activity",desc:"Full log of logins, task completions, and team changes. Visible to managers and above."},
+    {icon:E("📅","◷"),title:"Schedule",desc:"Tech Admin can paste a OneDrive/SharePoint schedule URL to show the team's shift schedule."},
+    {icon:E("⚙️","◎"),title:"Settings",desc:"Profile, display mode (including Minimal Mode), sound preferences, device scaling, PIN, and notifications."},
+    {icon:E("✦","✦"),title:"Minimal Mode",desc:"Settings → Display & Sound → Minimal Mode. Clean Google-inspired look with pill buttons, flat cards, and optional emoji hiding. Accent color fully customizable."},
+    {icon:E("📲","↗"),title:"Add to Home Screen",desc:"iPhone (Safari): Share → Add to Home Screen. Android (Chrome): ⋮ menu → Add to Home Screen. Works like a real app."},
+    {icon:E("💡","i"),title:"Feedback Button",desc:"Use the lightbulb button (bottom-right, above the ?) to send feature requests or report bugs directly to the Tech Admin."},
   ];
   return (
     <>
-      <button onClick={()=>{playSound("open");setOpen(true);}} className="float-action-btn" style={{position:"fixed",bottom:bottom??52,right:14,zIndex:9998,background:T.scarlet,color:"#fff",border:"none",borderRadius:"50%",width:40,height:40,fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.22)",transition:"transform .15s,filter .15s,bottom .25s",touchAction:"manipulation"}}
+      <button onClick={()=>{playSound("open");setOpen(true);}} className="float-action-btn" style={{position:"fixed",bottom:bottom??52,right:14,zIndex:9998,background:T.minimal?(T.dark?"#ffffff":"#202124"):T.scarlet,color:T.minimal?(T.dark?"#000000":"#ffffff"):"#fff",border:T.minimal?`1.5px solid ${T.bor}`:"none",borderRadius:"50%",width:40,height:40,fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.minimal?"none":"0 4px 14px rgba(0,0,0,.22)",transition:"transform .15s,filter .15s,bottom .25s",touchAction:"manipulation"}}
         onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.12)";e.currentTarget.style.filter="brightness(1.1)";}}
         onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.filter="none";}}
-        title="Help"
+        title="Help" data-tour="help-button"
       >?</button>
       {open&&(
         <div onClick={e=>e.target===e.currentTarget&&setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:20}}>
-          <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:18,width:"100%",maxWidth:480,maxHeight:"85vh",display:"flex",flexDirection:"column",animation:"fadeUp .22s ease both",overflow:"hidden"}}>
+          <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:18,width:"100%",maxWidth:480,maxHeight:"85vh",display:"flex",flexDirection:"column",animation:"fadeUp .22s ease both",overflow:"hidden"}}>
             {/* Sticky header with always-visible × */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px 14px",borderBottom:`1px solid ${T.bor}`,flexShrink:0,background:T.surf,borderRadius:"18px 18px 0 0",position:"sticky",top:0,zIndex:10}}>
-              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:19,fontWeight:800,color:T.txt}}>❓ Help & Navigation</div>
+              <div style={{fontFamily:T.minimal?"'Google Sans',sans-serif":"'Clash Display',sans-serif",fontSize:T.minimal?17:19,fontWeight:T.minimal?600:800,color:T.txt,letterSpacing:T.minimal?"-0.3px":"normal"}}>{E("❓","?")} Help & Navigation</div>
               <button onClick={()=>{playSound("click");setOpen(false);}}
                 style={{width:34,height:34,borderRadius:"50%",background:T.surfH,border:`1px solid ${T.bor}`,color:T.txt,fontSize:18,cursor:"pointer",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s",flexShrink:0}}
                 onMouseEnter={e=>{e.currentTarget.style.background=T.scarlet;e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor=T.scarlet;}}
@@ -6916,12 +7814,17 @@ function HelpModal({T,bottom}) {
             </div>
             {/* Scrollable content */}
             <div style={{overflowY:"auto",padding:"16px 22px 22px"}}>
-              <div style={{fontSize:13,color:T.sub,marginBottom:16,lineHeight:1.6}}>
-                Welcome to <strong style={{color:T.scarlet}}>MNU&apos;s Neer Locker</strong> — your campus business staff portal. Here's where to find everything:
+              <div style={{fontSize:13,color:T.sub,marginBottom:14,lineHeight:1.6}}>
+                Welcome to <strong style={{color:T.accent}}>MNU&apos;s Neer Locker</strong> — your staff portal. Here&apos;s where to find everything:
               </div>
+              <button onClick={()=>{setOpen(false);window._startOnboarding&&window._startOnboarding();playSound("open");}}
+                style={{width:"100%",marginBottom:14,background:T.accent,color:"#fff",border:"none",borderRadius:T.minimal?9999:12,padding:"11px 18px",fontWeight:T.minimal?500:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"opacity .15s"}}
+                onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
+                onMouseLeave={e=>e.currentTarget.style.opacity="1"}
+              >{E("✨","→")} Start guided walkthrough</button>
               <div style={{display:"grid",gap:10}}>
                 {items.map((item,i)=>(
-                  <div key={item.title} style={{display:"flex",gap:12,alignItems:"flex-start",background:T.surfH,borderRadius:12,padding:"11px 14px",animation:`fadeUp .2s ${i*30}ms ease both`}}>
+                  <div key={item.title} style={{display:"flex",gap:12,alignItems:"flex-start",background:T.surfH,borderRadius:T.minimal?12:12,border:T.minimal?`1px solid ${T.bor}`:"none",padding:"12px 14px",animation:`fadeUp .2s ${i*30}ms ease both`}}>
                     <span style={{fontSize:20,flexShrink:0}}>{item.icon}</span>
                     <div>
                       <div style={{fontWeight:700,fontSize:13,color:T.txt}}>{item.title}</div>
@@ -6942,6 +7845,103 @@ function HelpModal({T,bottom}) {
   );
 }
 
+
+// ─── RATINGS PANEL (tech dashboard) ──────────────────────────────────────────
+function RatingsPanel({T}){
+  const [items,setItems]=useState([]);
+  const [loaded,setLoaded]=useState(false);
+  const [filter,setFilter]=useState("all"); // all, this_month, last_30
+  useEffect(()=>{
+    SB.select("app_ratings","?order=submitted_at.desc").then(d=>{setItems(d||[]);setLoaded(true);});
+  },[]);
+  const filtered=(()=>{
+    if(filter==="all") return items;
+    const now=Date.now();
+    if(filter==="this_month"){
+      const mk=`${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}`;
+      return items.filter(r=>r.month_key===mk);
+    }
+    if(filter==="last_30") return items.filter(r=>now-r.submitted_at<30*86400000);
+    return items;
+  })();
+  const avg=filtered.length>0?(filtered.reduce((a,r)=>a+(r.rating||0),0)/filtered.length).toFixed(1):"—";
+  const withFeedback=filtered.filter(r=>r.feedback&&r.feedback.length>0);
+  const clear=async()=>{
+    if(!window.confirm("Delete ALL ratings? Cannot be undone.")) return;
+    await fetch(`${SUPABASE_URL}/rest/v1/app_ratings?id=neq.none`,{method:"DELETE",headers:SB.headers});
+    setItems([]);
+  };
+
+  return (
+    <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
+        <div style={{fontWeight:700,color:T.txt,display:"flex",alignItems:"center",gap:8}}>⭐ Staff Ratings ({items.length})</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {[{k:"all",l:"All"},{k:"this_month",l:"This Month"},{k:"last_30",l:"Last 30d"}].map(f=>(
+            <button key={f.k} onClick={()=>setFilter(f.k)} style={{background:filter===f.k?T.accent:T.surfH,color:filter===f.k?"#fff":T.sub,border:`1px solid ${filter===f.k?T.accent:T.bor}`,borderRadius:5,padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{f.l}</button>
+          ))}
+          {items.length>0&&<button onClick={clear} style={{background:"#fee2e2",color:"#991b1b",border:"1px solid #fca5a5",borderRadius:5,padding:"3px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Clear</button>}
+        </div>
+      </div>
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:12}}>
+        <div style={{background:T.bg,borderRadius:10,padding:"10px 12px",textAlign:"center",border:`1px solid ${T.bor}`}}>
+          <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.accent}}>{avg}</div>
+          <div style={{fontSize:10,color:T.sub,fontWeight:600}}>Avg Rating /10</div>
+        </div>
+        <div style={{background:T.bg,borderRadius:10,padding:"10px 12px",textAlign:"center",border:`1px solid ${T.bor}`}}>
+          <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt}}>{filtered.length}</div>
+          <div style={{fontSize:10,color:T.sub,fontWeight:600}}>Responses</div>
+        </div>
+        <div style={{background:T.bg,borderRadius:10,padding:"10px 12px",textAlign:"center",border:`1px solid ${T.bor}`}}>
+          <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.blue}}>{withFeedback.length}</div>
+          <div style={{fontSize:10,color:T.sub,fontWeight:600}}>With Ideas</div>
+        </div>
+      </div>
+      {/* Rating distribution */}
+      {filtered.length>0&&(
+        <div style={{background:T.bg,borderRadius:10,padding:"10px 14px",marginBottom:12,border:`1px solid ${T.bor}`}}>
+          <div style={{fontSize:11,fontWeight:700,color:T.sub,letterSpacing:"0.04em",marginBottom:8}}>DISTRIBUTION</div>
+          {[10,9,8,7,6,5,4,3,2,1].map(n=>{
+            const count=filtered.filter(r=>r.rating===n).length;
+            const pct=filtered.length>0?(count/filtered.length)*100:0;
+            return (
+              <div key={n} style={{display:"flex",alignItems:"center",gap:8,marginBottom:3}}>
+                <div style={{width:22,fontSize:11,fontWeight:700,color:T.sub,textAlign:"right"}}>{n}</div>
+                <div style={{flex:1,height:8,background:T.surfH,borderRadius:9999,overflow:"hidden"}}>
+                  <div style={{width:`${pct}%`,height:"100%",background:n>=8?"#16a34a":n>=5?"#eab308":"#dc2626",borderRadius:9999,transition:"width .4s"}}/>
+                </div>
+                <div style={{width:30,fontSize:10,color:T.sub,fontWeight:600}}>{count}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {/* Responses */}
+      {!loaded?<div style={{color:T.sub,fontSize:12}}>Loading ratings…</div>
+        :filtered.length===0?<div style={{color:T.sub,fontSize:12,padding:"10px 0"}}>No ratings yet.</div>
+        :(
+          <div style={{maxHeight:400,overflowY:"auto",display:"grid",gap:6}}>
+            {filtered.map(r=>(
+              <div key={r.id} style={{background:T.bg,borderRadius:10,padding:"10px 14px",border:`1px solid ${T.bor}`}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:r.feedback?8:0}}>
+                  <div style={{width:32,height:32,borderRadius:8,background:(r.rating>=8?"#16a34a":r.rating>=5?"#eab308":"#dc2626")+"22",border:`1px solid ${r.rating>=8?"#16a34a":r.rating>=5?"#eab308":"#dc2626"}44`,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:13,color:r.rating>=8?"#16a34a":r.rating>=5?"#eab308":"#dc2626",flexShrink:0}}>{r.rating}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:T.txt}}>{r.user_name||"Anonymous"} <span style={{color:T.mut,fontWeight:500}}>· {r.user_role||""}</span></div>
+                    <div style={{fontSize:10,color:T.faint,marginTop:1}}>{fmtDT(r.submitted_at)} · {r.month_key}</div>
+                  </div>
+                </div>
+                {r.feedback&&(
+                  <div style={{background:T.surfH,borderRadius:8,padding:"8px 10px",fontSize:12,color:T.txt,lineHeight:1.5,borderLeft:`3px solid ${T.accent}`}}>{r.feedback}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  );
+}
 
 // ─── FEEDBACK PANEL (tech dashboard) ─────────────────────────────────────────
 function FeedbackPanel({T,toast}) {
@@ -6986,6 +7986,199 @@ function QBtn({onClick,children,T}) {
       onMouseEnter={e=>{e.currentTarget.style.background=T.bor;e.currentTarget.style.color=T.txt;}}
       onMouseLeave={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.color=T.sub;}}
     >{children}</button>
+  );
+}
+
+// ─── MONTHLY RATING MODAL ──────────────────────────────────────────────────
+function RatingModal({T,user,open,onClose}) {
+  const [rating,setRating]=useState(0);
+  const [hover,setHover]=useState(0);
+  const [feedback,setFeedback]=useState("");
+  const [submitting,setSubmitting]=useState(false);
+  const [submitted,setSubmitted]=useState(false);
+
+  if(!open) return null;
+
+  const submit=async()=>{
+    if(rating===0){return;}
+    setSubmitting(true);
+    const now=new Date();
+    const monthKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+    try{
+      await SB.upsert("app_ratings",{
+        id:uid(),
+        user_id:user?.id||"",
+        user_name:user?.name||"Anonymous",
+        user_role:user?.role||"employee",
+        rating,
+        feedback:feedback.trim(),
+        month_key:monthKey,
+        submitted_at:Date.now(),
+      });
+      LS.set("nl3-last-rating",monthKey);
+      playSound("success");
+      setSubmitted(true);
+      setTimeout(()=>{onClose();setSubmitted(false);setRating(0);setFeedback("");},1800);
+    }catch(e){
+      console.error("Rating save failed",e);
+      setSubmitting(false);
+    }
+  };
+
+  const later=()=>{playSound("click");onClose();};
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:700,padding:16,animation:"fadeUp .25s ease both"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:440,overflow:"hidden",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.4)"}}>
+        {submitted?(
+          <div style={{padding:"48px 28px",textAlign:"center"}}>
+            <div style={{fontSize:52,marginBottom:14,animation:"tourIconPop .5s cubic-bezier(.34,1.85,.64,1)"}}>{E("🎉","★")}</div>
+            <div style={{fontSize:T.minimal?22:20,fontWeight:T.minimal?600:800,color:T.txt,marginBottom:6,letterSpacing:"-0.3px"}}>Thank you!</div>
+            <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>Your feedback helps make Neer Locker better for everyone.</div>
+          </div>
+        ):(
+          <>
+            <div style={{padding:"22px 24px 12px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <div style={{width:44,height:44,borderRadius:T.minimal?"50%":12,background:T.accent+"18",border:T.minimal?`1px solid ${T.accent}33`:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{E("⭐","★")}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:T.minimal?19:18,fontWeight:T.minimal?600:800,color:T.txt,letterSpacing:"-0.3px",fontFamily:T.minimal?"'Google Sans',sans-serif":"inherit"}}>How's Neer Locker?</div>
+                  <div style={{fontSize:12,color:T.sub,marginTop:2}}>Rate your experience this month</div>
+                </div>
+              </div>
+              <div style={{background:T.surfH,borderRadius:T.minimal?14:12,padding:"14px 12px",marginBottom:14}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",gap:4}}>
+                  {[1,2,3,4,5,6,7,8,9,10].map(n=>{
+                    const active=n<=(hover||rating);
+                    return (
+                      <button key={n} onMouseEnter={()=>setHover(n)} onMouseLeave={()=>setHover(0)}
+                        onClick={()=>{setRating(n);playSound("click");haptic&&haptic("light");}}
+                        style={{background:active?T.accent:T.bg,color:active?"#fff":T.sub,border:`1.5px solid ${active?T.accent:T.bor}`,borderRadius:T.minimal?9999:8,padding:"10px 0",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .12s",transform:active?"scale(1.05)":"scale(1)"}}
+                      >{n}</button>
+                    );
+                  })}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.sub,fontWeight:600,marginTop:8,letterSpacing:"0.04em"}}>
+                  <span>POOR</span><span>AMAZING</span>
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:T.sub,letterSpacing:"0.05em",marginBottom:6}}>ANY IMPROVEMENT IDEAS? (OPTIONAL)</div>
+                <textarea value={feedback} onChange={e=>setFeedback(e.target.value)}
+                  placeholder="What could we add or fix? What do you love?"
+                  rows={3} maxLength={500}
+                  style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:T.minimal?12:10,color:T.txt,padding:"10px 12px",fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:72}}
+                />
+                <div style={{fontSize:10,color:T.mut,textAlign:"right",marginTop:3}}>{feedback.length}/500</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10,padding:"0 20px 20px"}}>
+              <button onClick={later} disabled={submitting} style={{flex:1,background:"none",color:T.sub,border:`1px solid ${T.bor}`,borderRadius:9999,padding:"11px 18px",fontWeight:500,fontSize:13,cursor:submitting?"not-allowed":"pointer",fontFamily:"inherit",opacity:submitting?0.5:1}}>Maybe later</button>
+              <button onClick={submit} disabled={rating===0||submitting} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"11px 18px",fontWeight:T.minimal?500:700,fontSize:13,cursor:(rating===0||submitting)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(rating===0||submitting)?0.4:1,transition:"opacity .15s"}}>{submitting?"Sending…":"Submit rating"}</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── PROFILE PICTURE UPLOAD MODAL (saves to Supabase Storage) ──────────────
+function PfpUploadModal({T,user,emps,setEmps,open,onClose,toast}) {
+  const [file,setFile]=useState(null);
+  const [preview,setPreview]=useState(null);
+  const [uploading,setUploading]=useState(false);
+  const fileInput=useRef(null);
+
+  if(!open) return null;
+
+  const pickFile=()=>fileInput.current?.click();
+  const onFile=(f)=>{
+    if(!f) return;
+    if(!f.type.startsWith("image/")){toast("Please select an image","err");return;}
+    if(f.size>5_000_000){toast("Image must be under 5MB","err");return;}
+    setFile(f);
+    const reader=new FileReader();
+    reader.onload=e=>setPreview(e.target.result);
+    reader.readAsDataURL(f);
+  };
+
+  const upload=async()=>{
+    if(!file||!user) return;
+    setUploading(true);
+    try{
+      // Read as base64 and save to employees table as data URL
+      // (Supabase Storage would be cleaner, but this keeps things simple & works)
+      const reader=new FileReader();
+      reader.onload=async(e)=>{
+        const dataUrl=e.target.result;
+        // Resize to max 256x256 and compress for storage
+        const img=new Image();
+        img.onload=async()=>{
+          const max=256;
+          let w=img.width, h=img.height;
+          if(w>h&&w>max){h=(h/w)*max;w=max;}
+          else if(h>max){w=(w/h)*max;h=max;}
+          const canvas=document.createElement("canvas");
+          canvas.width=w; canvas.height=h;
+          const ctx=canvas.getContext("2d");
+          ctx.drawImage(img,0,0,w,h);
+          const resized=canvas.toDataURL("image/jpeg",0.85);
+          // Save to employees
+          await SB.upsert("employees",{id:user.id,avatar_url:resized});
+          const next=emps.map(e=>e.id===user.id?{...e,avatar_url:resized}:e);
+          setEmps(next);
+          playSound("success");
+          toast("Profile picture updated! ✅");
+          setUploading(false);
+          onClose();
+        };
+        img.src=dataUrl;
+      };
+      reader.readAsDataURL(file);
+    }catch(err){
+      console.error("PFP upload failed",err);
+      toast("Upload failed — try again","err");
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:900,padding:16,animation:"fadeUp .25s ease both"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:16,width:"100%",maxWidth:380,padding:22,animation:"tourCardIn .3s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.4)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div>
+            <div style={{fontWeight:T.minimal?600:800,fontSize:17,color:T.txt,letterSpacing:"-0.3px"}}>Profile Picture</div>
+            <div style={{fontSize:12,color:T.sub,marginTop:2}}>Saves to cloud · visible to your team</div>
+          </div>
+          <button onClick={onClose} style={{background:T.surfH,border:`1px solid ${T.bor}`,color:T.txt,width:30,height:30,borderRadius:"50%",fontSize:16,cursor:"pointer",fontFamily:"inherit"}}>×</button>
+        </div>
+        {/* Preview */}
+        <div style={{display:"flex",justifyContent:"center",marginBottom:14}}>
+          <div onClick={pickFile} style={{width:140,height:140,borderRadius:"50%",background:T.surfH,border:`2px dashed ${T.bor}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",overflow:"hidden",transition:"border-color .15s"}}
+            onMouseEnter={e=>e.currentTarget.style.borderColor=T.accent}
+            onMouseLeave={e=>e.currentTarget.style.borderColor=T.bor}
+          >
+            {preview?(
+              <img src={preview} alt="preview" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+            ):(
+              <div style={{textAlign:"center",color:T.sub,fontSize:11,fontWeight:600}}>
+                <div style={{fontSize:36,marginBottom:4}}>{E("📸","◎")}</div>
+                <div>Click to upload</div>
+              </div>
+            )}
+          </div>
+        </div>
+        <input ref={fileInput} type="file" accept="image/*" style={{display:"none"}} onChange={e=>onFile(e.target.files?.[0])}/>
+        <div style={{fontSize:11,color:T.sub,textAlign:"center",marginBottom:14,lineHeight:1.5}}>
+          JPG, PNG, GIF · max 5MB · auto-resized to 256×256
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={onClose} disabled={uploading} style={{flex:1,background:"none",color:T.sub,border:`1px solid ${T.bor}`,borderRadius:9999,padding:"10px 16px",fontWeight:500,fontSize:12,cursor:uploading?"not-allowed":"pointer",fontFamily:"inherit",opacity:uploading?0.5:1}}>Cancel</button>
+          <button onClick={upload} disabled={!file||uploading} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 16px",fontWeight:T.minimal?500:700,fontSize:12,cursor:(!file||uploading)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(!file||uploading)?0.4:1}}>{uploading?"Uploading…":"Save to Cloud"}</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
