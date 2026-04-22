@@ -4147,11 +4147,6 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
           <span style={{color:"rgba(255,255,255,0.7)",fontSize:12}}>Only authorized administrators may sign in.</span>
         </div>
       )}
-      {notice&&(
-        <div style={{position:"fixed",top:siteOffline?50:16,left:"50%",transform:"translateX(-50%)",zIndex:100,background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"10px 18px",display:"flex",gap:10,alignItems:"center",whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,0,0,.15)"}}>
-          <span>🚨</span><span style={{color:"#991b1b",fontWeight:700,fontSize:13}}>{notice}</span>
-        </div>
-      )}
       <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:5}}>
         <div className="fu" style={{marginBottom:16,textAlign:"center"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:8}}>
@@ -4219,6 +4214,12 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
           </div>
         </div>
       </div>
+      {notice&&(
+        <div style={{width:"100%",maxWidth:420,margin:"12px auto 0",background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"8px 14px",display:"flex",gap:8,alignItems:"flex-start",boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>
+          <span style={{fontSize:13,flexShrink:0}}>🚨</span>
+          <span style={{color:"#991b1b",fontWeight:600,fontSize:12,lineHeight:1.5}}>{notice}</span>
+        </div>
+      )}
       <ClaudeTag T={T}/><VersionBadge T={T}/>
     </div>
   );
