@@ -2085,12 +2085,15 @@ const NOTIF = {
   // Trigger server-side push (calls Vercel function)
   async send(userId, title, body, tag="neer-locker") {
     if(!NOTIF._canFire(userId+"|"+tag+"|"+title)) return;
+    // Only fire if notification permission is actually granted
+    if(NOTIF.permission()!=="granted") return;
     try {
-      await fetch("https://neer-locker.vercel.app/api/send-push", {
+      const r=await fetch("https://neer-locker.vercel.app/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({userId, title, body, tag}),
       });
+      if(!r.ok) console.warn("[NOTIF] Push API returned",r.status);
     } catch(e) { console.warn("[NOTIF] Send push failed:", e); }
   },
 
@@ -4549,6 +4552,10 @@ export default function App() {
   });
   const [nameColorId,setNameColorId]=useState(()=>localStorage.getItem("nl3-name-color")||"base");
   const [equippedFrame,setEquippedFrame]=useState(()=>localStorage.getItem("nl3-equipped-frame")||"");
+  const [finnSkinGold,setFinnSkinGold]=useState(()=>{
+    // Check localStorage for purchase flag (set on buy)
+    return localStorage.getItem("nl3-finn-skin-gold")==="1";
+  });;
   const saveEquippedBadges=(badges)=>{
     setEquippedBadges(badges);
     localStorage.setItem("nl3-badges",JSON.stringify(badges));
@@ -5334,6 +5341,16 @@ export default function App() {
       addAct("task_done",`"${task.title}" completed by ${user?.name}`,user?.id);
       grantXP(task.priority==="High"?50:25,"task complete");
       playSound("task"); haptic("success");
+      // Confetti if user owns it
+      if(localStorage.getItem("nl3-confetti")==="1"){
+        const colors=["#C8102E","#eab308","#1e7fa8","#10b981","#a855f7"];
+        for(let i=0;i<60;i++){
+          const el=document.createElement("div");
+          el.style.cssText=`position:fixed;top:${Math.random()*40}%;left:${Math.random()*100}%;width:${6+Math.random()*6}px;height:${6+Math.random()*6}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>0.5?"50%":"2px"};pointer-events:none;z-index:9999;animation:confettiFall ${1+Math.random()*1.5}s ease-out forwards`;
+          document.body.appendChild(el);
+          setTimeout(()=>el.remove(),2500);
+        }
+      }
       clearTimeout(undoRef.current);setUndoId(id);
       undoRef.current=setTimeout(()=>setUndoId(null),7000);
       // If repeat, recreate. If repeatDays, schedule for next matching day
@@ -6920,7 +6937,7 @@ export default function App() {
 
           {/* Finn button — bottom right above ideas */}
           <button onClick={()=>{playSound("finn");openFinn();}} title="Ask Finn" data-tour="finn-button"
-            className="float-action-btn" style={{position:"fixed",bottom:page==="dms"?222:148,right:14,zIndex:9998,background:"#0f2744",border:"2px solid #1e7fa8aa",borderRadius:"50%",width:40,height:40,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.28)",transition:"transform .15s,box-shadow .15s,bottom .25s",touchAction:"manipulation",padding:0}}
+            className="float-action-btn" style={{position:"fixed",bottom:page==="dms"?222:148,right:14,zIndex:9998,background:finnSkinGold?"linear-gradient(135deg,#b45309,#eab308,#fef3c7,#eab308,#b45309)":"#0f2744",border:finnSkinGold?"2px solid #eab308aa":"2px solid #1e7fa8aa",borderRadius:"50%",width:40,height:40,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:finnSkinGold?"0 4px 14px rgba(234,179,8,.5),0 0 20px rgba(234,179,8,.3)":"0 4px 14px rgba(0,0,0,.28)",transition:"transform .15s,box-shadow .15s,bottom .25s",touchAction:"manipulation",padding:0}}
             onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.14)";e.currentTarget.style.boxShadow="0 5px 18px rgba(0,0,0,.3)";}}
             onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 14px rgba(0,0,0,.28)";}}
           >
@@ -7061,6 +7078,34 @@ export default function App() {
                 setEquippedFrame(item.id);
                 if(user?.id) SB.patch("employees",user.id,{equipped_frame:item.id});
                 toast(`${item.name} equipped! Nice border. ✨`);
+              }
+              else if(item.type==="finn_skin"){
+                localStorage.setItem("nl3-finn-skin-gold","1");
+                setFinnSkinGold(true);
+                toast("Finn Gold Skin activated! 🤖✨");
+              }
+              else if(item.type==="confetti"){
+                localStorage.setItem("nl3-confetti","1");
+                toast("Task Confetti activated! Complete a task to see it 🎊");
+              }
+              else if(item.type==="aura"){
+                localStorage.setItem("nl3-dark-aura","1");
+                toast("Dark Aura activated! Check dark mode 🌑");
+              }
+              else if(item.type==="sounds"){
+                localStorage.setItem("nl3-premium-sounds","1");
+                toast("Premium Sounds activated! 🔊");
+              }
+              else if(item.type==="custom_title"){
+                const t=prompt("Enter your custom rank title (max 20 chars):");
+                if(t){const safe=t.slice(0,20);localStorage.setItem("nl3-custom-title",safe);toast(`Rank title set to "${safe}"! Check your leaderboard row.`);}
+              }
+              else if(item.type==="fireworks"){
+                localStorage.setItem("nl3-fireworks","1");
+                toast("Level-Up Fireworks activated! 🎆");
+              }
+              else if(item.type==="task_hint"){
+                toast("Finn will now give you a priority suggestion! Ask Finn: 'What should I work on?' 💡");
               }
               else toast(`${item.name} unlocked! Check Settings → Profile.`);
             }}/>}
