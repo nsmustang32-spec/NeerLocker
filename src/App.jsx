@@ -462,6 +462,23 @@ const SB = {
     } catch { return null; }
   },
 
+  // PATCH — partial update by id, never triggers NOT NULL constraint on other cols
+  async patch(table, id, data) {
+    try {
+      const r = await fetch(SB.url(table, `?id=eq.${id}`), {
+        method: "PATCH",
+        headers: {...SB.headers, "Prefer": "return=representation"},
+        body: JSON.stringify(data)
+      });
+      if(!r.ok){
+        const err=await r.text().catch(()=>"unknown");
+        console.error("SB.patch failed:",table,id,"status:",r.status,"body:",err);
+        return null;
+      }
+      return await r.json();
+    } catch { return null; }
+  },
+
   async delete(table, match) {
     try {
       const q = Object.entries(match).map(([k,v])=>`${k}=eq.${v}`).join("&");
@@ -4538,7 +4555,7 @@ export default function App() {
     if(user?.id){
       // Persist to Supabase AND update local emps so leaderboard sees it immediately
       const badgesJson=JSON.stringify(badges);
-      SB.upsert("employees",{id:user.id,equipped_badges:badgesJson});
+      SB.patch("employees",user.id,{equipped_badges:badgesJson});
       setEmps(prev=>prev.map(e=>e.id===user.id?{...e,equipped_badges:badgesJson}:e));
       setUser(u=>u?{...u,equipped_badges:badgesJson}:u);
     }
@@ -4547,7 +4564,7 @@ export default function App() {
     setNameColorId(id);
     localStorage.setItem("nl3-name-color",id);
     if(user?.id){
-      SB.upsert("employees",{id:user.id,name_color:id});
+      SB.patch("employees",user.id,{name_color:id});
       setEmps(prev=>prev.map(e=>e.id===user.id?{...e,name_color:id}:e));
       setUser(u=>u?{...u,name_color:id}:u);
     }
@@ -4558,7 +4575,7 @@ export default function App() {
     else localStorage.removeItem("nl3-equipped-frame");
     if(user?.id){
       const val=id||"";
-      SB.upsert("employees",{id:user.id,equipped_frame:val});
+      SB.patch("employees",user.id,{equipped_frame:val});
       setEmps(prev=>prev.map(e=>e.id===user.id?{...e,equipped_frame:val}:e));
       setUser(u=>u?{...u,equipped_frame:val}:u);
     }
@@ -5578,7 +5595,7 @@ export default function App() {
     // Vigil HyperCore: hash PIN with SHA-256 before saving
     const pinHash=await VIGIL.hashPIN(newPin);
     // Save hash to Supabase directly (bypasses saveEmps which saves plain pin field)
-    await SB.upsert("employees",{id:user?.id,pin_hash:pinHash,pin:""});
+    await SB.patch("employees",user?.id,{pin_hash:pinHash,pin:""});
     // Update local state with hash so verification works
     const next=emps.map(e=>e.id===user?.id?{...e,pin:pinHash}:e);
     setEmps(next);
@@ -5588,7 +5605,7 @@ export default function App() {
     toast("PIN saved securely 🛡");
   };
   const removePin=async()=>{
-    await SB.upsert("employees",{id:user?.id,pin_hash:"",pin:""});
+    await SB.patch("employees",user?.id,{pin_hash:"",pin:""});
     const next=emps.map(e=>e.id===user?.id?{...e,pin:""}:e);
     await setEmps(next);setUser(u=>({...u,pin:""}));toast("PIN removed");
   };
@@ -7042,7 +7059,7 @@ export default function App() {
                 if(!uf.includes(item.id)){uf.push(item.id);localStorage.setItem("nl3-unlocked-frames",JSON.stringify(uf));}
                 localStorage.setItem("nl3-equipped-frame",item.id);
                 setEquippedFrame(item.id);
-                if(user?.id) SB.upsert("employees",{id:user.id,equipped_frame:item.id});
+                if(user?.id) SB.patch("employees",user.id,{equipped_frame:item.id});
                 toast(`${item.name} equipped! Nice border. ✨`);
               }
               else toast(`${item.name} unlocked! Check Settings → Profile.`);
@@ -7310,7 +7327,7 @@ export default function App() {
                 const existing=JSON.parse(emp.badge_grants||"[]");
                 if(!existing.includes(badgeId)){
                   existing.push(badgeId);
-                  await SB.upsert("employees",{id:emp.id,badge_grants:JSON.stringify(existing)});
+                  await SB.patch("employees",emp.id,{badge_grants:JSON.stringify(existing)});
                   const next=emps.map(e=>e.id===emp.id?{...e,badge_grants:JSON.stringify(existing)}:e);
                   setEmps(next);
                   // Send announcement to staff
@@ -8764,7 +8781,7 @@ function PfpUploadModal({T,user,emps,setEmps,open,onClose,toast}) {
           ctx.drawImage(img,0,0,w,h);
           const resized=canvas.toDataURL("image/jpeg",0.85);
           // Save to employees
-          await SB.upsert("employees",{id:user.id,avatar_url:resized});
+          await SB.patch("employees",user.id,{avatar_url:resized});
           const next=emps.map(e=>e.id===user.id?{...e,avatar_url:resized}:e);
           setEmps(next);
           playSound("success");
