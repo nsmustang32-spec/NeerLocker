@@ -4124,7 +4124,7 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
   }).join(" ");
 
   return (
-    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 20px 80px",position:"relative",overflow:"hidden",background:T.dark?"#04020a":"#f5f0f6"}}>
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 20px 80px",position:"relative",overflow:"hidden",background:T.dark?"#04020a":"#f5f0f6"}}>
       {orbs.map((o,i)=>(
         <div key={i} style={{position:"fixed",left:`${o.x+Math.sin(tick*0.009*o.spd+i)*4}%`,top:`${o.y+Math.cos(tick*0.007*o.spd+i)*5}%`,width:o.size,height:o.size,borderRadius:"50%",background:`radial-gradient(circle,${o.color} 0%,transparent 68%)`,opacity:T.dark?0.16:0.09,transform:"translate(-50%,-50%)",filter:`blur(${o.blur}px)`,pointerEvents:"none"}}/>
       ))}
@@ -4141,10 +4141,12 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
       <div style={{position:"fixed",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,${T.scarlet},${T.blue},${T.scarlet},${T.blue})`,backgroundSize:"400% 100%",animation:"shimmer 3s linear infinite",zIndex:10}}/>
       <div style={{position:"fixed",bottom:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.blue},${T.scarlet},${T.blue})`,backgroundSize:"400% 100%",animation:"shimmer 4s linear infinite reverse",zIndex:10}}/>
       {siteOffline&&(
-        <div style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"#991b1b",padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"center",gap:10,boxShadow:"0 2px 12px rgba(0,0,0,.3)"}}>
-          <span style={{fontSize:18}}>🔴</span>
-          <span style={{color:"#fff",fontWeight:800,fontSize:14,letterSpacing:"0.02em"}}>System Offline — Maintenance in Progress</span>
-          <span style={{color:"rgba(255,255,255,0.7)",fontSize:12}}>Only authorized administrators may sign in.</span>
+        <div style={{width:"100%",maxWidth:420,background:"#991b1b",borderRadius:10,padding:"8px 14px",display:"flex",alignItems:"flex-start",gap:8,marginBottom:10,boxShadow:"0 2px 8px rgba(0,0,0,.2)",zIndex:10}}>
+          <span style={{fontSize:14,flexShrink:0}}>🔴</span>
+          <div>
+            <div style={{color:"#fff",fontWeight:700,fontSize:12,lineHeight:1.4}}>System Offline — Maintenance in Progress</div>
+            <div style={{color:"rgba(255,255,255,0.8)",fontSize:11,marginTop:2}}>Only authorized administrators may sign in.</div>
+          </div>
         </div>
       )}
       <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:5}}>
@@ -4215,7 +4217,7 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
         </div>
       </div>
       {notice&&(
-        <div style={{width:"100%",maxWidth:420,margin:"12px auto 0",background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"8px 14px",display:"flex",gap:8,alignItems:"flex-start",boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>
+        <div style={{width:"100%",maxWidth:420,marginTop:10,background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"8px 14px",display:"flex",gap:8,alignItems:"flex-start",boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>
           <span style={{fontSize:13,flexShrink:0}}>🚨</span>
           <span style={{color:"#991b1b",fontWeight:600,fontSize:12,lineHeight:1.5}}>{notice}</span>
         </div>
@@ -5318,11 +5320,14 @@ export default function App() {
       emps.filter(e=>e.id!==user?.id).forEach(e=>{
         NOTIF.send(e.id,"New Task 📋",`${task.title} — assigned to everyone`,"task");
       });
+      toast(`📋 Task "${task.title}" sent to all staff`);
     } else if(task.assignedTo!==user?.id){
       // Notify the specific person assigned
       localStorage.setItem("nl3-notif-task-"+task.id,"1");
       setTimeout(()=>localStorage.removeItem("nl3-notif-task-"+task.id),300000);
       NOTIF.send(task.assignedTo,"New Task 📋",`${task.title} — assigned to you`,"task");
+      // If task is assigned to self, show local toast since push is suppressed on active window
+      if(task.assignedTo===user?.id) toast(`📋 Task assigned to you: ${task.title}`);
     }
   };
 
