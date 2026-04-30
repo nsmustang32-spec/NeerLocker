@@ -557,7 +557,9 @@ const buildCSS = T => `
   @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
   @keyframes popIn{from{transform:scale(0) rotate(-8deg);opacity:0;}to{transform:scale(1);opacity:1;}}
   @keyframes spin{to{transform:rotate(360deg);}}
-  @keyframes toast{from{opacity:0;transform:translateY(8px) scale(.95);}to{opacity:1;transform:none;}}
+  @keyframes toast{from{opacity:0;transform:translateY(12px) scale(0.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+  @keyframes toastOut{from{opacity:1;transform:translateY(0) scale(1);}to{opacity:0;transform:translateY(6px) scale(0.97);}}
+  @keyframes toastProgress{from{transform:scaleX(1);}to{transform:scaleX(0);}}
   @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
   @keyframes slideRight{from{opacity:0;transform:translateX(-16px);}to{opacity:1;transform:none;}}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
@@ -727,12 +729,65 @@ function Avatar({email,color,size=36,avatarUrl,frame}) {
   return <div style={{width:size,height:size,borderRadius:"50%",background:color+"22",...frameStyle,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,color,fontSize:size*0.42,flexShrink:0}}>{initial(email)}</div>;
 }
 
-function ToastList({items}) {
+function ToastList({items,T={}}) {
+  const dk=T.dark;
+  // Type config: matches Note component style — dark mode aware
+  const cfg={
+    ok:   {bg:dk?"#052e16":"#f0fdf4",border:dk?"#166534":"#86efac",txt:dk?"#86efac":"#15803d",icon:(
+      <svg height="15" width="15" viewBox="0 0 16 16" fill="currentColor">
+        <path fillRule="evenodd" clipRule="evenodd" d="M14.5 8C14.5 11.5899 11.5899 14.5 8 14.5C4.41015 14.5 1.5 11.5899 1.5 8C1.5 4.41015 4.41015 1.5 8 1.5C11.5899 1.5 14.5 4.41015 14.5 8ZM16 8C16 12.4183 12.4183 16 8 16C3.58172 16 0 12.4183 0 8C0 3.58172 3.58172 0 8 0C12.4183 0 16 3.58172 16 8ZM11.5303 6.53033L12.0607 6L11 4.93934L10.4697 5.46967L6.5 9.43934L5.53033 8.46967L5 7.93934L3.93934 9L4.46967 9.53033L5.96967 11.0303C6.26256 11.3232 6.73744 11.3232 7.03033 11.0303L11.5303 6.53033Z"/>
+      </svg>
+    )},
+    err:  {bg:dk?"#450a0a":"#fef2f2",border:dk?"#7f1d1d":"#fca5a5",txt:dk?"#fca5a5":"#991b1b",icon:(
+      <svg height="15" width="15" viewBox="0 0 16 16" fill="currentColor">
+        <path fillRule="evenodd" clipRule="evenodd" d="M5.30761 1.5L1.5 5.30761L1.5 10.6924L5.30761 14.5H10.6924L14.5 10.6924V5.30761L10.6924 1.5H5.30761ZM5.10051 0C4.83529 0 4.58094 0.105357 4.3934 0.292893L0.292893 4.3934C0.105357 4.58094 0 4.83529 0 5.10051V10.8995C0 11.1647 0.105357 11.4191 0.292894 11.6066L4.3934 15.7071C4.58094 15.8946 4.83529 16 5.10051 16H10.8995C11.1647 16 11.4191 15.8946 11.6066 15.7071L15.7071 11.6066C15.8946 11.4191 16 11.1647 16 10.8995V5.10051C16 4.83529 15.8946 4.58093 15.7071 4.3934L11.6066 0.292893C11.4191 0.105357 11.1647 0 10.8995 0H5.10051ZM8.75 3.75V4.5V8L8.75 8.75H7.25V8V4.5V3.75H8.75ZM8 12C8.55229 12 9 11.5523 9 11C9 10.4477 8.55229 10 8 10C7.44772 10 7 10.4477 7 11C7 11.5523 7.44772 12 8 12Z"/>
+      </svg>
+    )},
+    warn: {bg:dk?"#422006":"#fffbeb",border:dk?"#854d0e":"#fcd34d",txt:dk?"#fcd34d":"#92400e",icon:(
+      <svg height="15" width="15" viewBox="0 0 16 16" fill="currentColor">
+        <path fillRule="evenodd" clipRule="evenodd" d="M8.55846 2H7.44148L1.88975 13.5H14.1102L8.55846 2ZM9.90929 1.34788C9.65902 0.829456 9.13413 0.5 8.55846 0.5H7.44148C6.86581 0.5 6.34092 0.829454 6.09065 1.34787L0.192608 13.5653C-0.127943 14.2293 0.355835 15 1.09316 15H14.9068C15.6441 15 16.1279 14.2293 15.8073 13.5653L9.90929 1.34788ZM8.74997 4.75V5.5V8V8.75H7.24997V8V5.5V4.75H8.74997ZM7.99997 12C8.55226 12 8.99997 11.5523 8.99997 11C8.99997 10.4477 8.55226 10 7.99997 10C7.44769 10 6.99997 10.4477 6.99997 11C6.99997 11.5523 7.44769 12 7.99997 12Z"/>
+      </svg>
+    )},
+    info: {bg:dk?"#172554":"#eff6ff",border:dk?"#1e3a8a":"#93c5fd",txt:dk?"#93c5fd":"#1e40af",icon:(
+      <svg height="15" width="15" viewBox="0 0 16 16" fill="currentColor">
+        <path fillRule="evenodd" clipRule="evenodd" d="M8 14.5C11.5899 14.5 14.5 11.5899 14.5 8C14.5 4.41015 11.5899 1.5 8 1.5C4.41015 1.5 1.5 4.41015 1.5 8C1.5 11.5899 4.41015 14.5 8 14.5ZM8 16C12.4183 16 16 12.4183 16 8C16 3.58172 12.4183 0 8 0C3.58172 0 0 3.58172 0 8C0 12.4183 3.58172 16 8 16ZM6.25 7H7H7.74999C8.30227 7 8.74999 7.44772 8.74999 8V11.5V12.25H7.24999V11.5V8.5H7H6.25V7ZM8 6C8.55229 6 9 5.55228 9 5C9 4.44772 8.55229 4 8 4C7.44772 4 7 4.44772 7 5C7 5.55228 7.44772 6 8 6Z"/>
+      </svg>
+    )},
+  };
+
+  if(!items.length) return null;
   return (
-    <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",zIndex:9998,display:"flex",flexDirection:"column",gap:8,alignItems:"center",pointerEvents:"none"}}>
-      {items.map(t=>(
-        <div key={t.id} style={{background:t.type==="err"?"#fee2e2":t.type==="warn"?"#fef9c3":"#dcfce7",border:`1px solid ${t.type==="err"?"#fca5a5":t.type==="warn"?"#fde047":"#86efac"}`,color:t.type==="err"?"#991b1b":t.type==="warn"?"#92400e":"#15803d",borderRadius:10,padding:"9px 20px",fontWeight:700,fontSize:13,whiteSpace:"nowrap",boxShadow:"0 4px 14px rgba(0,0,0,.12)",animation:"toast .22s cubic-bezier(.23,1,.32,1) both"}}>{t.msg}</div>
-      ))}
+    <div style={{position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",zIndex:9997,display:"flex",flexDirection:"column",gap:6,alignItems:"center",pointerEvents:"none",width:"calc(100vw - 32px)",maxWidth:420}}>
+      {items.map((t,i)=>{
+        const c=cfg[t.type]||cfg.info;
+        return (
+          <div key={t.id} style={{
+            width:"100%",
+            background:c.bg,
+            border:`1px solid ${c.border}`,
+            borderRadius:10,
+            padding:"9px 13px",
+            display:"flex",alignItems:"center",gap:9,
+            boxShadow:"0 4px 20px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06)",
+            animation:"toast .25s cubic-bezier(0.34,1.56,0.64,1) both",
+            animationDelay:`${i*0.04}s`,
+            pointerEvents:"none",
+          }}>
+            {/* Icon */}
+            <div style={{flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",width:16,height:16,color:c.txt}}>
+              {c.icon}
+            </div>
+            {/* Message */}
+            <span style={{fontSize:13,fontWeight:500,color:c.txt,lineHeight:1.5,fontFamily:"inherit",flex:1,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+              {t.msg}
+            </span>
+            {/* Progress bar */}
+            <div style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:c.border+"44",borderRadius:"0 0 10px 10px",overflow:"hidden"}}>
+              <div style={{height:"100%",background:c.border,width:"100%",transformOrigin:"left",animation:"toastProgress 3.2s linear forwards"}}/>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -795,9 +850,6 @@ function TechWelcomeAnim({T}) {
     });
     return()=>clearInterval(ticker);
   },[]);
-
-  const progress=Math.min(tick/18,1);
-  const offset=CIRC*(1-progress);
 
   return (
     <div style={{position:"fixed",inset:0,zIndex:900,background:T.dark?"#04030a":"#0a0608",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:24,overflow:"hidden"}}>
@@ -921,28 +973,15 @@ function TechExitAnim({T}) {
 
 // ─── LOGOUT ANIMATION ─────────────────────────────────────────────────────────
 function LogoutAnim({T}) {
-  const [tick,setTick]=useState(0);
-  const CIRC=239;
-  useEffect(()=>{
-    const i=setInterval(()=>setTick(t=>t+1),55);
-    return()=>clearInterval(i);
-  },[]);
-  const progress=Math.min(tick/18,1);
-  const offset=CIRC*(1-progress);
   return (
     <div style={{position:"fixed",inset:0,background:T.bg,zIndex:850,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:22,animation:"fadeIn .18s ease both"}}>
-      <div style={{position:"relative",width:84,height:84}}>
-        <svg width="84" height="84" style={{position:"absolute",inset:0,transform:"rotate(-90deg)"}}>
-          <circle cx="42" cy="42" r="38" fill="none" stroke={T.bor} strokeWidth="5"/>
-          <circle cx="42" cy="42" r="38" fill="none" stroke={T.scarlet} strokeWidth="5"
-            strokeDasharray={CIRC} strokeDashoffset={offset} strokeLinecap="round"
-            style={{transition:"stroke-dashoffset .05s linear",filter:`drop-shadow(0 0 4px ${T.scarlet}88)`}}/>
-        </svg>
-        <svg width="84" height="84" style={{position:"absolute",inset:0,animation:progress<1?"spin 1.2s linear infinite":"none",opacity:progress<1?0.5:0,transition:"opacity .4s"}}>
-          <circle cx="42" cy="42" r="26" fill="none" stroke={T.blue} strokeWidth="2" strokeDasharray="20 20" strokeLinecap="round"/>
-        </svg>
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30}}>👋</div>
-      </div>
+      <div style={{
+        width:44,height:44,
+        background:T.scarlet,
+        borderRadius:"6%",
+        animation:"morphSquare 2s ease-in-out infinite",
+        boxShadow:`0 0 24px ${T.scarlet}55, 0 4px 16px rgba(0,0,0,0.18)`,
+      }}/>
       <div style={{textAlign:"center"}}>
         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,letterSpacing:"-0.3px"}}>See you later!</div>
         <div style={{color:T.sub,fontSize:13,marginTop:6}}>Signing out of MNU&apos;s Neer Locker…</div>
@@ -954,9 +993,7 @@ function LogoutAnim({T}) {
 // ─── WELCOME ANIMATION ────────────────────────────────────────────────────────
 function WelcomeAnim({name,role,T,onDone}) {
   const [step,setStep]=useState(0);
-  const [tick,setTick]=useState(0);
   const rc=ROLES[role]||ROLES.employee;
-  const CIRC=239;
 
   // Same taglines as the login page — pick ONE randomly on mount, never changes
   const taglines=["Staff Portal for MNU's Neer Locker.","Sign in to get started.","Manage tasks, inventory, and your team.","Keep things running smoothly.","All your shift tools in one place.","Built for the Neer Locker team.","Stay connected with your crew.","Tasks. Inventory. Communication.","Your work hub, simplified.","Track everything that matters.","Quick access for every shift.","Reliable. Simple. Yours."];
@@ -965,29 +1002,20 @@ function WelcomeAnim({name,role,T,onDone}) {
   useEffect(()=>{
     const t1=setTimeout(()=>setStep(1),260);
     const t2=setTimeout(()=>onDone(),2600);
-    const ticker=setInterval(()=>setTick(t=>t+1),55);
-    return()=>{clearTimeout(t1);clearTimeout(t2);clearInterval(ticker);};
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
   },[]);
-
-  const progress=Math.min(tick/18,1);
-  const offset=CIRC*(1-progress);
 
   return (
     <div style={{position:"fixed",inset:0,background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:900,gap:22}}>
-      {/* Closing progress ring */}
-      <div style={{position:"relative",width:84,height:84}}>
-        <svg width="84" height="84" style={{position:"absolute",inset:0,transform:"rotate(-90deg)"}}>
-          <circle cx="42" cy="42" r="38" fill="none" stroke={T.bor} strokeWidth="5"/>
-          <circle cx="42" cy="42" r="38" fill="none" stroke={T.scarlet} strokeWidth="5"
-            strokeDasharray={CIRC}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            style={{transition:"stroke-dashoffset .05s linear",filter:`drop-shadow(0 0 4px ${T.scarlet}88)`}}/>
-        </svg>
-        <svg width="84" height="84" style={{position:"absolute",inset:0,animation:progress<1?"spin 1.2s linear infinite":"none",opacity:progress<1?0.5:0,transition:"opacity .4s"}}>
-          <circle cx="42" cy="42" r="26" fill="none" stroke={T.blue} strokeWidth="2" strokeDasharray="20 20" strokeLinecap="round"/>
-        </svg>
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:30}}>🎓</div>
+      {/* Morphing square spinner */}
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18}}>
+        <div style={{
+          width:44,height:44,
+          background:T.scarlet,
+          borderRadius:"6%",
+          animation:"morphSquare 2s ease-in-out infinite",
+          boxShadow:`0 0 24px ${T.scarlet}55, 0 4px 16px rgba(0,0,0,0.18)`,
+        }}/>
       </div>
 
       {/* Name + rotating tagline */}
@@ -1078,113 +1106,256 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn,onShop}) {
   const ref=useRef(null);
   const myAnns=anns.filter(a=>!(a.dismissed||[]).includes(user?.id)).length;
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id)).length;
-  const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).length;
-  const totalBadge=myTasks+myAnns+unreadDMs;
-
-  const items=[
-    {key:"home",        icon:E("🏠","⌂"), label:"Home"},
-    {key:"tasks",       icon:E("✅","✓"), label:"Tasks",         badge:myTasks,   perm:"tasks"},
-    {key:"inv",         icon:E("📦","□"), label:"Inventory",      perm:"inv"},
-    {key:"anns",        icon:E("🔔","○"), label:"Announcements",  badge:myAnns,    perm:"ann"},
-    {key:"dms",         icon:E("💬","≡"), label:"Messages",       badge:unreadDMs, perm:"dms"},
-    {key:"leaderboard", icon:E("🏆","◆"), label:"Leaderboard",   perm:"leaderboard"},
-    {key:"shop",        icon:E("🛍","◇"), label:"XP Shop",        shop:true},
-    {key:"act",         icon:E("📊","▦"), label:"Activity",       perm:"act"},
-    {key:"schedule",    icon:E("📅","◷"), label:"Schedule"},
-    {key:"set",         icon:E("⚙️","◎"), label:"Settings"},
-    {key:"finn",        icon:"finn",label:"Ask Finn",      finn:true},
-  ].filter(i=>!i.perm||can(user,i.perm))
-  ;
+  const unreadDMs=(()=>{const last=LS.get("nl3-dm-last")||{};return dms.filter(m=>m.to===user?.id&&(m.at||0)>(last[m.from]||0)).length;})();
 
   // Close on outside click
   useEffect(()=>{
-    const handler=e=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
-    document.addEventListener("mousedown",handler);
-    return()=>document.removeEventListener("mousedown",handler);
-  },[]);
+    if(!open) return;
+    const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener("mousedown",h);
+    document.addEventListener("touchstart",h);
+    return()=>{document.removeEventListener("mousedown",h);document.removeEventListener("touchstart",h);};
+  },[open]);
 
-  const go=(key,finn,shop)=>{if(finn){onFinn();setOpen(false);playSound("open");}else if(shop){onShop&&onShop();setOpen(false);playSound("open");}else{setPage(key);setOpen(false);playSound("click");}};
+  const go=(key,finn,shop)=>{
+    if(finn){onFinn();setOpen(false);playSound("open");}
+    else if(shop){onShop&&onShop();setOpen(false);playSound("open");}
+    else{setPage(key);setOpen(false);playSound("click");}
+  };
+
+  const hasP=(perm)=>{
+    if(!perm) return true;
+    if(!user) return false;
+    const r=ROLES[user.role];
+    return r&&(r.p.includes("*")||r.p.includes(perm));
+  };
+
+  // Dock items — filtered by permission
+  const rawItems=[
+    {key:"home",        label:"Home",          finn:false, shop:false, icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>
+      </svg>
+    )},
+    {key:"tasks",       label:"Tasks",         perm:"tasks", badge:myTasks, icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/>
+      </svg>
+    )},
+    {key:"inv",         label:"Inventory",     perm:"inv", icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+        <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+      </svg>
+    )},
+    {key:"anns",        label:"Alerts",        perm:"ann",  badge:myAnns, icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+    )},
+    {key:"dms",         label:"Messages",      perm:"dms",  badge:unreadDMs, icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    )},
+    {key:"leaderboard", label:"Leaderboard",   perm:"leaderboard", icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>
+      </svg>
+    )},
+    {key:"shop",        label:"XP Shop",       shop:true, icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 0 1-8 0"/>
+      </svg>
+    )},
+    {key:"act",         label:"Activity",      perm:"act", icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    )},
+    {key:"schedule",    label:"Schedule",      icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+    )},
+    {key:"finn",        label:"Ask Finn",      finn:true, icon:(
+      <svg width="18" height="18" viewBox="0 0 22 22">
+        <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
+        <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.55"/>
+        <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
+        <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
+        <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
+        <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
+        <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+        <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+        <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+        <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
+        <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
+        <circle cx="11" cy="11" r="1" fill="#fff"/>
+      </svg>
+    )},
+    {key:"set",         label:"Settings",      icon:(
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    )},
+  ];
+
+  const visibleItems=rawItems.filter(i=>i.shop||i.finn||hasP(i.perm));
+  // Split into rows of max 6 to fit on screen
+  const row1=visibleItems.slice(0,Math.ceil(visibleItems.length/2));
+  const row2=visibleItems.slice(Math.ceil(visibleItems.length/2));
+  const useRows=visibleItems.length>6;
 
   return (
     <div ref={ref} style={{position:"relative"}}>
-      {/* Circle nav button */}
-      <button onClick={()=>{setOpen(o=>!o);playSound("open");}}
-        title="Navigation Menu" data-tour="nav-button"
-        className="nav-circle-btn"
-        style={{width:48,height:48,borderRadius:"50%",background:open?T.scarlet:T.surf,border:`${T.minimal?"1.5px":"2px"} solid ${open?T.scarlet:T.bor}`,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:4,padding:0,transition:"all .2s",boxShadow:open?"0 4px 20px "+T.accent+"55":"0 2px 10px rgba(0,0,0,.14)",position:"relative",flexShrink:0,touchAction:"manipulation"}}
-        onMouseEnter={e=>{if(!open){e.currentTarget.style.background=T.accent+"18";e.currentTarget.style.borderColor=T.scarlet+"88";e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.18)";}}}
-        onMouseLeave={e=>{if(!open){e.currentTarget.style.background=T.surf;e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.boxShadow="0 2px 10px rgba(0,0,0,.14)";}}}
-      >
-        {/* Animated 3-line → X icon */}
-        <div style={{display:"flex",flexDirection:"column",gap:4,width:18}}>
-          <div style={{height:2,borderRadius:1,background:open?"#fff":T.sub,width:"100%",transform:open?"rotate(45deg) translate(4px,4px)":"none",transition:"all .22s cubic-bezier(.23,1,.32,1)",transformOrigin:"left"}}/>
-          <div style={{height:2,borderRadius:1,background:open?"#fff":T.sub,width:"100%",opacity:open?0:1,transition:"all .22s"}}/>
-          <div style={{height:2,borderRadius:1,background:open?"#fff":T.sub,width:"100%",transform:open?"rotate(-45deg) translate(4px,-4px)":"none",transition:"all .22s cubic-bezier(.23,1,.32,1)",transformOrigin:"left"}}/>
-        </div>
-        {totalBadge>0&&!open&&(
-          <div style={{position:"absolute",top:-3,right:-3,background:T.scarlet,color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",border:`2px solid ${T.surf}`}}>
-            {totalBadge>9?"9+":totalBadge}
-          </div>
-        )}
-      </button>
-
-      {/* Dropdown panel */}
+      {/* Floating Dock — shows when open */}
       {open&&(
-        <div style={{position:"fixed",top:116,left:10,background:T.surf,border:`1px solid ${T.bor}`,borderRadius:16,padding:"6px 6px 10px",minWidth:248,zIndex:500,boxShadow:`0 16px 48px rgba(0,0,0,.22),0 2px 0 ${T.scarlet}18`,animation:"fadeUp .18s cubic-bezier(.23,1,.32,1) both",maxHeight:"calc(100vh - 130px)",overflowY:"auto"}}>
-          {/* User chip at top of dropdown */}
-          <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px 10px",borderBottom:`1px solid ${T.bor}`,marginBottom:6}}>
-            <div style={{position:"relative",flexShrink:0}}>
-              <Avatar email={user?.email} color={ROLES[user?.role]?.color||T.scarlet} size={28}/>
-              <div style={{position:"absolute",bottom:-1,right:-1}}><StatusDot status={user?.status||"online"}/></div>
-            </div>
-            <div style={{minWidth:0}}>
-              <div style={{fontSize:12,fontWeight:800,color:T.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{user?.name}</div>
-              <div style={{fontSize:10,color:T.sub}}>{ROLES[user?.role]?.label}</div>
-            </div>
-          </div>
-          {/* Nav items */}
-          {items.map((item,i)=>{
-            const active=page===item.key;
-            return (
-              <button key={item.key} onClick={()=>go(item.key,item.finn,item.shop)}
-                style={{width:"100%",background:active?T.accent+"18":"transparent",color:active?T.accent:T.sub,border:"none",borderRadius:12,padding:"13px 16px",fontWeight:700,fontSize:16,fontFamily:"inherit",textAlign:"left",display:"flex",alignItems:"center",gap:12,cursor:"pointer",borderLeft:active?`4px solid ${T.scarlet}`:"4px solid transparent",transition:"all .15s",animation:`slideRight .18s ${i*25}ms ease both`}}
-                onMouseEnter={e=>{if(!active){e.currentTarget.style.background=T.surfH;e.currentTarget.style.color=T.txt;}}}
-                onMouseLeave={e=>{if(!active){e.currentTarget.style.background="transparent";e.currentTarget.style.color=T.sub;}}}
-              >
-                {item.finn?(
-                  <svg width="22" height="22" viewBox="0 0 22 22" style={{flexShrink:0}}>
-                    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-                    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
-                    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
-                    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-                    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-                    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-                    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-                    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-                    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-                    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-                    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-                    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-                    <circle cx="11" cy="11" r="1" fill="#fff"/>
-                  </svg>
-                ):(
-                  <span style={{fontSize:window._showEmojis===false?16:22,width:28,textAlign:"center",flexShrink:0,fontWeight:window._showEmojis===false?"700":"normal",color:active?T.accent:T.sub}}>{item.icon}</span>
-                )}
-                <span style={{flex:1}}>{item.label}</span>
-                {(item.badge||0)>0&&<NumBadge count={item.badge} color={T.scarlet}/>}
-                {active&&<span style={{width:8,height:8,borderRadius:"50%",background:T.scarlet,flexShrink:0,display:"inline-block"}}/>}
-              </button>
-            );
-          })}
+        <div style={{
+          position:"fixed",bottom:72,left:"50%",transform:"translateX(-50%)",
+          zIndex:450,animation:"dockExpand 0.28s cubic-bezier(0.34,1.56,0.64,1) both",
+          display:"flex",flexDirection:"column",gap:8,alignItems:"center",
+          pointerEvents:"auto",
+        }}>
+          {useRows?(
+            <>
+              <DockRow items={row2} page={page} go={go} T={T}/>
+              <DockRow items={row1} page={page} go={go} T={T}/>
+            </>
+          ):(
+            <DockRow items={visibleItems} page={page} go={go} T={T}/>
+          )}
         </div>
       )}
+      {/* Trigger button */}
+      <button onClick={()=>{setOpen(o=>!o);playSound(open?"click":"open");haptic&&haptic("light");}}
+        data-tour="nav-button"
+        style={{
+          position:"fixed",bottom:16,left:"50%",transform:"translateX(-50%)",
+          zIndex:500,
+          width:52,height:52,borderRadius:"50%",
+          background:open?T.accent:"#111827",
+          border:`2px solid ${open?T.accent+"88":"#374151"}`,
+          color:"#fff",cursor:"pointer",
+          display:"flex",alignItems:"center",justifyContent:"center",
+          transition:"background .2s,border-color .2s,transform .2s",
+          boxShadow:`0 4px 20px rgba(0,0,0,.4)${open?`,0 0 0 6px ${T.accent}22`:""}`,
+        }}
+        aria-label="Navigation menu"
+      >
+        <div style={{position:"relative",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {/* Hamburger → X morph */}
+          <span style={{
+            position:"absolute",display:"block",width:20,height:2,
+            background:"#fff",borderRadius:2,
+            top:open?"50%":"calc(50% - 5px)",
+            transform:open?"rotate(45deg)":"none",
+            marginTop:open?"-1px":"0",
+            transition:"all .22s cubic-bezier(.4,0,.2,1)",
+          }}/>
+          <span style={{
+            position:"absolute",display:"block",width:20,height:2,
+            background:"#fff",borderRadius:2,top:"50%",marginTop:-1,
+            opacity:open?0:1,transition:"opacity .15s",
+          }}/>
+          <span style={{
+            position:"absolute",display:"block",width:20,height:2,
+            background:"#fff",borderRadius:2,
+            top:open?"50%":"calc(50% + 4px)",
+            transform:open?"rotate(-45deg)":"none",
+            marginTop:open?"-1px":"0",
+            transition:"all .22s cubic-bezier(.4,0,.2,1)",
+          }}/>
+        </div>
+        {/* Unread badge on trigger */}
+        {!open&&(myTasks+myAnns+unreadDMs)>0&&<div style={{position:"absolute",top:4,right:4,width:8,height:8,borderRadius:"50%",background:T.scarlet,border:"1.5px solid #111827"}}/>}
+      </button>
     </div>
   );
 }
 
-// ─── HOME PAGE ────────────────────────────────────────────────────────────────
+// ─── DOCK ROW ─────────────────────────────────────────────────────────────────
+function DockRow({items,page,go,T}) {
+  const [hoveredIdx,setHoveredIdx]=useState(null);
 
-// ─── ANIMATED HERO BANNER ─────────────────────────────────────────────────────
+  const getScale=(i)=>{
+    if(hoveredIdx===null) return 1;
+    const dist=Math.abs(i-hoveredIdx);
+    if(dist===0) return 1.55;
+    if(dist===1) return 1.2;
+    if(dist===2) return 1.05;
+    return 1;
+  };
+
+  const getSize=(i)=>Math.round(44*getScale(i));
+
+  return (
+    <div style={{
+      display:"flex",alignItems:"flex-end",gap:8,
+      padding:"10px 16px",
+      background:T.dark?"rgba(15,15,20,0.92)":"rgba(255,255,255,0.92)",
+      backdropFilter:"blur(20px)",
+      border:`1px solid ${T.bor}`,
+      borderRadius:22,
+      boxShadow:`0 8px 32px rgba(0,0,0,.25), 0 1px 0 rgba(255,255,255,0.06) inset`,
+    }}>
+      {items.map((item,i)=>{
+        const isActive=page===item.key&&!item.finn&&!item.shop;
+        const sz=getSize(i);
+        const totalBadge=(item.badge||0);
+        return (
+          <div key={item.key} style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}
+            onMouseEnter={()=>setHoveredIdx(i)}
+            onMouseLeave={()=>setHoveredIdx(null)}
+          >
+            {/* Tooltip */}
+            {hoveredIdx===i&&(
+              <div style={{
+                position:"absolute",bottom:"calc(100% + 6px)",left:"50%",transform:"translateX(-50%)",
+                background:T.dark?"#1f2937":"#111827",color:"#fff",
+                fontSize:10,fontWeight:700,letterSpacing:"0.04em",
+                padding:"3px 8px",borderRadius:6,whiteSpace:"nowrap",
+                pointerEvents:"none",zIndex:10,
+                animation:"fadeUp .1s ease both",
+              }}>{item.label}</div>
+            )}
+            {/* Icon button */}
+            <div onClick={()=>go(item.key,item.finn,item.shop)}
+              className="dock-item-btn"
+              style={{
+                width:sz,height:sz,
+                borderRadius:Math.round(13*(sz/44)),
+                background:isActive
+                  ? `linear-gradient(135deg,${T.accent},${T.accent}dd)`
+                  : item.finn
+                    ? "linear-gradient(135deg,#0f2744,#1e3a5f)"
+                    : item.shop
+                      ? `linear-gradient(135deg,${T.accent}22,${T.accent}44)`
+                      : T.surfH,
+                border:`1.5px solid ${isActive?T.accent+"88":item.finn?"#1e7fa8aa":item.shop?T.accent+"44":T.bor}`,
+                color:isActive?"#fff":item.finn?"#60a5fa":item.shop?T.accent:T.txt,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                cursor:"pointer",
+                boxShadow:isActive?`0 4px 12px ${T.accent}44`:"none",
+                transition:"all .2s cubic-bezier(0.34,1.56,0.64,1)",
+              }}>
+              {item.icon}
+              {/* Badge */}
+              {totalBadge>0&&(
+                <div style={{position:"absolute",top:-3,right:-3,minWidth:14,height:14,background:T.scarlet,borderRadius:9999,fontSize:9,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",border:`1.5px solid ${T.dark?"#111":"#fff"}`}}>{totalBadge>9?"9+":totalBadge}</div>
+              )}
+            </div>
+            {/* Active dot */}
+            <div style={{width:4,height:4,borderRadius:"50%",background:isActive?T.accent:"transparent",transition:"background .15s"}}/>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
 function HeroBanner({user,T,onProfileClick}) {
   const [time,setTime]=useState(new Date());
   const [greet,setGreet]=useState("Hey");
@@ -3486,37 +3657,121 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         </div>
       )}
 
-      {/* Input */}
-      <div style={{padding:"10px 14px 14px",borderTop:`1px solid ${T.bor}`,display:"flex",gap:8,flexShrink:0,background:T.surf}}>
-        <input ref={inputRef} value={input} onChange={e=>setInput(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()}
-          placeholder={pendingAction?"Type your answer…":"Ask Finn anything…"}
-          style={{flex:1,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:12,padding:"10px 14px",fontSize:13,fontFamily:"inherit",color:T.txt,outline:"none",transition:"border-color .15s,box-shadow .15s"}}
-          onFocus={e=>{e.target.style.borderColor="#1e7fa8";e.target.style.boxShadow="0 0 0 3px #1e7fa811";}}
-          onBlur={e=>{e.target.style.borderColor=T.bor;e.target.style.boxShadow="none";}}
-        />
-        {/* Mic button */}
-        <button onClick={()=>{
-            LS.set("nl3-mic-used",true);
-            startListening();
-          }} title={listening?"Stop":"Talk to Finn"}
-          style={{background:listening?"#ef4444":voiceOn?"#1e7fa822":"none",border:"1px solid "+(listening?"#ef4444":voiceOn?"#1e7fa844":T.bor),borderRadius:10,padding:"8px 10px",cursor:"pointer",color:listening?"#fff":voiceOn?"#1e7fa8":T.mut,fontSize:16,transition:"all .2s",flexShrink:0}}
-        >{listening?"⏹":"🎤"}</button>
-        {/* Voice on/off */}
-        <button onClick={()=>{const next=!voiceOn;setVoiceOn(next);LS.set("nl3-finn-voice",next);if(next){const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);const isPWA=window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone;if(isIOS&&isPWA)toast("Voice output will work but mic may not in iOS home screen apps","warn");}if(!next){window.speechSynthesis.cancel();setSpeaking(false);}haptic("light");}}
-          title={voiceOn?"Voice on":"Voice off"}
-          style={{background:voiceOn?"#1e7fa822":"none",border:"1px solid "+(voiceOn?"#1e7fa844":T.bor),borderRadius:10,padding:"8px 10px",cursor:"pointer",color:voiceOn?"#1e7fa8":T.faint,fontSize:14,transition:"all .2s",flexShrink:0}}
-        >{voiceOn?"🔊":"🔇"}</button>
+      {/* Input — Animated AI Prompt style */}
+      <div style={{padding:"8px 12px 10px",borderTop:`1px solid ${T.bor}`,flexShrink:0,background:T.surf}}>
+        <div style={{background:T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)",borderRadius:16,padding:6}}>
+          {/* Textarea row */}
+          <div style={{position:"relative"}}>
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={e=>{setInput(e.target.value);e.target.style.height="56px";e.target.style.height=Math.min(e.target.scrollHeight,180)+"px";}}
+              onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),send())}
+              placeholder={pendingAction?"Type your answer…":"Ask Finn anything…"}
+              rows={1}
+              style={{
+                display:"block",width:"100%",
+                minHeight:56,maxHeight:180,
+                resize:"none",overflowY:"auto",
+                background:T.dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",
+                border:"none",outline:"none",
+                borderRadius:"12px 12px 0 0",
+                padding:"14px 16px",
+                fontSize:13,fontFamily:"inherit",
+                color:T.txt,lineHeight:1.5,
+              }}
+            />
+          </div>
+          {/* Bottom action bar */}
+          <div style={{height:48,background:T.dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.04)",borderRadius:"0 0 12px 12px",display:"flex",alignItems:"center",padding:"0 10px",justifyContent:"space-between"}}>
+            {/* Left — model switcher + voice */}
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              {/* Model selector */}
+              <div style={{display:"flex",alignItems:"center",background:T.dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.06)",borderRadius:8,padding:"2px",gap:2}}>
+                <button onClick={()=>{setUseGroq(true);LS.set("nl3-finn-mode","aether");haptic&&haptic("light");}}
+                  style={{display:"flex",alignItems:"center",gap:5,padding:"4px 9px",borderRadius:6,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,letterSpacing:"0.02em",transition:"all .15s",
+                    background:useGroq?T.dark?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.9)":"transparent",
+                    color:useGroq?T.dark?"#fff":"#0f2744":T.dark?"rgba(255,255,255,0.4)":"rgba(0,0,0,0.35)",
+                    boxShadow:useGroq?"0 1px 3px rgba(0,0,0,0.12)":"none",
+                  }}>
+                  <svg width="12" height="12" viewBox="0 0 22 22">
+                    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="currentColor" strokeWidth="1.2" opacity="0.5"/>
+                    <circle cx="11" cy="11" r="2" fill="currentColor" opacity="0.9"/>
+                    <circle cx="11" cy="11" r="0.8" fill={useGroq?"#1e7fa8":"currentColor"}/>
+                  </svg>
+                  Aether
+                </button>
+                <button onClick={()=>{setUseGroq(false);LS.set("nl3-finn-mode","atlas");haptic&&haptic("light");}}
+                  style={{display:"flex",alignItems:"center",gap:5,padding:"4px 9px",borderRadius:6,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,letterSpacing:"0.02em",transition:"all .15s",
+                    background:!useGroq?T.dark?"rgba(255,255,255,0.15)":"rgba(255,255,255,0.9)":"transparent",
+                    color:!useGroq?T.dark?"#fff":"#0f2744":T.dark?"rgba(255,255,255,0.4)":"rgba(0,0,0,0.35)",
+                    boxShadow:!useGroq?"0 1px 3px rgba(0,0,0,0.12)":"none",
+                  }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="4"/>
+                    <line x1="12" y1="2" x2="12" y2="5"/>
+                    <line x1="12" y1="19" x2="12" y2="22"/>
+                    <line x1="2" y1="12" x2="5" y2="12"/>
+                    <line x1="19" y1="12" x2="22" y2="12"/>
+                  </svg>
+                  Atlas
+                </button>
+              </div>
+              <div style={{width:1,height:16,background:T.bor,margin:"0 2px"}}/>
+              {/* Mic */}
+              <button onClick={()=>{LS.set("nl3-mic-used",true);startListening();}}
+                title={listening?"Stop":"Talk to Finn"}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:7,border:"none",cursor:"pointer",fontFamily:"inherit",
+                  background:listening?"#ef4444":T.dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",
+                  color:listening?"#fff":T.dark?"rgba(255,255,255,0.5)":"rgba(0,0,0,0.4)",
+                  transition:"all .15s",
+                }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
+                  <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
+              </button>
+              {/* Voice toggle */}
+              <button onClick={()=>{const n=!voiceOn;setVoiceOn(n);LS.set("nl3-finn-voice",n);if(!n&&window.speechSynthesis)window.speechSynthesis.cancel();}}
+                title={voiceOn?"Voice on":"Voice off"}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:7,border:"none",cursor:"pointer",fontFamily:"inherit",
+                  background:voiceOn?T.dark?"rgba(30,127,168,0.25)":"rgba(30,127,168,0.1)":T.dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)",
+                  color:voiceOn?"#1e7fa8":T.dark?"rgba(255,255,255,0.4)":"rgba(0,0,0,0.4)",
+                  transition:"all .15s",
+                }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  {voiceOn
+                    ?<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></>
+                    :<><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></>
+                  }
+                </svg>
+              </button>
+            </div>
+            {/* Right — send button */}
+            <button onClick={send} disabled={loading||!input.trim()}
+              style={{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,borderRadius:9,border:"none",cursor:loading||!input.trim()?"not-allowed":"pointer",
+                background:T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.07)",
+                color:input.trim()&&!loading?T.dark?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.7)":T.dark?"rgba(255,255,255,0.2)":"rgba(0,0,0,0.2)",
+                transition:"all .15s",
+              }}>
+              {loading
+                ?<div style={{width:12,height:12,borderRadius:"50%",border:`2px solid ${T.dark?"rgba(255,255,255,0.2)":"rgba(0,0,0,0.15)"}`,borderTopColor:T.dark?"rgba(255,255,255,0.7)":"rgba(0,0,0,0.5)",animation:"spin .7s linear infinite"}}/>
+                :<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              }
+            </button>
+          </div>
+        </div>
+        {/* Speaking indicator */}
         {speaking&&(
-          <div style={{position:"absolute",bottom:70,left:"50%",transform:"translateX(-50%)",background:T.surf,border:"1px solid #1e7fa844",borderRadius:20,padding:"4px 14px",fontSize:11,color:"#1e7fa8",fontWeight:700,whiteSpace:"nowrap",boxShadow:"0 2px 8px rgba(0,0,0,.1)",display:"flex",alignItems:"center",gap:6,zIndex:10}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:"#1e7fa8",animation:"pulse 1s infinite"}}/>Finn is speaking...
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,marginTop:6,fontSize:11,color:"#1e7fa8",fontWeight:600}}>
+            <span style={{width:5,height:5,borderRadius:"50%",background:"#1e7fa8",animation:"pulse 1s infinite"}}/>
+            Finn is speaking...
           </div>
         )}
-        <button onClick={send} disabled={loading||!input.trim()}
-          style={{background:"linear-gradient(135deg,#0f2744,#1a3a5c)",border:"1px solid #1e7fa833",borderRadius:12,padding:"10px 14px",cursor:loading||!input.trim()?"not-allowed":"pointer",opacity:loading||!input.trim()?0.5:1,color:"#fff",fontWeight:700,fontSize:13,fontFamily:"inherit",transition:"opacity .15s,box-shadow .15s",boxShadow:"0 0 0 0 #1e7fa8"}}
-          onMouseEnter={e=>{if(!loading&&input.trim())e.currentTarget.style.boxShadow="0 0 12px #1e7fa844";}}
-          onMouseLeave={e=>e.currentTarget.style.boxShadow="0 0 0 0 #1e7fa8"}
-        >Send</button>
       </div>
       {/* Groq official badge — inlined SVG */}
       {useGroq&&(
@@ -4503,6 +4758,8 @@ export default function App() {
   const [showBriefing,setShowBriefing]=useState(false);
   const [loggingOut,setLoggingOut]=useState(false);
   const [techAction,setTechAction]=useState("");
+  const [techSection,setTechSection]=useState("overview");
+  const [techSidebarOpen,setTechSidebarOpen]=useState(true);
 
   const [emailIn,setEmailIn]=useState(LS.get("nl3-remember-email")||"");
   const [rememberMe,setRememberMe]=useState(!!LS.get("nl3-remember-email"));
@@ -5717,7 +5974,7 @@ export default function App() {
   return (
     <div style={{fontFamily:T.minimal?"'Google Sans','Segoe UI',sans-serif":"'DM Sans',sans-serif",minHeight:"100vh",background:T.bg,color:T.txt}}>
       <style>{buildCSS(T)}</style>
-      <ToastList items={toasts}/>
+      <ToastList items={toasts} T={T}/>
       <XPToastList items={xpToasts}/>
 
       {/* Undo banner */}
@@ -7183,7 +7440,63 @@ export default function App() {
             </div>
           </header>
 
-          <div style={{maxWidth:1000,margin:"0 auto",padding:"22px 20px 80px"}}>
+          <div style={{display:"flex",minHeight:"calc(100vh - 82px)"}}>
+            {/* ── COLLAPSIBLE SIDEBAR ─────────────────────────────── */}
+            <nav className="tech-sidebar" style={{
+              width:techSidebarOpen?220:56,flexShrink:0,
+              borderRight:`1px solid ${T.bor}`,
+              background:T.surf,
+              position:"sticky",top:82,height:"calc(100vh - 82px)",
+              display:"flex",flexDirection:"column",
+              overflow:"hidden",transition:"width .25s cubic-bezier(.4,0,.2,1)",
+            }}>
+              {/* Sidebar items */}
+              <div style={{flex:1,overflowY:"auto",padding:"10px 6px",display:"flex",flexDirection:"column",gap:2}}>
+                {[
+                  {key:"overview", icon:"🏠", label:"Overview"},
+                  {key:"staff",    icon:"👥", label:"Staff & Access"},
+                  {key:"xp",      icon:"⭐", label:"XP & Badges"},
+                  {key:"content",  icon:"📋", label:"Content"},
+                  {key:"messages", icon:"💬", label:"Messages"},
+                  {key:"system",   icon:"🛡️", label:"System"},
+                  {key:"ratings",  icon:"⭐", label:"Ratings"},
+                ].map(s=>(
+                  <button key={s.key} onClick={()=>{
+                      setTechSection(s.key);playSound("click");
+                      const el=document.getElementById("tech-section-"+s.key);
+                      if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+                    }}
+                    className={`tech-sidebar-item${techSection===s.key?" active":""}`}
+                    style={{
+                      display:"flex",alignItems:"center",gap:10,
+                      padding:"10px 10px",borderRadius:8,
+                      border:`1px solid transparent`,
+                      borderLeft:techSection===s.key?`2px solid ${T.warn}`:"2px solid transparent",
+                      background:techSection===s.key?T.warn+"14":"transparent",
+                      color:techSection===s.key?T.warn:T.sub,
+                      cursor:"pointer",fontFamily:"inherit",fontWeight:techSection===s.key?700:500,
+                      fontSize:13,textAlign:"left",width:"100%",flexShrink:0,
+                      whiteSpace:"nowrap",
+                    }}>
+                    <span style={{fontSize:16,flexShrink:0,width:22,textAlign:"center"}}>{s.icon}</span>
+                    {techSidebarOpen&&<span style={{transition:"opacity .2s",opacity:techSidebarOpen?1:0}}>{s.label}</span>}
+                  </button>
+                ))}
+              </div>
+              {/* Toggle collapse button */}
+              <button onClick={()=>setTechSidebarOpen(o=>!o)}
+                style={{padding:"14px 10px",borderTop:`1px solid ${T.bor}`,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10,color:T.sub,fontFamily:"inherit",fontSize:12,width:"100%"}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{flexShrink:0,transform:techSidebarOpen?"rotate(180deg)":"none",transition:"transform .25s"}}>
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+                {techSidebarOpen&&<span>Collapse</span>}
+              </button>
+            </nav>
+
+            {/* ── MAIN CONTENT ────────────────────────────────────── */}
+            <div style={{flex:1,overflowY:"auto",padding:"22px 20px 80px",minWidth:0}}>
+            <div id="tech-section-overview" style={{scrollMarginTop:90}}/>
             {/* Metrics */}
             <TechMetrics T={T}/>
 
@@ -7236,6 +7549,7 @@ export default function App() {
 
             {/* ── XP GRANT PANEL ─────────────────────────────────────────── */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
+<div id="tech-section-xp" style={{scrollMarginTop:90}}/>
               <div style={{fontWeight:700,color:T.txt,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
                 <span style={{fontSize:18}}>⭐</span> Grant XP to Staff
               </div>
@@ -7404,6 +7718,7 @@ export default function App() {
 
             {/* Schedule URL */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
+<div id="tech-section-staff" style={{scrollMarginTop:90}}/>
               <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>📅 Staff Schedule Link</div>
               <div style={{fontSize:12,color:T.sub,marginBottom:10,lineHeight:1.6}}>
                 Paste any schedule URL here — Google Sheets, OneDrive, SharePoint, or any link. All staff will see it instantly in the Schedule tab.
@@ -7553,6 +7868,7 @@ export default function App() {
 
             {/* All DMs viewer */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
+<div id="tech-section-messages" style={{scrollMarginTop:90}}/>
               <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>💬 All Direct Messages ({dms.length})</div>
               <div style={{fontSize:12,color:T.warn,fontWeight:600,marginBottom:10}}>⚠️ Viewing as Technical Administrator — staff are notified messages may be reviewed.</div>
               {/* Warning sender */}
@@ -7691,6 +8007,7 @@ export default function App() {
             {/* Task Manager */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+<div id="tech-section-content" style={{scrollMarginTop:90}}/>
                 <div style={{fontWeight:700,color:T.txt}}>✅ Task Manager ({tasks.length} tasks)</div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   {selectedTasks.size>0&&(
@@ -7864,6 +8181,7 @@ export default function App() {
               ))}
             </div>
 
+            <div id="tech-section-ratings" style={{scrollMarginTop:90}}/>
             {/* Monthly ratings from staff */}
             <RatingsPanel T={T}/>
 
@@ -7875,7 +8193,8 @@ export default function App() {
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
                 <div style={{width:32,height:32,borderRadius:8,background:"#16a34a22",border:"1px solid #16a34a44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🛡</div>
                 <div>
-                  <div style={{fontWeight:800,color:T.txt,fontSize:15}}>Vigil HyperCore</div>
+  <div id="tech-section-system" style={{scrollMarginTop:90}}/>
+                <div style={{fontWeight:800,color:T.txt,fontSize:15}}>Vigil HyperCore</div>
                   <div style={{fontSize:10,color:"#16a34a",fontWeight:700,letterSpacing:"0.06em"}}>v{VIGIL_VERSION} · HYPERCORE · ACTIVE</div>
                 </div>
                 <div style={{marginLeft:"auto",display:"flex",gap:6}}>
@@ -7950,6 +8269,7 @@ export default function App() {
                   ))}
                 </div>
               )}
+            </div>
             </div>
           </div>
           <ClaudeTag T={T}/><VersionBadge T={T}/>
@@ -8888,5 +9208,3 @@ function PfpUploadModal({T,user,emps,setEmps,open,onClose,toast}) {
     </div>
   );
 }
-
-
