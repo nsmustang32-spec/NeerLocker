@@ -79,11 +79,7 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
-  "1.9.1": [
-    "Minimal Mode: Complete visual overhaul with Google Antigravity-inspired palette",
-    "Minimal Mode: Full accent color system — all UI elements respond to chosen color",
-    "Minimal Mode: Emoji toggle, minimal sounds engine, animated home banner",
-    "XP Shop: 36 items across Colors, Power-ups, Badges, Profile, and Fun categories",
+  "1.9.1": [    "XP Shop: 36 items across Colors, Power-ups, Badges, Profile, and Fun categories",
     "XP Shop: 13 accent colors including animated Rainbow (2500 XP)",
     "XP Shop: Streak Saver, 2x XP Boost, XP Gifts, Task Hint power-ups",
     "XP Shop: Pioneer, Legend, GOAT, MNU Pride, Grinder, Night Owl, Streak badges",
@@ -101,10 +97,7 @@ const PATCH_NOTES = {
     "Help: Updated guide with all new features documented",
     "Fix: PINs now correctly persist across updates (pin_hash loaded from Supabase)",
     "Fix: Profile pictures loaded on startup across all devices",
-    "Fix: mkTheme/mkMinimalTheme const declarations fixed — resolved white screen crash",
-    "Fix: Shop category tabs now fully visible — overflow clipping resolved",
-    "Fix: Toggle thumb colors — no more white-on-white in minimal dark mode",
-    "Fix: Claude tag no longer overlaps nav menu",
+    "Fix: Shop category tabs now fully visible — overflow clipping resolved",    "Fix: Claude tag no longer overlaps nav menu",
   ],
   "1.8.4": [
     "Fix: Notifications no longer fire twice",
@@ -233,44 +226,14 @@ const LOCK_MS    = 5 * 60 * 1000;
 const AUTO_LOGOUT_MS = 30 * 60 * 1000;
 
 // ─── THEMES ───────────────────────────────────────────────────────────────────
-// ── Google Antigravity exact minimal theme ──────────────────────────────────
-const mkMinimalTheme = (dark, compact, accent) => ({
-  // Exact Google Antigravity palette
-  scarlet: dark?"#ffffff":"#202124",  // pill color = opposite of bg
-  sD:      dark?"#aecbfa":"#3c4043",
-  sG:      dark?"#8ab4f820":"#20212410",
-  blue:    dark?"#8ab4f8":"#1a73e8",  // link/accent blue
-  bD:      dark?"#aecbfa":"#1557b0",
-  bG:      dark?"#8ab4f812":"#1a73e810",
-  bg:      dark?"#000000":"#ffffff",  // pure black / pure white
-  surf:    dark?"#111111":"#ffffff",
-  surfH:   dark?"#1a1a1a":"#f8f9fa",
-  card:    dark?"#111111":"#ffffff",
-  bor:     dark?"#2a2a2a":"#e0e0e0",
-  borH:    dark?"#5f6368":"#bdc1c6",
-  txt:     dark?"#ffffff":"#000000",
-  sub:     dark?"#888888":"#666666",
-  faint:   dark?"#3c4043":"#e8eaed",
-  mut:     dark?"#5f6368":"#80868b",
-  ok:      dark?"#81c995":"#188038",
-  warn:    dark?"#fdd663":"#e37400",
-  err:     dark?"#f28b82":"#c5221f",
-  accent: accent || "#C8102E", // user-chosen accent color
-  dark, compact, minimal:true,
-  // Generous spacing — airy like Antigravity
-  sp: compact ? { xs:2, sm:4, md:8,  lg:12, xl:16, r:9999, card:12 }
-              : { xs:4, sm:8, md:16, lg:24, xl:32, r:9999, card:12 },
-  fs: compact ? { xs:9,  sm:10, md:12, lg:14, xl:16 }
-              : { xs:11, sm:13, md:15, lg:17, xl:21 },
-});
 
 const mkTheme = (dark, compact, accent) => ({
   // accent overrides scarlet if provided
   scarlet:accent||"#C8102E", sD:accent?accent+"cc":"#9e0b23", sG:dark?(accent||"#C8102E")+"30":(accent||"#C8102E")+"20",
   blue: dark?"#5BBFDB":"#1e7fa8", bD:dark?"#3aa8c7":"#155f80", bG:dark?"#5BBFDB20":"#1e7fa818",
-  bg:   dark?"#0a0608":"#f5f1f2",
-  surf: dark?"#150b0e":"#ffffff",
-  surfH:dark?"#1e1014":"#faf3f4",
+  bg:   dark?"#0d1520":"#f4f6fa",
+  surf: dark?"#1a2535":"#ffffff",
+  surfH:dark?"#212f42":"#faf3f4",
   card: dark?"#1e1014":"#ffffff",
   bor:  dark?"#2e1820":"#e2d0d4",
   borH: dark?"#3e2428":"#c8b0b6",
@@ -289,8 +252,8 @@ const mkTheme = (dark, compact, accent) => ({
   fs: compact ? { xs:9,  sm:10, md:11, lg:13, xl:15 }
               : { xs:11, sm:13, md:15, lg:17, xl:21 },
 });
-const T0 = (()=>{ try{ const m=JSON.parse(localStorage.getItem("nl3-minimal")); const dk=JSON.parse(localStorage.getItem("nl3-dark")); const cp=JSON.parse(localStorage.getItem("nl3-compact")); const ac=localStorage.getItem("nl3-accent")||"";
-window._minimalMode=!!m; window._minimalSounds=(localStorage.getItem('nl3-minimal-sound')!==String(false)); window._showEmojis=(localStorage.getItem('nl3-emojis')!==String(false)); const se=localStorage.getItem("nl3-emojis")!==String(false); if(m) return {...mkMinimalTheme(!!dk,!!cp,ac),showEmojis:se}; return {...mkTheme(!!dk,!!cp,ac),showEmojis:se}; }catch(e){ window._minimalMode=false; window._showEmojis=true; window._minimalSounds=false; return mkTheme(false,false,""); } })();
+const T0 = (()=>{ return mkTheme(false,false,"#C8102E"); })();
+
 
 // ─── SOUND ENGINE ─────────────────────────────────────────────────────────────
 // Shared AudioContext — reused so browsers don't block it after first interaction
@@ -323,7 +286,7 @@ if (typeof document !== "undefined") {
   });
 }
 
-// Original rich sound engine — used in normal (non-minimal) mode
+// Sound engine
 function _playSoundRich(type="click") {
   if (!window._soundOn) return;
   const ctx = getCtx();
@@ -374,46 +337,7 @@ function _playSoundRich(type="click") {
 
 function playSound(type="click") {
   if (!window._soundOn) return;
-  if (!window._minimalMode || window._minimalSounds===false) { _playSoundRich(type); return; }
-  // Minimal mode with minimal sounds on — clean short tones only
-  const ctx = getCtx();
-  if (!ctx) return;
-  try {
-    const now = ctx.currentTime;
-    const vol = window._soundVol ?? 0.22;
-    const master = ctx.createGain();
-    master.gain.setValueAtTime(vol * 0.7, now); // Minimal = slightly quieter
-    master.connect(ctx.destination);
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain); gain.connect(master);
-
-    // Clean minimal sound map — short, soft, unobtrusive
-    const sounds = {
-      click:    { freq:880,  type:"sine",     dur:0.05, attack:0.003, decay:0.04  },
-      open:     { freq:1046, type:"sine",     dur:0.08, attack:0.004, decay:0.07  },
-      close:    { freq:784,  type:"sine",     dur:0.06, attack:0.002, decay:0.05  },
-      notify:   { freq:1174, type:"sine",     dur:0.12, attack:0.005, decay:0.10  },
-      success:  { freq:1318, type:"sine",     dur:0.14, attack:0.005, decay:0.12  },
-      delete:   { freq:392,  type:"sine",     dur:0.08, attack:0.002, decay:0.07  },
-      warn:     { freq:659,  type:"triangle", dur:0.10, attack:0.003, decay:0.09  },
-      dm:       { freq:1046, type:"sine",     dur:0.09, attack:0.004, decay:0.08  },
-      finn:     { freq:1318, type:"sine",     dur:0.10, attack:0.005, decay:0.09  },
-      backup:   { freq:880,  type:"sine",     dur:0.10, attack:0.004, decay:0.09  },
-      login:    { freq:1046, type:"sine",     dur:0.15, attack:0.005, decay:0.13  },
-      logout:   { freq:659,  type:"sine",     dur:0.10, attack:0.003, decay:0.09  },
-    };
-
-    const s = sounds[type] || sounds.click;
-    osc.type = s.type;
-    osc.frequency.setValueAtTime(s.freq, now);
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.9, now + s.attack);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + s.dur);
-    osc.start(now);
-    osc.stop(now + s.dur + 0.01);
-  } catch(e) {}
+  try { _playSoundRich(type); } catch(e) {}
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
@@ -430,6 +354,7 @@ const daysLeft= d => { if(!d) return null; const diff=Math.ceil((new Date(d)-Dat
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://ocpzvyjbuhznnhxsxlvy.supabase.co";
 const SUPABASE_KEY = "sb_publishable_CwxgKLPpmI6M9Fa_2xFNLQ_IbYDrTpq";
+const MNU_ICON="data:image/png;base64,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"; // Neer Locker logo
 
 // Lightweight Supabase REST helper — no SDK needed
 const SB = {
@@ -507,12 +432,8 @@ const DB = {
 };
 
 // LS — localStorage for per-device display preferences (never shared)
-// Emoji helper — minimal mode only. Normal mode ALWAYS shows emoji.
-const E = (emoji, fallback="") => {
-  // Only suppress emojis if: minimal mode is ON AND emoji toggle is OFF
-  if (!window._minimalMode || window._showEmojis!==false) return emoji;
-  return fallback||emoji;
-};
+// Emoji helper — always returns emoji
+const E=(emoji,fallback)=>emoji;
 
 const LS = {
   get: k => { try { const v=localStorage.getItem(k); return v?JSON.parse(v):null; } catch { return null; } },
@@ -611,6 +532,16 @@ const buildCSS = T => `
     .header-name{display:none!important;}
   }
   @media(max-width:600px){.two-col{grid-template-columns:1fr!important;}.set-grid{grid-template-columns:1fr!important;}}
+  @keyframes moreExpand{from{opacity:0;transform:translateY(12px) scale(0.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+  @keyframes navBubblePop{from{opacity:0;transform:translateX(-50%) scale(0.5);}to{opacity:1;transform:translateX(-50%) scale(1);}}
+  @keyframes morphSquare{0%{border-radius:6%;transform:rotate(0deg);}33%{border-radius:50%;transform:rotate(90deg);}66%{border-radius:6%;transform:rotate(270deg);}100%{border-radius:6%;transform:rotate(360deg);}}
+  @keyframes skeletonShimmer{from{background-position:200% 0;}to{background-position:-200% 0;}}
+  @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(100vh) rotate(720deg);opacity:0;}}
+  @keyframes dockExpand{from{opacity:0;transform:translateX(-50%) translateY(8px) scale(0.94);}to{opacity:1;transform:translateX(-50%) translateY(0) scale(1);}}
+  @keyframes creatorShimmer{0%{background-position:200% center;}100%{background-position:-200% center;}}
+  @keyframes eotmGlow{0%,100%{filter:drop-shadow(0 0 4px #f59e0b88);}50%{filter:drop-shadow(0 0 12px #f59e0bcc);}}
+  @keyframes creatorPulse{0%,100%{filter:drop-shadow(0 0 6px #16a34a) drop-shadow(0 0 12px #16a34a66);}50%{filter:drop-shadow(0 0 12px #16a34a) drop-shadow(0 0 24px #16a34aaa);}}
+  @keyframes rainbowSpin{0%{filter:hue-rotate(0deg);}100%{filter:hue-rotate(360deg);}}
 `;
 
 // ─── REUSABLE UI ──────────────────────────────────────────────────────────────
@@ -629,8 +560,7 @@ const StatusDot = ({status}) => {
 
 function Btn({children,onClick,variant,sm,xs,disabled,full,flex,T,style:sx={},sound}) {
   const [p,setP]=useState(false);
-  const mn=T.minimal;
-  const V= mn ? {
+  const V= false ? {
     // Google Antigravity pill style — primary is ALWAYS red #C8102E (MNU brand)
     primary:{bg:T.accent,color:"#fff",border:"none"},
     blue:   {bg:"#1a73e8",color:"#fff",border:"none"},
@@ -647,14 +577,14 @@ function Btn({children,onClick,variant,sm,xs,disabled,full,flex,T,style:sx={},so
   const v=V[variant||"primary"];
   const pad=xs?"4px 10px":sm?"6px 14px":"10px 20px";
   const fs=xs?11:sm?12:14;
-  const radius=mn?9999:T.sp.r;
+  const radius=T.sp.r;
   const snd=sound||(variant==="danger"?"delete":variant==="success"?"success":"click");
   const handleClick=e=>{ if(!disabled){playSound(snd);} onClick?.(e); };
   return (
     <button onClick={handleClick} disabled={disabled} className="btn-press"
       onMouseDown={()=>setP(true)} onMouseUp={()=>setP(false)} onMouseLeave={()=>setP(false)}
-      style={{background:v.bg,color:v.color,border:v.border,borderRadius:radius,padding:pad,fontWeight:mn?500:700,fontSize:fs,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.5:1,transform:p?"scale(0.97)":"scale(1)",transition:"all .15s",letterSpacing:mn?"0.01em":undefined,fontFamily:"inherit",width:full?"100%":undefined,flex:flex||undefined,...sx}}
-      onMouseEnter={e=>{if(!disabled)e.currentTarget.style.opacity=mn?"0.85":"1";e.currentTarget.style.filter=mn?"none":"brightness(1.08)";}}
+      style={{background:v.bg,color:v.color,border:v.border,borderRadius:radius,padding:pad,fontWeight:700,fontSize:fs,cursor:disabled?"not-allowed":"pointer",opacity:disabled?0.5:1,transform:p?"scale(0.97)":"scale(1)",transition:"all .15s",letterSpacing:undefined,fontFamily:"inherit",width:full?"100%":undefined,flex:flex||undefined,...sx}}
+      onMouseEnter={e=>{if(!disabled)e.currentTarget.style.opacity="1";e.currentTarget.style.filter="brightness(1.08)";}}
       onMouseLeave={e=>{e.currentTarget.style.opacity="1";e.currentTarget.style.filter="none";}}
     >{children}</button>
   );
@@ -757,7 +687,7 @@ function ToastList({items,T={}}) {
 
   if(!items.length) return null;
   return (
-    <div style={{position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",zIndex:9997,display:"flex",flexDirection:"column",gap:6,alignItems:"center",pointerEvents:"none",width:"calc(100vw - 32px)",maxWidth:420}}>
+    <div style={{position:"fixed",bottom:160,left:"50%",transform:"translateX(-50%)",zIndex:9997,display:"flex",flexDirection:"column",gap:6,alignItems:"center",pointerEvents:"none",width:"calc(100vw - 32px)",maxWidth:420}}>
       {items.map((t,i)=>{
         const c=cfg[t.type]||cfg.info;
         return (
@@ -792,9 +722,9 @@ function ToastList({items,T={}}) {
   );
 }
 
-function VersionBadge({T,hide}) {
+function VersionBadge({T,hide,navOpen}) {
   return (
-    <div style={{position:"fixed",bottom:12,right:8,zIndex:499,background:T.surf,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:"0.03em",userSelect:"none",display:"flex",gap:5,alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)",opacity:hide?0:1,transform:hide?"translateY(12px)":"translateY(0)",transition:"opacity .25s ease,transform .25s ease",pointerEvents:hide?"none":"auto"}}>
+    <div style={{position:"fixed",bottom:12,right:8,zIndex:499,background:T.surf,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:"0.03em",userSelect:"none",display:"flex",gap:5,alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)",opacity:(hide||navOpen)?0:1,transform:(hide||navOpen)?"translateY(20px)":"translateY(0)",transition:"opacity .25s ease,transform .25s ease",pointerEvents:hide?"none":"auto"}}>
       <span style={{color:T.accent,fontWeight:800}}>MNU</span>
       <span style={{color:T.faint}}>·</span>
       <span style={{color:T.sub}}>Neer Locker</span>
@@ -976,11 +906,11 @@ function LogoutAnim({T}) {
   return (
     <div style={{position:"fixed",inset:0,background:T.bg,zIndex:850,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:22,animation:"fadeIn .18s ease both"}}>
       <div style={{
-        width:44,height:44,
+        width:52,height:52,
         background:T.scarlet,
         borderRadius:"6%",
         animation:"morphSquare 2s ease-in-out infinite",
-        boxShadow:`0 0 24px ${T.scarlet}55, 0 4px 16px rgba(0,0,0,0.18)`,
+        boxShadow:`0 0 32px ${T.scarlet}66, 0 4px 20px rgba(0,0,0,0.2)`,
       }}/>
       <div style={{textAlign:"center"}}>
         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,letterSpacing:"-0.3px"}}>See you later!</div>
@@ -1008,13 +938,13 @@ function WelcomeAnim({name,role,T,onDone}) {
   return (
     <div style={{position:"fixed",inset:0,background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:900,gap:22}}>
       {/* Morphing square spinner */}
-      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18}}>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
         <div style={{
-          width:44,height:44,
+          width:52,height:52,
           background:T.scarlet,
           borderRadius:"6%",
           animation:"morphSquare 2s ease-in-out infinite",
-          boxShadow:`0 0 24px ${T.scarlet}55, 0 4px 16px rgba(0,0,0,0.18)`,
+          boxShadow:`0 0 32px ${T.scarlet}66, 0 4px 20px rgba(0,0,0,0.2)`,
         }}/>
       </div>
 
@@ -1095,33 +1025,18 @@ function LoginBriefing({user,tasks,anns,dms,emps,T,onClose}) {
         <div style={{marginTop:16}}>
           <Btn T={T} full variant="ghost" onClick={close}>Got it, let&apos;s go →</Btn>
         </div>
+
       </div>
     </div>
   );
 }
 
 // ─── SIDEBAR NAV ─────────────────────────────────────────────────────────────
-function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn,onShop}) {
-  const [open,setOpen]=useState(false);
-  const ref=useRef(null);
+function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn,onShop,onHelp,onFeedback,navOpen,setNavOpen}) {
+  const [moreOpen,setMoreOpen]=useState(false);
   const myAnns=anns.filter(a=>!(a.dismissed||[]).includes(user?.id)).length;
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id)).length;
   const unreadDMs=(()=>{const last=LS.get("nl3-dm-last")||{};return dms.filter(m=>m.to===user?.id&&(m.at||0)>(last[m.from]||0)).length;})();
-
-  // Close on outside click
-  useEffect(()=>{
-    if(!open) return;
-    const h=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
-    document.addEventListener("mousedown",h);
-    document.addEventListener("touchstart",h);
-    return()=>{document.removeEventListener("mousedown",h);document.removeEventListener("touchstart",h);};
-  },[open]);
-
-  const go=(key,finn,shop)=>{
-    if(finn){onFinn();setOpen(false);playSound("open");}
-    else if(shop){onShop&&onShop();setOpen(false);playSound("open");}
-    else{setPage(key);setOpen(false);playSound("click");}
-  };
 
   const hasP=(perm)=>{
     if(!perm) return true;
@@ -1130,325 +1045,277 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn,onShop}) {
     return r&&(r.p.includes("*")||r.p.includes(perm));
   };
 
-  // Dock items — filtered by permission
-  const rawItems=[
-    {key:"home",        label:"Home",          finn:false, shop:false, icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/>
-      </svg>
-    )},
-    {key:"tasks",       label:"Tasks",         perm:"tasks", badge:myTasks, icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/>
-      </svg>
-    )},
-    {key:"inv",         label:"Inventory",     perm:"inv", icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-        <line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
-      </svg>
-    )},
-    {key:"anns",        label:"Alerts",        perm:"ann",  badge:myAnns, icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-    )},
-    {key:"dms",         label:"Messages",      perm:"dms",  badge:unreadDMs, icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-    )},
-    {key:"leaderboard", label:"Leaderboard",   perm:"leaderboard", icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>
-      </svg>
-    )},
-    {key:"shop",        label:"XP Shop",       shop:true, icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/>
-        <path d="M16 10a4 4 0 0 1-8 0"/>
-      </svg>
-    )},
-    {key:"act",         label:"Activity",      perm:"act", icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-      </svg>
-    )},
-    {key:"schedule",    label:"Schedule",      icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-    )},
-    {key:"finn",        label:"Ask Finn",      finn:true, icon:(
-      <svg width="18" height="18" viewBox="0 0 22 22">
-        <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
-        <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.55"/>
-        <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-        <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-        <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-        <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-        <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-        <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-        <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-        <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-        <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-        <circle cx="11" cy="11" r="1" fill="#fff"/>
-      </svg>
-    )},
-    {key:"set",         label:"Settings",      icon:(
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}>
-        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    )},
-  ];
+  const scarlet=T.accent||"#C8102E";
+  const inactiveColor=T.dark?"rgba(255,255,255,0.38)":"rgba(0,0,0,0.32)";
+  const navBg=T.dark?"rgba(13,20,30,0.97)":"rgba(255,255,255,0.97)";
 
-  const visibleItems=rawItems.filter(i=>i.shop||i.finn||hasP(i.perm));
-  // Split into rows of max 6 to fit on screen
-  const row1=visibleItems.slice(0,Math.ceil(visibleItems.length/2));
-  const row2=visibleItems.slice(Math.ceil(visibleItems.length/2));
-  const useRows=visibleItems.length>6;
+  const ref=useRef(null);
+  useEffect(()=>{
+    if(!moreOpen) return;
+    const h=(e)=>{if(ref.current&&!ref.current.contains(e.target)){setMoreOpen(false);}};
+    document.addEventListener("mousedown",h);
+    document.addEventListener("touchstart",h);
+    return()=>{document.removeEventListener("mousedown",h);document.removeEventListener("touchstart",h);};
+  },[moreOpen]);
 
-  return (
-    <div ref={ref} style={{position:"relative"}}>
-      {/* Floating Dock — shows when open */}
-      {open&&(
-        <div style={{
-          position:"fixed",bottom:72,left:"50%",transform:"translateX(-50%)",
-          zIndex:450,animation:"dockExpand 0.28s cubic-bezier(0.34,1.56,0.64,1) both",
-          display:"flex",flexDirection:"column",gap:8,alignItems:"center",
-          pointerEvents:"auto",
-        }}>
-          {useRows?(
-            <>
-              <DockRow items={row2} page={page} go={go} T={T}/>
-              <DockRow items={row1} page={page} go={go} T={T}/>
-            </>
-          ):(
-            <DockRow items={visibleItems} page={page} go={go} T={T}/>
-          )}
-        </div>
-      )}
-      {/* Trigger button */}
-      <button onClick={()=>{setOpen(o=>!o);playSound(open?"click":"open");haptic&&haptic("light");}}
-        data-tour="nav-button"
-        style={{
-          position:"fixed",bottom:16,left:"50%",transform:"translateX(-50%)",
-          zIndex:500,
-          width:52,height:52,borderRadius:"50%",
-          background:open?T.accent:"#111827",
-          border:`2px solid ${open?T.accent+"88":"#374151"}`,
-          color:"#fff",cursor:"pointer",
-          display:"flex",alignItems:"center",justifyContent:"center",
-          transition:"background .2s,border-color .2s,transform .2s",
-          boxShadow:`0 4px 20px rgba(0,0,0,.4)${open?`,0 0 0 6px ${T.accent}22`:""}`,
-        }}
-        aria-label="Navigation menu"
-      >
-        <div style={{position:"relative",width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>
-          {/* Hamburger → X morph */}
-          <span style={{
-            position:"absolute",display:"block",width:20,height:2,
-            background:"#fff",borderRadius:2,
-            top:open?"50%":"calc(50% - 5px)",
-            transform:open?"rotate(45deg)":"none",
-            marginTop:open?"-1px":"0",
-            transition:"all .22s cubic-bezier(.4,0,.2,1)",
-          }}/>
-          <span style={{
-            position:"absolute",display:"block",width:20,height:2,
-            background:"#fff",borderRadius:2,top:"50%",marginTop:-1,
-            opacity:open?0:1,transition:"opacity .15s",
-          }}/>
-          <span style={{
-            position:"absolute",display:"block",width:20,height:2,
-            background:"#fff",borderRadius:2,
-            top:open?"50%":"calc(50% + 4px)",
-            transform:open?"rotate(-45deg)":"none",
-            marginTop:open?"-1px":"0",
-            transition:"all .22s cubic-bezier(.4,0,.2,1)",
-          }}/>
-        </div>
-        {/* Unread badge on trigger */}
-        {!open&&(myTasks+myAnns+unreadDMs)>0&&<div style={{position:"absolute",top:4,right:4,width:8,height:8,borderRadius:"50%",background:T.scarlet,border:"1.5px solid #111827"}}/>}
-      </button>
-    </div>
-  );
-}
-
-// ─── DOCK ROW ─────────────────────────────────────────────────────────────────
-function DockRow({items,page,go,T}) {
-  const [hoveredIdx,setHoveredIdx]=useState(null);
-
-  const getScale=(i)=>{
-    if(hoveredIdx===null) return 1;
-    const dist=Math.abs(i-hoveredIdx);
-    if(dist===0) return 1.55;
-    if(dist===1) return 1.2;
-    if(dist===2) return 1.05;
-    return 1;
+  const go=(key,special)=>{
+    if(special==="finn"){onFinn&&onFinn();setMoreOpen(false);}
+    else if(special==="shop"){onShop&&onShop();setMoreOpen(false);}
+    else if(special==="help"){onHelp&&onHelp();setMoreOpen(false);}
+    else if(special==="feedback"){onFeedback&&onFeedback();setMoreOpen(false);}
+    else{setPage(key);playSound("click");haptic&&haptic("light");setMoreOpen(false);}
   };
 
-  const getSize=(i)=>Math.round(44*getScale(i));
+  const pinned=[
+    {key:"home",        label:"Home",      perm:null,
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{width:20,height:20}}><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>},
+    {key:"tasks",       label:"Tasks",     perm:"tasks", badge:myTasks,
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{width:20,height:20}}><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>},
+    {key:"inv",         label:"Inventory", perm:"inv",
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{width:20,height:20}}><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>},
+    {key:"set",         label:"Settings",  perm:null,
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{width:20,height:20}}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>},
+  ].filter(i=>hasP(i.perm));
+
+  // Fan-out items — burst from More button in arc
+  const moreItems=[
+    {key:"dms",         label:"DMs",         perm:"dms",          badge:unreadDMs,
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>},
+    {key:"anns",        label:"Alerts",       perm:"ann",          badge:myAnns,
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>},
+    {key:"leaderboard", label:"Ranks",        perm:"leaderboard",
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>},
+    {key:"act",         label:"Activity",     perm:"act",
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>},
+    {key:"schedule",    label:"Schedule",     perm:null,
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>},
+    {key:"finn",        label:"Finn",         perm:null, special:"finn",
+      icon:<svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.6"><polygon points="11,2 20,7 20,17 11,22 2,17 2,7"/><circle cx="11" cy="11" r="3"/></svg>},
+    {key:"shop",        label:"XP Shop",      perm:null, special:"shop",
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>},
+
+    {key:"feedback",    label:"Ideas",        perm:null, special:"feedback",
+      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><line x1="12" y1="2" x2="12" y2="6"/><path d="M12 6a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3 5.5V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.5C7.5 16.5 6 14.5 6 12a6 6 0 0 1 6-6z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>},
+  ].filter(i=>hasP(i.perm));
+
+  const moreBadge=moreItems.reduce((s,i)=>s+(i.badge||0),0);
+
+  // Fan arc: items spread in a semicircle above the More button
+  // Angles from 180° (left) to 0° (right), spread evenly
+  // radius: how far items fly out
+  const fanRadius=180;
+  const totalItems=moreItems.length;
+  // Spread from ~210° to ~330° (upper arc, biased upward)
+  const startAngle=210;
+  const endAngle=330;
+  const getPos=(i)=>{
+    const angle=startAngle+(endAngle-startAngle)*(i/(totalItems-1));
+    const rad=angle*(Math.PI/180);
+    return {
+      x: Math.cos(rad)*fanRadius,
+      y: Math.sin(rad)*fanRadius,
+    };
+  };
+
+  const NavItem=({item,isActive})=>(
+    <div onClick={()=>go(item.key,item.special)}
+      style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",flex:1,paddingBottom:10,cursor:"pointer",position:"relative",height:"100%",userSelect:"none"}}>
+      {isActive&&(
+        <div style={{position:"absolute",top:-22,left:"50%",transform:"translateX(-50%)",width:48,height:48,borderRadius:"50%",background:`linear-gradient(135deg,${scarlet},${scarlet}cc)`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 6px 20px ${scarlet}55`,animation:"navBubblePop .25s cubic-bezier(.34,1.56,.64,1) both"}}>
+          <div style={{color:"#fff"}}>{item.icon}</div>
+          {(item.badge||0)>0&&<div style={{position:"absolute",top:-2,right:-2,minWidth:14,height:14,background:"#ef4444",borderRadius:9999,fontSize:8,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",border:"1.5px solid #fff"}}>{item.badge>9?"9+":item.badge}</div>}
+        </div>
+      )}
+      {!isActive&&(
+        <div style={{color:inactiveColor,marginBottom:2,position:"relative"}}>
+          {item.icon}
+          {(item.badge||0)>0&&<div style={{position:"absolute",top:-4,right:-4,minWidth:13,height:13,background:scarlet,borderRadius:9999,fontSize:8,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 2px",border:`1.5px solid ${T.dark?"#0d141e":"#fff"}`}}>{item.badge>9?"9+":item.badge}</div>}
+        </div>
+      )}
+      <div style={{fontSize:10,fontWeight:isActive?700:500,color:isActive?scarlet:inactiveColor,marginTop:isActive?30:2,letterSpacing:"0.01em",transition:"margin-top .2s"}}>{item.label}</div>
+    </div>
+  );
 
   return (
-    <div style={{
-      display:"flex",alignItems:"flex-end",gap:8,
-      padding:"10px 16px",
-      background:T.dark?"rgba(15,15,20,0.92)":"rgba(255,255,255,0.92)",
-      backdropFilter:"blur(20px)",
-      border:`1px solid ${T.bor}`,
-      borderRadius:22,
-      boxShadow:`0 8px 32px rgba(0,0,0,.25), 0 1px 0 rgba(255,255,255,0.06) inset`,
-    }}>
-      {items.map((item,i)=>{
-        const isActive=page===item.key&&!item.finn&&!item.shop;
-        const sz=getSize(i);
-        const totalBadge=(item.badge||0);
+    <div ref={ref} style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",zIndex:500,width:"calc(100vw - 28px)",maxWidth:430,pointerEvents:"auto"}}>
+
+      {/* ── FAN-OUT ITEMS ── rendered relative to the More button position */}
+      {moreItems.map((item,i)=>{
+        const pos=getPos(i);
+        const delay=moreOpen?i*28:(moreItems.length-1-i)*20;
+        const badge=item.badge||0;
         return (
-          <div key={item.key} style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}
-            onMouseEnter={()=>setHoveredIdx(i)}
-            onMouseLeave={()=>setHoveredIdx(null)}
-          >
-            {/* Tooltip */}
-            {hoveredIdx===i&&(
-              <div style={{
-                position:"absolute",bottom:"calc(100% + 6px)",left:"50%",transform:"translateX(-50%)",
-                background:T.dark?"#1f2937":"#111827",color:"#fff",
-                fontSize:10,fontWeight:700,letterSpacing:"0.04em",
-                padding:"3px 8px",borderRadius:6,whiteSpace:"nowrap",
-                pointerEvents:"none",zIndex:10,
-                animation:"fadeUp .1s ease both",
-              }}>{item.label}</div>
-            )}
-            {/* Icon button */}
-            <div onClick={()=>go(item.key,item.finn,item.shop)}
-              className="dock-item-btn"
-              style={{
-                width:sz,height:sz,
-                borderRadius:Math.round(13*(sz/44)),
-                background:isActive
-                  ? `linear-gradient(135deg,${T.accent},${T.accent}dd)`
-                  : item.finn
-                    ? "linear-gradient(135deg,#0f2744,#1e3a5f)"
-                    : item.shop
-                      ? `linear-gradient(135deg,${T.accent}22,${T.accent}44)`
-                      : T.surfH,
-                border:`1.5px solid ${isActive?T.accent+"88":item.finn?"#1e7fa8aa":item.shop?T.accent+"44":T.bor}`,
-                color:isActive?"#fff":item.finn?"#60a5fa":item.shop?T.accent:T.txt,
-                display:"flex",alignItems:"center",justifyContent:"center",
-                cursor:"pointer",
-                boxShadow:isActive?`0 4px 12px ${T.accent}44`:"none",
-                transition:"all .2s cubic-bezier(0.34,1.56,0.64,1)",
-              }}>
+          <div key={item.key}
+            onClick={()=>go(item.key,item.special)}
+            style={{
+              position:"absolute",
+              // More button is at center of pill — calc its offset from pill left
+              bottom:40, // sits above the pill bottom
+              left:"50%",
+              width:58,height:58,
+              borderRadius:"50%",
+              background:T.dark?"rgba(22,34,50,0.97)":"rgba(255,255,255,0.97)",
+              backdropFilter:"blur(16px)",
+              WebkitBackdropFilter:"blur(16px)",
+              border:`1.5px solid ${T.dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.08)"}`,
+              boxShadow:T.dark?"0 4px 20px rgba(0,0,0,0.5)":"0 4px 20px rgba(0,0,0,0.15)",
+              display:"flex",
+              flexDirection:"column",
+              alignItems:"center",
+              justifyContent:"center",
+              cursor:"pointer",
+              pointerEvents:moreOpen?"auto":"none",
+              zIndex:510,
+              gap:2,
+              transform:moreOpen
+                ? `translate(calc(-50% + ${pos.x}px), calc(-50% + ${-pos.y - 220}px)) scale(1)`
+                : `translate(-50%, 0px) scale(0.4)`,
+              opacity:moreOpen?1:0,
+              transition:`transform ${moreOpen?200+i*30:140+i*20}ms cubic-bezier(${moreOpen?".34,1.4,.64,1":".4,0,1,1"}) ${delay}ms, opacity ${moreOpen?160+i*25:100}ms ease ${delay}ms`,
+            }}>
+            <div style={{color:T.dark?"rgba(255,255,255,0.8)":"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center"}}>
               {item.icon}
-              {/* Badge */}
-              {totalBadge>0&&(
-                <div style={{position:"absolute",top:-3,right:-3,minWidth:14,height:14,background:T.scarlet,borderRadius:9999,fontSize:9,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",border:`1.5px solid ${T.dark?"#111":"#fff"}`}}>{totalBadge>9?"9+":totalBadge}</div>
-              )}
             </div>
-            {/* Active dot */}
-            <div style={{width:4,height:4,borderRadius:"50%",background:isActive?T.accent:"transparent",transition:"background .15s"}}/>
+            <div style={{fontSize:8,fontWeight:600,color:T.dark?"rgba(255,255,255,0.5)":"rgba(0,0,0,0.45)",lineHeight:1,textAlign:"center",marginTop:1}}>{item.label}</div>
+            {badge>0&&<div style={{position:"absolute",top:-2,right:-2,minWidth:14,height:14,background:scarlet,borderRadius:9999,fontSize:8,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",border:`1.5px solid ${T.dark?"#0d141e":"#fff"}`}}>{badge>9?"9+":badge}</div>}
           </div>
         );
       })}
+
+      {/* Backdrop blur overlay when open */}
+      {moreOpen&&(
+        <div onClick={()=>setMoreOpen(false)}
+          style={{position:"fixed",inset:0,zIndex:505,background:"rgba(0,0,0,0.25)",backdropFilter:"blur(2px)",WebkitBackdropFilter:"blur(2px)"}}/>
+      )}
+
+      {/* ── MAIN PILL BAR ── */}
+      <div style={{
+        background:navBg,
+        backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",
+        borderRadius:28,
+        padding:"0 6px",
+        boxShadow:T.dark?"0 8px 32px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05) inset":"0 8px 32px rgba(0,0,0,0.12), 0 1px 0 rgba(255,255,255,0.9) inset",
+        border:`1px solid ${T.dark?"rgba(255,255,255,0.07)":"rgba(0,0,0,0.06)"}`,
+        display:"flex",alignItems:"flex-end",justifyContent:"space-around",
+        height:64,position:"relative",zIndex:510,
+      }}>
+        {/* Left 2 pinned */}
+        {pinned.slice(0,2).map(item=>(
+          <NavItem key={item.key} item={item} isActive={page===item.key}/>
+        ))}
+
+        {/* More — center */}
+        <div onClick={()=>{setMoreOpen(o=>!o);playSound(moreOpen?"click":"open");haptic&&haptic("medium");}}
+          style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",flex:1,paddingBottom:10,cursor:"pointer",position:"relative",height:"100%",userSelect:"none",zIndex:520}}>
+          {/* Animated More bubble */}
+          <div style={{
+            position:"absolute",top:-22,left:"50%",transform:"translateX(-50%)",
+            width:48,height:48,borderRadius:"50%",
+            background:moreOpen?`linear-gradient(135deg,${scarlet},${scarlet}cc)`:`linear-gradient(135deg,${T.dark?"#1e3a5f":"#e8edf5"},${T.dark?"#152840":"#d8e0ee"})`,
+            display:"flex",alignItems:"center",justifyContent:"center",
+            boxShadow:moreOpen?`0 6px 20px ${scarlet}55`:"0 4px 12px rgba(0,0,0,0.2)",
+            transition:"background .25s, box-shadow .25s, transform .2s cubic-bezier(.34,1.56,.64,1)",
+            transform:moreOpen?"translateX(-50%) rotate(45deg)":"translateX(-50%) rotate(0deg)",
+          }}>
+            {/* Plus → X morphing icon */}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke={moreOpen?"#fff":(T.dark?"rgba(255,255,255,0.7)":"rgba(0,0,0,0.5)")}
+              strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            {!moreOpen&&moreBadge>0&&<div style={{position:"absolute",top:-2,right:-2,minWidth:14,height:14,background:scarlet,borderRadius:9999,fontSize:8,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 3px",border:`1.5px solid ${T.dark?"#0d141e":"#fff"}`}}>{moreBadge>9?"9+":moreBadge}</div>}
+          </div>
+          <div style={{fontSize:10,fontWeight:600,color:moreOpen?scarlet:inactiveColor,marginTop:30,letterSpacing:"0.01em",transition:"color .2s"}}>More</div>
+        </div>
+
+        {/* Right 2 pinned */}
+        {pinned.slice(2).map(item=>(
+          <NavItem key={item.key} item={item} isActive={page===item.key}/>
+        ))}
+      </div>
     </div>
   );
 }
 
 
-function HeroBanner({user,T,onProfileClick}) {
+function HeroBanner({user,T,onProfileClick,onSearch,onAlerts,equippedBadges=[],nameColorId="base"}) {
   const [time,setTime]=useState(new Date());
   const [greet,setGreet]=useState("Hey");
+  const [tick,setTick]=useState(0);
   useEffect(()=>{
     const h=new Date().getHours();
     setGreet(h<12?"Good morning":h<17?"Good afternoon":"Good evening");
     const i=setInterval(()=>setTime(new Date()),1000);
-    return()=>clearInterval(i);
+    const t=setInterval(()=>setTick(v=>v+1),50);
+    return()=>{clearInterval(i);clearInterval(t);};
   },[]);
+  const wavePhase=tick*0.025;
+
+  const orbs=[
+    {x:8,  baseY:12, size:280, color:"#C8102E", spd:0.4, blur:50, speed:0.4},
+    {x:85, baseY:60, size:220, color:"#1e7fa8", spd:0.3, blur:60, speed:0.3},
+    {x:50, baseY:30, size:180, color:"#7c3aed", spd:0.5, blur:55, speed:0.5},
+  ];
+
   const rc=ROLES[user.role];
-  const timeStr=time.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
-  const dateStr=time.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
-  if(T.minimal) {
-    // Animated minimal banner — breathing underline + color sweep + scan
-    const [phase,setPhase]=useState(0);
-    useEffect(()=>{const i=setInterval(()=>setPhase(p=>p+0.025),50);return()=>clearInterval(i);},[]);
-    const lineW=48+Math.sin(phase)*16; // breathing underline width 32–64px
-    const lineOpacity=0.4+Math.sin(phase*0.7)*0.25;
+  const scarlet="#C8102E";
 
-    // Color animation — cycle through red, blue, cyan
-    const colorPhase = (phase * 0.3) % (Math.PI * 2);
-    const gradAngle = (phase * 3) % 360;
-    // Compute animated gradient color stops
-    const c1 = `hsla(${(phase*20)%360}, 75%, ${T.dark?60:48}%, 0.08)`;
-    const c2 = `hsla(${(phase*20+120)%360}, 75%, ${T.dark?60:48}%, 0.06)`;
-    const c3 = `hsla(${(phase*20+240)%360}, 75%, ${T.dark?60:48}%, 0.08)`;
+  // Animated wave path
+  const W=600, H=56;
+  const makePts=(amp,spd,off)=>{
+    const t=wavePhase*spd+off;
+    let d=`M0,${H} L`;
+    for(let i=0;i<=80;i++){
+      const x=(i/80)*W;
+      const r=(i/80)*Math.PI*3;
+      const y=H-amp*(Math.sin(r+t)*0.55+Math.sin(r*1.7-t*1.2)*0.28+Math.sin(r*2.9+t*0.5)*0.17);
+      d+=`${x.toFixed(1)},${Math.max(1,y).toFixed(1)} `;
+    }
+    return d+`${W},${H} Z`;
+  };
 
-    return (
-      <div className="fu" style={{borderRadius:16,marginBottom:20,background:T.surf,border:`1px solid ${T.bor}`,padding:"28px 28px 24px",position:"relative",overflow:"hidden"}}>
-        {/* Animated color gradient background */}
-        <div style={{position:"absolute",inset:0,background:`linear-gradient(${gradAngle}deg, ${c1}, ${c2}, ${c3})`,transition:"none",pointerEvents:"none"}}/>
-        {/* Floating color orbs — very subtle */}
-        <div style={{position:"absolute",top:`${20+Math.sin(phase*0.5)*15}%`,left:`${75+Math.cos(phase*0.4)*10}%`,width:120,height:120,borderRadius:"50%",background:`radial-gradient(circle,hsla(${(phase*15)%360},80%,${T.dark?60:50}%,0.12) 0%,transparent 70%)`,filter:"blur(20px)",pointerEvents:"none",transition:"none"}}/>
-        <div style={{position:"absolute",top:`${60+Math.sin(phase*0.6+1)*12}%`,left:`${20+Math.cos(phase*0.5+2)*10}%`,width:90,height:90,borderRadius:"50%",background:`radial-gradient(circle,hsla(${(phase*15+180)%360},80%,${T.dark?60:50}%,0.10) 0%,transparent 70%)`,filter:"blur(18px)",pointerEvents:"none",transition:"none"}}/>
-        {/* Animated scan line — very subtle */}
-        <div style={{position:"absolute",top:0,left:0,right:0,height:"1px",background:`linear-gradient(90deg,transparent,${T.scarlet}${T.dark?"66":"33"},transparent)`,transform:`translateX(${(Math.sin(phase*0.4)*50)+25}%)`,transition:"none",pointerEvents:"none"}}/>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,flexWrap:"wrap",position:"relative",zIndex:2}}>
-          <div style={{flex:1,minWidth:200}}>
-            <div style={{fontSize:11,fontWeight:500,color:T.sub,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:10}}>{dateStr}</div>
-            <div style={{fontSize:28,fontWeight:400,color:T.txt,lineHeight:1.1,marginBottom:6,letterSpacing:"-0.5px"}}>
-              {greet},
+  const firstName=user.name?.split(" ")[0]||"there";
+
+  return (
+    <div style={{width:"100%"}}>
+      {/* ── SCARLET HEADER with wave ── */}
+      <div style={{background:scarlet,position:"relative",borderRadius:"0 0 0 0",marginBottom:0}}>
+
+        {/* Header content */}
+        <div style={{padding:"14px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontSize:22,fontWeight:800,color:"#fff",letterSpacing:"-0.3px",lineHeight:1.1}}>
+              Hi {firstName} 👋
             </div>
-            <div style={{fontSize:28,fontWeight:700,color:T.txt,lineHeight:1.1,marginBottom:4,letterSpacing:"-0.5px",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>{user.name}<UserBadges badgeIds={equippedBadges} size={20} gap={4}/></div>
-            {/* Breathing animated underline */}
-            <div style={{width:lineW,height:2,background:`linear-gradient(90deg, hsl(${(phase*25)%360},80%,55%), hsl(${(phase*25+120)%360},80%,55%))`,borderRadius:9999,opacity:lineOpacity,marginBottom:18,transition:"none"}}/>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              <button onClick={onProfileClick} style={{background:"none",border:`1.5px solid ${T.bor}`,borderRadius:9999,padding:"5px 16px",fontSize:12,fontWeight:500,color:T.sub,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet;e.currentTarget.style.color=T.scarlet;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
-              >{rc?.label}</button>
-              <button onClick={onProfileClick} style={{background:"none",border:`1.5px solid ${T.bor}`,borderRadius:9999,padding:"5px 14px",fontSize:12,fontWeight:500,color:T.sub,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:6,transition:"all .15s"}}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.txt;e.currentTarget.style.color=T.txt;}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
-              ><StatusDot status={user.status||"online"}/><span style={{textTransform:"capitalize"}}>{user.status||"online"}</span></button>
+            <div style={{fontSize:13,color:"rgba(255,255,255,0.72)",marginTop:3,fontWeight:400}}>
+              {greet} — {time.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"})}
             </div>
           </div>
-          {/* Clock — large, lightweight with color sweep */}
-          <div style={{textAlign:"right",flexShrink:0,paddingTop:4}}>
-            <div style={{fontSize:38,fontWeight:200,color:T.txt,letterSpacing:"-1px",fontVariantNumeric:"tabular-nums",lineHeight:1}}>{timeStr}</div>
-            <div style={{fontSize:10,color:T.sub,marginTop:6,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase"}}>Local time</div>
-            {/* Color breathing dot indicator */}
-            <div style={{width:6,height:6,borderRadius:"50%",background:`hsl(${(phase*25)%360},80%,55%)`,opacity:0.5+Math.sin(phase)*0.5,margin:"10px 0 0 auto",transition:"none",boxShadow:`0 0 8px hsl(${(phase*25)%360},80%,55%)`}}/>
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            {/* Search icon — minimalistic magnifying glass */}
+            <button onClick={()=>onSearch&&onSearch()} style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.18)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,backdropFilter:"blur(8px)"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10.5" cy="10.5" r="6.5" stroke="rgba(255,255,255,0.9)"/>
+                <line x1="15.5" y1="15.5" x2="21" y2="21" stroke="rgba(255,255,255,0.9)" strokeWidth="2.5"/>
+              </svg>
+            </button>
+            {/* Bell */}
+            <button onClick={onProfileClick}
+              style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.18)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,backdropFilter:"blur(8px)"}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </button>
           </div>
         </div>
-      </div>
-    );
-  }
-  // Original hero
-  const orbs=[{size:120,x:78,baseY:15,speed:0.7,color:T.scarlet,opacity:0.12},{size:80,x:88,baseY:55,speed:1.1,color:T.blue,opacity:0.10},{size:60,x:5,baseY:20,speed:0.9,color:T.blue,opacity:0.08},{size:90,x:60,baseY:70,speed:0.6,color:T.scarlet,opacity:0.07},{size:50,x:40,baseY:5,speed:1.3,color:T.scarlet,opacity:0.06}];
-  const [wavePhase,setWavePhase]=useState(0);
-  useEffect(()=>{const i=setInterval(()=>setWavePhase(w=>w+0.08),100);return()=>clearInterval(i);},[]);
-  const W=800,H=40;
-  const pts=Array.from({length:20},(_,i)=>{const x=i*(W/19);const y=H/2+Math.sin(wavePhase+i*0.5)*10+Math.sin(wavePhase*1.3+i*0.8)*6;return `${i===0?"M":"L"}${x},${y}`;}).join(" ");
-  return (
-    <div className="fu" style={{position:"relative",overflow:"hidden",borderRadius:20,marginBottom:20,minHeight:160,background:T.dark?`linear-gradient(145deg,#200810 0%,#0e0508 40%,#060d1a 100%)`:`linear-gradient(145deg,#fff0f0 0%,#fff5f5 40%,#f0f4ff 100%)`,border:`1px solid ${T.bor}`,boxShadow:`0 8px 40px ${T.scarlet}20,0 2px 0 ${T.scarlet}40 inset`}}>
-      {orbs.map((o,i)=>(<div key={i} style={{position:"absolute",left:`${o.x}%`,top:`${o.baseY+Math.sin(wavePhase*o.speed+i)*14}%`,width:o.size,height:o.size,borderRadius:"50%",background:`radial-gradient(circle,${o.color} 0%,transparent 70%)`,opacity:o.opacity,transform:"translate(-50%,-50%)",pointerEvents:"none",filter:"blur(8px)"}}/>))}
-      <div style={{position:"absolute",inset:0,background:`linear-gradient(110deg,transparent 20%,${T.scarlet}08 45%,${T.blue}06 55%,transparent 80%)`,animation:"shimmer 5s ease-in-out infinite",backgroundSize:"300% 100%",pointerEvents:"none"}}/>
-      <svg style={{position:"absolute",bottom:0,left:0,right:0,width:"100%",height:40,pointerEvents:"none",opacity:0.18}} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none"><path d={pts} stroke={T.scarlet} strokeWidth="2.5" fill="none" strokeLinecap="round"/></svg>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,${T.scarlet},${T.blue},${T.scarlet},${T.blue})`,backgroundSize:"400% 100%",animation:"shimmer 4s linear infinite",borderRadius:"20px 20px 0 0"}}/>
-      <div style={{position:"relative",zIndex:2,padding:"26px 26px 22px"}}>
-        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
-          <div style={{flex:1,minWidth:200}}>
-            <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:28,fontWeight:800,color:T.txt,lineHeight:1.1,marginBottom:6,letterSpacing:"-0.5px"}}>{greet}, <span style={{color:T.scarlet,textShadow:`0 0 20px ${T.scarlet}50`}}>{user.name}!</span></div>
-            <div style={{color:T.sub,fontSize:13,marginBottom:12}}>{dateStr}</div>
-            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-              <button onClick={onProfileClick} style={{background:rc?.color+"28",border:`1px solid ${rc?.color}55`,borderRadius:8,padding:"4px 14px",fontWeight:700,fontSize:12,color:rc?.color,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{rc?.label} ⚙️</button>
-              <button onClick={onProfileClick} style={{display:"flex",alignItems:"center",gap:6,background:T.dark?"rgba(0,0,0,0.35)":"rgba(255,255,255,0.65)",backdropFilter:"blur(6px)",borderRadius:8,padding:"4px 12px",border:`1px solid ${T.bor}`,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}><StatusDot status={user.status||"online"}/><span style={{fontSize:12,color:T.sub,textTransform:"capitalize",fontWeight:600}}>{user.status||"online"}</span></button>
-            </div>
-          </div>
-          <div style={{background:T.dark?"rgba(0,0,0,0.5)":"rgba(255,255,255,0.75)",backdropFilter:"blur(12px)",border:`1px solid ${T.bor}`,borderRadius:16,padding:"14px 20px",textAlign:"center",flexShrink:0}}>
-            <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:26,fontWeight:800,color:T.scarlet,letterSpacing:"0.04em",textShadow:`0 0 16px ${T.scarlet}40`}}>{timeStr}</div>
-            <div style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.08em",marginTop:3}}>LIVE CLOCK</div>
-          </div>
+
+        {/* Spacer + wave */}
+        <div style={{height:24}}/>
+        <div style={{position:"relative",height:H,overflow:"hidden"}}>
+          <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{display:"block",position:"absolute",bottom:0,left:0,width:"100%"}}>
+            <path d={makePts(H*0.38,1.3,1.8)} fill="rgba(160,0,20,0.45)"/>
+            <path d={makePts(H*0.48,1.0,0.7)} fill="rgba(190,8,28,0.6)"/>
+            <path d={makePts(H*0.6,0.8,0)}   fill={T.bg}/>
+          </svg>
         </div>
       </div>
     </div>
@@ -1456,323 +1323,208 @@ function HeroBanner({user,T,onProfileClick}) {
 }
 
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl,onShop,equippedBadges,nameColorId}) {
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl,onShop,onFinn,onSearch,equippedBadges,nameColorId}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
-  const doneTasks=tasks.filter(t=>t.done&&t.createdBy===user.id||tasks.filter(tt=>tt.done&&(tt.assignedTo===user.id||tt.assignedTo==="all")).includes(t));
-  const overdueTasks=myTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
-  const myAnns=anns.filter(a=>!(a.dismissed||[]).includes(user.id));
-  const onlineEmps=emps.filter(e=>e.status==="online"&&e.id!==user.id);
-  const unreadDMs=dms.filter(d=>d.to===user.id&&!d.read).length;
-
-  const quickStats=[
-    {icon:E("✅","✓"),label:"Open Tasks",val:myTasks.length,color:T.blue,page:"tasks"},
-    {icon:E("🔔","○"),label:"Announcements",val:myAnns.length,color:T.scarlet,page:"anns"},
-    {icon:E("💬","≡"),label:"Unread DMs",val:unreadDMs,color:"#7c3aed",page:"dms"},
-    {icon:E("⚠️","△"),label:"Overdue",val:overdueTasks.length,color:T.err,page:"tasks"},
-    ...(scheduleUrl?[{icon:E("📅","◷"),label:"Schedule",val:"View",color:"#16a34a",page:"schedule"}]:[]),
-  ];
-
+  const doneTasks=tasks.filter(t=>t.done&&(t.assignedTo===user.id||t.assignedTo==="all"));
+  const online=emps.filter(e=>e.id!==user.id&&e.status==="online");
   const myProgress=progress[user.id]||{xp:0,level:1,title:"Pioneer",streak:0};
   const lvInfo=getLevelInfo(myProgress.xp);
   const isEligible=XP_ELIGIBLE_ROLES.includes(user.role);
+  const myAnns=anns.filter(a=>!(a.dismissed||[]).includes(user.id));
+  const unreadDMs=(()=>{const last=LS.get("nl3-dm-last")||{};return dms.filter(m=>m.to===user.id&&(m.at||0)>(last[m.from]||0)).length;})();
+  const rc=ROLES[user.role];
+  const scarlet="#C8102E";
+  const urgentTasks=myTasks.filter(t=>t.due&&new Date(t.due)<=new Date(Date.now()+86400000));
+
+  const Card=({children,style={}})=>(
+    <div style={{background:T.dark?"#1a2535":"#fff",borderRadius:16,padding:14,boxShadow:T.dark?"0 2px 12px rgba(0,0,0,0.3)":"0 2px 12px rgba(0,0,0,0.06)",border:`1px solid ${T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.05)"}`, ...style}}>
+      {children}
+    </div>
+  );
+
+  const SecHeader=({label,link,onLink})=>(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <div style={{fontSize:13,fontWeight:700,color:T.txt}}>{label}</div>
+      {link&&<button onClick={onLink} style={{background:"none",border:"none",color:scarlet,fontSize:11,fontWeight:600,cursor:"pointer",padding:0}}>{link} ›</button>}
+    </div>
+  );
 
   return (
-    <div>
-      {/* Animated Hero Banner */}
-      <HeroBanner user={user} T={T} onProfileClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}/>
+    <div style={{paddingBottom:100}}>
 
-      {/* Progression Card — only for eligible roles */}
-      {isEligible&&(
-        <div className="fu" style={{background:T.card,border:`2px solid ${lvInfo.color}44`,borderRadius:16,padding:16,marginBottom:16,animation:"fadeUp .3s ease both",position:"relative",overflow:"hidden"}}>
-          {/* Glow background */}
-          <div style={{position:"absolute",inset:0,background:`radial-gradient(ellipse at 10% 50%,${lvInfo.color}18 0%,transparent 70%)`,pointerEvents:"none"}}/>
-          <div style={{display:"flex",alignItems:"center",gap:14,position:"relative"}}>
-            {/* Level badge with custom logo */}
-            <LevelLogo level={lvInfo.level} color={lvInfo.color} size={56}/>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <span style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:lvInfo.color}}>{lvInfo.title}</span>
-                <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
-  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
-    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
-    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-    <circle cx="11" cy="11" r="1" fill="#fff"/>
-  </svg>
-  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
-</span>
-                {myProgress.streak>0&&(
-                  <div style={{display:"flex",alignItems:"center",gap:4,background:"#ff6b0022",border:"1px solid #ff6b0044",borderRadius:20,padding:"2px 8px"}}>
-                    <span style={{fontSize:12}}>{E("🔥","")}</span>
-                    <span style={{fontSize:11,fontWeight:800,color:"#ff6b00"}}>{myProgress.streak} day streak</span>
-                  </div>
-                )}
+      {/* ── HEADER BANNER ── */}
+      <HeroBanner user={user} T={T}
+        onProfileClick={()=>{setPage("set");setPrevPage("home");playSound("click");}}
+        onSearch={()=>{onSearch&&onSearch();}}
+        onAlerts={()=>{setPage("anns");playSound("open");}}
+        equippedBadges={equippedBadges} nameColorId={nameColorId}/>
+
+      {/* ── CONTENT ── */}
+      <div style={{padding:"16px 14px",display:"flex",flexDirection:"column",gap:14}}>
+
+        {/* ── STAT CARDS ── */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          {/* Tasks */}
+          <Card style={{cursor:"pointer"}} onClick={()=>setPage("tasks")}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"rgba(200,16,46,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
               </div>
-              <div style={{fontSize:11,color:T.sub,marginTop:2}}>{myProgress.xp} XP total{lvInfo.next?` · ${lvInfo.xpToNext} XP to ${lvInfo.next.title}`:` · Max level!`}</div>
-              {/* XP progress bar */}
-              <div style={{marginTop:8,height:6,background:T.bor,borderRadius:3,overflow:"hidden"}}>
-                <div style={{height:"100%",width:`${lvInfo.pct}%`,background:`linear-gradient(90deg,${lvInfo.color}88,${lvInfo.color})`,borderRadius:3,transition:"width .6s cubic-bezier(.23,1,.32,1)"}}/>
+              <div>
+                <div style={{fontSize:20,fontWeight:800,color:T.txt,lineHeight:1}}>{myTasks.length}</div>
+                <div style={{fontSize:10,color:T.sub,marginTop:2}}>Open Tasks</div>
+                {urgentTasks.length>0&&<div style={{fontSize:9,fontWeight:700,color:scarlet,marginTop:2}}>{urgentTasks.length} Due Soon</div>}
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginTop:3,fontSize:10,color:T.faint}}>
-                <span>{lvInfo.pct}% to next level</span>
-                {lvInfo.next&&<span>{lvInfo.next.title}</span>}
-              </div>
-              {/* Shop button */}
-              <button onClick={()=>{playSound("open");onShop&&onShop();}}
-                style={{marginTop:10,width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:T.minimal?9999:10,padding:"9px 14px",fontSize:12,fontWeight:T.minimal?500:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:6,transition:"opacity .15s"}}
-                onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
-                onMouseLeave={e=>e.currentTarget.style.opacity="1"}
-              >
-                <span style={{fontSize:14}}>{E("🛍","◇")}</span> Spend {myProgress.xp} XP in the Shop
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          </Card>
 
-      {/* Quick stats */}
-      <div className="fu" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,marginBottom:20}} >
-        {quickStats.map((s,i)=>(
-          <button key={s.label} onClick={()=>{playSound("click");setPage(s.page);}} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:"14px 16px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all .18s",animation:`fadeUp .25s ${i*60}ms ease both`}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 5px 18px rgba(0,0,0,.1)";e.currentTarget.style.borderColor=s.color;}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=T.bor;}}
-          >
-            <div style={{fontSize:22}}>{s.icon}</div>
-            <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:24,fontWeight:800,color:s.color,marginTop:4}}>{s.val}</div>
-            <div style={{fontSize:11,color:T.sub,fontWeight:600,marginTop:2}}>{s.label}</div>
-          </button>
-        ))}
-      </div>
+          {/* Ask Finn */}
+          <Card style={{cursor:"pointer",background:`linear-gradient(135deg,${T.dark?"#1a2535":"#fff"} 0%,${T.dark?"#1e2d42":"#f8f9ff"} 100%)`}} onClick={()=>{playSound("open");onFinn&&onFinn();}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"rgba(200,16,46,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="17" height="17" viewBox="0 0 22 22" fill="none" stroke={scarlet} strokeWidth="1.8"><polygon points="11,2 20,7 20,17 11,22 2,17 2,7"/><circle cx="11" cy="11" r="3"/></svg>
+              </div>
+              <div>
+                <div style={{fontSize:14,fontWeight:800,color:T.txt,lineHeight:1.2}}>Ask Finn</div>
+                <div style={{fontSize:10,color:T.sub,marginTop:3}}>AI Assistant</div>
+                <div style={{fontSize:9,fontWeight:700,color:scarlet,marginTop:2}}>Tap to chat</div>
+              </div>
+            </div>
+          </Card>
 
-
-
-      {/* Staff Levels — visible to boss only */}
-      {can(user,"boss")&&XP_ELIGIBLE_ROLES.some(r=>emps.find(e=>e.role===r))&&(
-        <div className="fu card" style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginTop:14}}>
-          <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:12,fontFamily:"'Clash Display',sans-serif",display:"flex",alignItems:"center",gap:8}}>{E("🏆","")} Staff Progression <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
-  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
-    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
-    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-    <circle cx="11" cy="11" r="1" fill="#fff"/>
-  </svg>
-  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
-</span></div>
-          <div style={{display:"grid",gap:8}}>
-            {emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role)).sort((a,b)=>(progress[b.id]?.xp||0)-(progress[a.id]?.xp||0)).map((e,i)=>{
-              const pg=progress[e.id]||{xp:0,level:1,title:"Pioneer",streak:0};
-              const lv=getLevelInfo(pg.xp);
-              return (
-                <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 10px",background:T.bg,borderRadius:10,border:`1px solid ${lv.color}33`}}>
-                  <div style={{width:24,height:24,borderRadius:6,background:`${lv.color}22`,border:`1.5px solid ${lv.color}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <span style={{fontSize:10,fontWeight:800,color:lv.color}}>{lv.level}</span>
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{fontSize:13,fontWeight:700,color:T.txt}}>{e.name}</span>
-                      <span style={{fontSize:11,fontWeight:700,color:lv.color}}>{lv.title}</span>
-                      {pg.streak>0&&<span style={{fontSize:11}}>🔥{pg.streak}</span>}
-                    </div>
-                    <div style={{height:4,background:T.bor,borderRadius:2,marginTop:4,overflow:"hidden"}}>
-                      <div style={{height:"100%",width:`${lv.pct}%`,background:lv.color,borderRadius:2}}/>
-                    </div>
-                  </div>
-                  <span style={{fontSize:11,color:T.sub,flexShrink:0}}>{pg.xp} XP</span>
-                  <span style={{fontSize:10,color:T.faint,flexShrink:0}}>#{i+1}</span>
+          {/* XP / Rank */}
+          {isEligible&&(
+            <Card style={{cursor:"pointer"}} onClick={()=>setPage("leaderboard")}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:36,height:36,borderRadius:10,background:"rgba(200,16,46,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Recently viewed */}
-      {prevPage&&prevPage!=="home"&&(
-        <div className="fu" style={{marginTop:14,animation:"fadeUp .25s ease both"}}>
-          <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:6,display:"flex",alignItems:"center",gap:6}}>RECENTLY VIEWED <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
-  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
-    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
-    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-    <circle cx="11" cy="11" r="1" fill="#fff"/>
-  </svg>
-  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
-</span></div>
-          <button onClick={()=>{setPrevPage(null);setPage(prevPage);playSound("click");}}
-            style={{display:"flex",alignItems:"center",gap:8,background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"10px 14px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",width:"100%",textAlign:"left"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accent+"66";e.currentTarget.style.background=T.surfH;}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.background=T.card;}}
-          >
-            <span style={{fontSize:16}}>{({"tasks":"✅","inv":"📦","anns":"🔔","dms":"💬","act":"📊","set":"⚙️"})[prevPage]||"📄"}</span>
-            <span style={{fontSize:13,fontWeight:600,color:T.txt}}>{({"tasks":"Tasks","inv":"Inventory","anns":"Announcements","dms":"Messages","act":"Activity","set":"Settings"})[prevPage]||prevPage}</span>
-            <span style={{fontSize:11,color:T.sub,marginLeft:"auto"}}>← Back</span>
-          </button>
-        </div>
-      )}
-
-      {/* Employee of the Month */}
-      {can(user,"boss")&&(()=>{
-        const eligible=emps.filter(e=>XP_ELIGIBLE_ROLES.includes(e.role));
-        const eotm=eligible.map(e=>({...e,xp:(progress[e.id]||{}).xp||0})).sort((a,b)=>b.xp-a.xp)[0];
-        if(!eotm) return null;
-        const lv=getLevelInfo(eotm.xp);
-        return (
-          <div className="fu" style={{background:`linear-gradient(135deg,${lv.color}18,${lv.color}08)`,border:`1px solid ${lv.color}44`,borderRadius:14,padding:14,marginBottom:14,display:"flex",alignItems:"center",gap:12}}>
-            <span style={{fontSize:24}}>⭐</span>
-            <div style={{flex:1}}>
-              <div style={{fontSize:10,fontWeight:800,color:T.sub,letterSpacing:"0.1em",textTransform:"uppercase"}}>Employee of the Month</div>
-              <div style={{fontWeight:800,fontSize:15,color:T.txt,marginTop:2}}>{eotm.name} <span style={{color:lv.color,fontSize:13}}>· {lv.title}</span></div>
-              <div style={{fontSize:12,color:T.sub,marginTop:1}}>{eotm.xp} XP · Level {lv.level}</div>
-            </div>
-            <LevelLogo level={lv.level} color={lv.color} size={44}/>
-          </div>
-        );
-      })()}
-
-      {/* Online team (boss/manager only) */}
-      {can(user,"online")&&onlineEmps.length>0&&(
-        <div className="fu card" style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginTop:14}}>
-          <div style={{fontWeight:800,fontSize:14,color:T.txt,marginBottom:10,fontFamily:"'Clash Display',sans-serif"}}>🟢 Online Now ({onlineEmps.length})</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-            {onlineEmps.map(e=>(
-              <div key={e.id} onClick={()=>{playSound("click");setViewingProfile&&setViewingProfile(e);}} style={{display:"flex",alignItems:"center",gap:5,background:T.surfH,borderRadius:20,padding:"5px 12px",cursor:"pointer",transition:"background .15s"}}
-                onMouseEnter={el=>el.currentTarget.style.background=T.bor}
-                onMouseLeave={el=>el.currentTarget.style.background=T.surfH}>
-                <StatusDot status={e.status}/>
-                {(()=>{
-                  const granted=JSON.parse(e.badge_grants||"[]");
-                  const equipped=JSON.parse(e.equipped_badges||"[]");
-                  const grantedBadges=[...new Set([...granted,...equipped])].slice(0,3);
-                  const isCreator=grantedBadges.includes("creator")||granted.includes("creator");
-                  const onlinNameColor=(e.name_color||"base")==="name_color"?T.accent:T.txt;
-                  return <>
-                    {isCreator
-                      ?<CreatorName name={e.name.split(" ")[0]} size={12}/>
-                      :<span style={{fontSize:12,fontWeight:600,color:onlinNameColor}}>{e.name.split(" ")[0]}</span>}
-                    {grantedBadges.length>0&&<UserBadges badgeIds={grantedBadges} size={13} gap={2}/>}
-                  </>;
-                })()}
+                <div>
+                  <div style={{fontSize:20,fontWeight:800,color:T.txt,lineHeight:1}}>{myProgress.xp.toLocaleString()}</div>
+                  <div style={{fontSize:10,color:T.sub,marginTop:2}}>XP · {lvInfo?.title||myProgress.title}</div>
+                  {myProgress.streak>0&&<div style={{fontSize:9,fontWeight:700,color:"#f59e0b",marginTop:2}}>🔥 {myProgress.streak} day streak</div>}
+                </div>
               </div>
+            </Card>
+          )}
+
+          {/* Online team */}
+          <Card>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:36,height:36,borderRadius:10,background:"rgba(34,197,94,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              </div>
+              <div>
+                <div style={{fontSize:20,fontWeight:800,color:T.txt,lineHeight:1}}>{online.length}</div>
+                <div style={{fontSize:10,color:T.sub,marginTop:2}}>Online Now</div>
+                {online.length>0&&<div style={{fontSize:9,fontWeight:700,color:"#22c55e",marginTop:2}}>{online[0]?.name?.split(" ")[0]}{online.length>1?` +${online.length-1}`:""}</div>}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* ── XP PROGRESS BAR ── */}
+        {isEligible&&lvInfo&&(
+          <Card>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={{fontSize:12,fontWeight:700,color:T.txt}}>🏆 {lvInfo.title}</div>
+              <div style={{fontSize:11,fontWeight:700,color:scarlet}}>{Math.round(lvInfo.pct)}%</div>
+            </div>
+            <div style={{width:"100%",height:7,borderRadius:4,background:T.dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)",overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${lvInfo.pct}%`,borderRadius:4,background:`linear-gradient(90deg,${scarlet},#ff4d6d)`,transition:"width 1s ease"}}/>
+            </div>
+            <div style={{fontSize:10,color:T.sub,marginTop:6}}>{lvInfo.xpToNext>0?`${lvInfo.xpToNext} XP to ${lvInfo.nextTitle}`:"Max level reached 🎉"}</div>
+          </Card>
+        )}
+
+        {/* ── UPCOMING TASKS ── */}
+        {myTasks.length>0&&(
+          <div>
+            <SecHeader label="Upcoming Tasks" link="View All" onLink={()=>setPage("tasks")}/>
+            <Card style={{padding:0,overflow:"hidden"}}>
+              {myTasks.slice(0,3).map((t,i)=>{
+                const due=t.due?new Date(t.due):null;
+                const today=new Date(); today.setHours(23,59,59,0);
+                const isToday=due&&due<=today;
+                const isTmrw=due&&due<=new Date(Date.now()+172800000)&&!isToday;
+                return (
+                  <div key={t.id} onClick={()=>setPage("tasks")}
+                    style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",borderBottom:i<Math.min(myTasks.length,3)-1?`1px solid ${T.dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"}`:0,cursor:"pointer"}}>
+                    <div style={{width:18,height:18,borderRadius:"50%",border:`2px solid ${T.dark?"rgba(255,255,255,0.2)":T.bor}`,flexShrink:0}}/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:T.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
+                      <div style={{fontSize:10,color:T.sub,marginTop:1}}>{t.area||"Neer Locker"}</div>
+                    </div>
+                    {due&&<div style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,background:isToday?"rgba(200,16,46,0.12)":"rgba(138,154,181,0.1)",color:isToday?scarlet:T.sub,flexShrink:0}}>{isToday?"Today":isTmrw?"Tomorrow":due.toLocaleDateString("en-US",{month:"short",day:"numeric"})}</div>}
+                  </div>
+                );
+              })}
+            </Card>
+          </div>
+        )}
+
+        {/* ── RECENT ACTIVITY ── */}
+        <div>
+          <SecHeader label="Recent Activity" link="View All" onLink={()=>setPage("act")}/>
+          <Card style={{padding:0,overflow:"hidden"}}>
+            {doneTasks.slice(0,2).map((t,i)=>(
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",borderBottom:i===0?`1px solid ${T.dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"}`:0}}>
+                <div style={{width:32,height:32,borderRadius:9,background:"rgba(34,197,94,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:600,color:T.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
+                  <div style={{fontSize:10,color:T.sub,marginTop:1}}>Completed</div>
+                </div>
+                <span style={{fontSize:9,color:T.sub}}>›</span>
+              </div>
+            ))}
+            {myAnns.slice(0,1).map((a,i)=>(
+              <div key={a.id} onClick={()=>setPage("anns")} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",cursor:"pointer"}}>
+                <div style={{width:32,height:32,borderRadius:9,background:"rgba(200,16,46,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:600,color:T.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                  <div style={{fontSize:10,color:T.sub,marginTop:1}}>Announcement</div>
+                </div>
+                <span style={{fontSize:9,fontWeight:700,padding:"2px 7px",borderRadius:20,background:"rgba(200,16,46,0.1)",color:scarlet}}>New</span>
+              </div>
+            ))}
+            {doneTasks.length===0&&myAnns.length===0&&(
+              <div style={{padding:"20px 14px",textAlign:"center",color:T.sub,fontSize:12}}>No recent activity yet</div>
+            )}
+          </Card>
+        </div>
+
+        {/* ── QUICK ACTIONS ── */}
+        <div>
+          <SecHeader label="Quick Actions"/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {[
+              {label:"New Task",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,action:()=>setPage("tasks")},
+              {label:"Message",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,action:()=>setPage("dms")},
+              {label:"Inventory",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,action:()=>setPage("inv")},
+              {label:"XP Shop",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,action:onShop},
+            ].map(({label,icon,action})=>(
+              <Card key={label} style={{cursor:"pointer",padding:12}} onClick={()=>{action&&action();playSound("click");}}>
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{width:32,height:32,borderRadius:9,background:"rgba(200,16,46,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    {icon}
+                  </div>
+                  <div style={{fontSize:12,fontWeight:700,color:T.txt}}>{label}</div>
+                </div>
+              </Card>
             ))}
           </div>
         </div>
-      )}
 
-      {/* Smart reminders */}
-      {isEligible&&overdueTasks.length>0&&(
-        <div className="fu" style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s ease both"}}>
-          <span style={{fontSize:20,flexShrink:0}}>{E("⚠️","!")}</span>
-          <div>
-            <div style={{fontWeight:800,fontSize:13,color:"#991b1b"}}>You have {overdueTasks.length} overdue task{overdueTasks.length>1?"s":""}{"!"}</div>
-            <div style={{fontSize:12,color:"#b91c1c",marginTop:2}}>{overdueTasks.slice(0,2).map(t=>t.title).join(", ")}{overdueTasks.length>2?` +${overdueTasks.length-2} more`:""}</div>
-          </div>
-          <button onClick={()=>setPage("tasks")} style={{marginLeft:"auto",background:"#991b1b",color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>View</button>
-        </div>
-      )}
-      {isEligible&&myTasks.length>0&&overdueTasks.length===0&&(
-        <div className="fu" style={{background:`${T.blue}10`,border:`1px solid ${T.blue}33`,borderRadius:14,padding:"12px 16px",marginTop:14,display:"flex",gap:10,alignItems:"center",animation:"fadeUp .3s .1s ease both"}}>
-          <span style={{fontSize:20,flexShrink:0}}>{E("💡","i")}</span>
-          <div style={{flex:1}}>
-            <div style={{fontWeight:700,fontSize:13,color:T.txt,display:"flex",alignItems:"center",gap:6}}>You have {myTasks.length} open task{myTasks.length>1?"s":""}. Keep it up{"!"} <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
-  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
-    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
-    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-    <circle cx="11" cy="11" r="1" fill="#fff"/>
-  </svg>
-  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
-</span></div>
-            <div style={{fontSize:12,color:T.sub,marginTop:2,display:"flex",alignItems:"center",gap:6}}>Next: {myTasks[0]?.title} <span style={{display:"inline-flex",alignItems:"center",gap:3,background:"linear-gradient(135deg,#0f274488,#1e7fa822)",border:"1px solid #1e7fa866",borderRadius:20,padding:"2px 7px 2px 3px",verticalAlign:"middle",flexShrink:0}}>
-  <svg width="12" height="12" viewBox="0 0 22 22" style={{flexShrink:0}}>
-    <rect width="22" height="22" rx="6" fill="#0f2744"/>
-    <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.7" opacity="0.2"/>
-    <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.7" opacity="0.6"/>
-    <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-    <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-    <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-    <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-    <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-    <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-    <circle cx="11" cy="11" r="1" fill="#fff"/>
-  </svg>
-  <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
-</span></div>
-          </div>
-          <button onClick={()=>setPage("tasks")} style={{background:T.blue,color:"#fff",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>Go</button>
-        </div>
-      )}
-
-      {/* Help section */}
-      <div className="fu" style={{background:T.minimal?T.surf:`${T.blue}12`,border:`1px solid ${T.minimal?T.bor:T.blue+"33"}`,borderRadius:T.minimal?16:14,padding:T.minimal?20:16,marginTop:14}}>
-        <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:12}}>
-          <span style={{fontSize:T.minimal?20:24,flexShrink:0}}>{E("❓","?")}</span>
-          <div style={{flex:1}}>
-            <div style={{fontWeight:T.minimal?600:800,fontSize:T.minimal?15:14,color:T.txt,marginBottom:6,letterSpacing:T.minimal?"-0.2px":"normal"}}>Need help navigating?</div>
-            <div style={{fontSize:13,color:T.sub,lineHeight:1.65}}>
-              Tap the <strong style={{color:T.txt}}>circle button</strong> (top-left) to open the menu.<br/>
-              Tap <strong style={{color:T.txt}}>MNU{"'"}s Neer Locker</strong> in the header to return home.<br/>
-              Ask <strong style={{color:T.accent}}>Finn</strong> (bottom-right robot button) for help with anything.<br/>
-              Tap the <strong style={{color:T.accent}}>?</strong> button for a full guide · tap <strong style={{color:"#b45309"}}>{E("💡","i")}</strong> to send feedback.
-            </div>
-          </div>
-        </div>
-        <div style={{padding:"12px 14px",background:T.minimal?T.surfH:`${T.blue}10`,border:`1px solid ${T.minimal?T.bor:T.blue+"33"}`,borderRadius:T.minimal?12:12}}>
-          <div style={{fontWeight:T.minimal?600:700,fontSize:13,color:T.txt,marginBottom:6,display:"flex",alignItems:"center",gap:6}}>{E("📲","↗")} Add to home screen</div>
-          <div style={{fontSize:12,color:T.sub,lineHeight:1.7}}>
-            <strong style={{color:T.txt}}>iPhone:</strong> Open in Safari → Share → <strong>Add to Home Screen</strong><br/>
-            <strong style={{color:T.txt}}>Android:</strong> Open in Chrome → ⋮ menu → <strong>Add to Home Screen</strong>
-          </div>
-        </div>
-        <button onClick={()=>{playSound("open");window._startOnboarding&&window._startOnboarding();}}
-          style={{marginTop:12,width:"100%",background:T.accent,color:"#fff",border:"none",borderRadius:T.minimal?9999:12,padding:T.minimal?"10px 20px":"12px 20px",fontWeight:T.minimal?500:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s",letterSpacing:T.minimal?"0.01em":"normal"}}
-          onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
-          onMouseLeave={e=>e.currentTarget.style.opacity="1"}
-        >{E("✨","→")} Start guided tour</button>
       </div>
     </div>
   );
 }
 
-// ─── DM SECTION ───────────────────────────────────────────────────────────────
+
 function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
   const [selected,setSelected]=useState(null);
   const [msgInput,setMsgInput]=useState("");
@@ -1934,7 +1686,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
                       {isGroupChat&&!mine&&senderEmp&&(
                         <div style={{fontSize:11,fontWeight:700,color:ROLES[senderEmp.role]?.color||T.sub,marginBottom:3,paddingLeft:4}}>{senderEmp.name}</div>
                       )}
-                      <div style={{background:mine?(T.minimal?T.accent:T.scarlet):T.surfH,color:mine?"#fff":T.txt,borderRadius:mine?"18px 18px 5px 18px":"18px 18px 18px 5px",padding:"11px 16px",fontSize:15,fontWeight:500,lineHeight:1.6,boxShadow:"0 2px 8px rgba(0,0,0,.08)",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:320,overflowY:"auto"}}>
+                      <div style={{background:mine?(T.scarlet):T.surfH,color:mine?"#fff":T.txt,borderRadius:mine?"18px 18px 5px 18px":"18px 18px 18px 5px",padding:"11px 16px",fontSize:15,fontWeight:500,lineHeight:1.6,boxShadow:"0 2px 8px rgba(0,0,0,.08)",wordBreak:"break-word",overflowWrap:"anywhere",maxHeight:320,overflowY:"auto"}}>
                         <div>{msg.text}</div>
                         <div style={{fontSize:11,opacity:0.65,marginTop:4,textAlign:mine?"right":"left",fontWeight:400,display:"flex",alignItems:"center",justifyContent:mine?"flex-end":"flex-start",gap:4}}>
                           <span>{fmtT(msg.at)}</span>
@@ -3815,13 +3567,13 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
     const lq=q.toLowerCase();
     const out=[];
     if(filter==="all"||filter==="tasks") tasks.filter(t=>t.title?.toLowerCase().includes(lq)).slice(0,3).forEach(t=>
-      out.push({type:"task",icon:"✅",label:t.title,sub:t.priority+" · "+(t.done?"Done":"Open"),page:"tasks",color:"#1e7fa8"}));
+      out.push({type:"task",icon:"task",label:t.title,sub:t.priority+" · "+(t.done?"Done":"Open"),page:"tasks",color:"#1e7fa8"}));
     if(filter==="all"||filter==="inv") inv.filter(i=>i.name?.toLowerCase().includes(lq)).slice(0,3).forEach(i=>
-      out.push({type:"inv",icon:"📦",label:i.name,sub:"Stock: "+i.stock,page:"inv",color:"#7c3aed"}));
+      out.push({type:"inv",icon:"inv",label:i.name,sub:"Stock: "+i.stock,page:"inv",color:"#7c3aed"}));
     if(filter==="all"||filter==="staff") emps.filter(e=>e.name?.toLowerCase().includes(lq)&&can(user,"emp")).slice(0,3).forEach(e=>
-      out.push({type:"emp",icon:"👤",label:e.name,sub:ROLES[e.role]?.label||"",page:"set",color:ROLES[e.role]?.color||"#6b7280"}));
+      out.push({type:"emp",icon:"emp",label:e.name,sub:ROLES[e.role]?.label||"",page:"set",color:ROLES[e.role]?.color||"#6b7280"}));
     if(filter==="all"||filter==="anns") anns.filter(a=>a.msg?.toLowerCase().includes(lq)).slice(0,2).forEach(a=>
-      out.push({type:"ann",icon:"🔔",label:a.msg.slice(0,50)+(a.msg.length>50?"…":""),sub:"Announcement",page:"anns",color:"#C8102E"}));
+      out.push({type:"ann",icon:"ann",label:a.msg.slice(0,50)+(a.msg.length>50?"…":""),sub:"Announcement",page:"anns",color:"#C8102E"}));
     return out;
   },[q,filter,tasks,inv,emps,anns]);
 
@@ -3830,7 +3582,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
       onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{width:"min(560px,92vw)",background:T.surf,borderRadius:18,overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,.35)",animation:"slideUp .2s cubic-bezier(.23,1,.32,1) both"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,padding:"14px 16px",borderBottom:`1px solid ${T.bor}`}}>
-          <span style={{fontSize:18,flexShrink:0}}>🔍</span>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{flexShrink:0,color:T.sub}}><circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor"/><line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" strokeWidth="2.5"/></svg>
           <input ref={ref} value={q} onChange={e=>setQ(e.target.value)}
             placeholder="Search tasks, inventory, staff, announcements…"
             style={{flex:1,background:"none",border:"none",outline:"none",fontSize:16,color:T.txt,fontFamily:"inherit"}}
@@ -3853,7 +3605,16 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
                 style={{width:"100%",display:"flex",alignItems:"center",gap:12,padding:"12px 16px",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",textAlign:"left",borderBottom:`1px solid ${T.bor}`,transition:"background .12s"}}
                 onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
                 onMouseLeave={e=>e.currentTarget.style.background="none"}>
-                <span style={{fontSize:20,flexShrink:0}}>{r.icon}</span>
+                {(()=>{
+                  const icons={
+                    task:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>,
+                    inv:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,
+                    emp:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
+                    ann:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+                    page:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>,
+                  };
+                  return <div style={{width:36,height:36,borderRadius:10,background:`${r.color}18`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,color:r.color}}>{icons[r.icon]||icons.page}</div>;
+                })()}
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:T.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.label}</div>
                   <div style={{fontSize:11,color:T.sub,marginTop:1}}>{r.sub}</div>
@@ -3885,7 +3646,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
               FINN &mdash; QUICK NAVIGATE
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:"💬",label:"Messages",page:"dms"}].map(s=>(
+              {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),label:"Messages",page:"dms"}].map(s=>(
                 <button key={s.page} onClick={()=>{setPage(s.page);onClose();playSound("click");}}
                   style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit",color:T.txt,fontSize:13,fontWeight:600,transition:"all .15s"}}
                   onMouseEnter={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.borderColor=T.accent+"66";}}
@@ -3980,7 +3741,7 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
     {id:"badge_legend",   cat:"badges", name:"Legend",        desc:"Top performer status",         cost:2000, icon:E("👑","♛"), color:"#eab308", type:"badge"},
     {id:"badge_sparkle",  cat:"badges", name:"Sparkle Trail", desc:"Sparkles on your profile",     cost:1500, icon:E("✨","★"), color:"#a855f7", type:"badge"},
     {id:"badge_goat",     cat:"badges", name:"G.O.A.T.",      desc:"Greatest of all time",         cost:5000, icon:E("🐐","◆"), color:"#0d9488", type:"badge"},
-    {id:"badge_mnu",      cat:"badges", name:"MNU Pride",     desc:"Show your school spirit",      cost:600,  icon:E("🎓","◈"), color:"#C8102E", type:"badge"},
+    {id:"badge_mnu",      cat:"badges", name:"MNU Pride",     desc:"Show your school spirit",      cost:600,  icon:(<img src={MNU_ICON} alt="MNU" style={{width:"1em",height:"1em",objectFit:"contain",verticalAlign:"middle"}}/>), color:"#C8102E", type:"badge"},
     {id:"badge_grinder",  cat:"badges", name:"Grinder",       desc:"You never stop working",       cost:1000, icon:E("⚙️","◎"), color:"#374151", type:"badge"},
     {id:"badge_nightowl", cat:"badges", name:"Night Owl",     desc:"Working late hours",           cost:700,  icon:E("🦉","◉"), color:"#1e1b4b", type:"badge"},
     {id:"badge_streak7",  cat:"badges", name:"7-Day Streak",  desc:"Logged in 7 days straight",    cost:400,  icon:E("🔥","·"), color:"#ea580c", type:"badge"},
@@ -4058,11 +3819,11 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
 
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:800,padding:"24px 16px",animation:"fadeUp .25s ease both"}}>
-      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:620,maxHeight:"90vh",display:"flex",flexDirection:"column",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.5)",overflowY:"hidden",overflowX:"visible"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:18,width:"100%",maxWidth:620,maxHeight:"90vh",display:"flex",flexDirection:"column",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.5)",overflowY:"hidden",overflowX:"visible"}}>
         {/* Header */}
         <div style={{padding:"18px 22px 14px",borderBottom:`1px solid ${T.bor}`,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
           <div>
-            <div style={{fontSize:T.minimal?19:18,fontWeight:T.minimal?600:800,color:T.txt,display:"flex",alignItems:"center",gap:8,fontFamily:T.minimal?"'Google Sans',sans-serif":"'Clash Display',sans-serif",letterSpacing:"-0.3px"}}>
+            <div style={{fontSize:18,fontWeight:800,color:T.txt,display:"flex",alignItems:"center",gap:8,fontFamily:"'Clash Display',sans-serif",letterSpacing:"-0.3px"}}>
               <span style={{fontSize:22}}>{E("🛍","◇")}</span> XP Shop
             </div>
             <div style={{fontSize:11,color:T.sub,marginTop:2}}>Spend your XP on cosmetics and power-ups</div>
@@ -4080,7 +3841,7 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
         <div style={{padding:"10px 18px 10px",borderBottom:`1px solid ${T.bor}`,display:"flex",gap:8,overflowX:"auto",overflowY:"visible",background:T.surfH,flexShrink:0,minHeight:52}}>
           {cats.map(c=>(
             <button key={c.key} onClick={()=>{setCategory(c.key);playSound("click");}}
-              style={{background:category===c.key?T.accent:T.bg,color:category===c.key?"#fff":T.txt,border:`2px solid ${category===c.key?T.accent:T.bor}`,borderRadius:9999,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,transition:"all .15s",boxShadow:category===c.key?`0 2px 8px ${T.accent}44`:"none",letterSpacing:T.minimal?"-0.1px":"normal"}}>
+              style={{background:category===c.key?T.accent:T.bg,color:category===c.key?"#fff":T.txt,border:`2px solid ${category===c.key?T.accent:T.bor}`,borderRadius:9999,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,transition:"all .15s",boxShadow:category===c.key?`0 2px 8px ${T.accent}44`:"none",letterSpacing:"normal"}}>
               {c.icon} {c.label}
             </button>
           ))}
@@ -4096,7 +3857,7 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
                 const canAfford=userXP>=item.cost;
                 const isFree=item.free;
                 return (
-                  <div key={item.id} style={{background:T.surfH,border:`1px solid ${isOwned?T.ok+"66":T.bor}`,borderRadius:T.minimal?12:10,padding:12,display:"flex",flexDirection:"column",gap:8,position:"relative",overflow:"hidden"}}>
+                  <div key={item.id} style={{background:T.surfH,border:`1px solid ${isOwned?T.ok+"66":T.bor}`,borderRadius:10,padding:12,display:"flex",flexDirection:"column",gap:8,position:"relative",overflow:"hidden"}}>
                     {isOwned&&!item.consumable&&<div style={{position:"absolute",top:6,right:6,background:T.ok,color:"#fff",fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999,letterSpacing:"0.04em",zIndex:1}}>OWNED</div>}
                     {item.consumable&&!isOwned&&<div style={{position:"absolute",top:6,right:6,background:T.warn+"33",color:T.warn,fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999,zIndex:1}}>USE ONCE</div>}
                     {item.consumable&&isOwned&&<div style={{position:"absolute",top:6,right:6,background:"#ef444420",color:"#ef4444",fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:9999,zIndex:1}}>USED</div>}
@@ -4106,7 +3867,7 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
                     </div>
                     {/* Name */}
                     <div>
-                      <div style={{fontSize:13,fontWeight:700,color:T.txt,marginBottom:2,letterSpacing:T.minimal?"-0.15px":"normal"}}>{item.name}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:T.txt,marginBottom:2,letterSpacing:"normal"}}>{item.name}</div>
                       <div style={{fontSize:11,color:T.sub,lineHeight:1.4}}>{item.desc}</div>
                     </div>
                     {/* Cost + buy */}
@@ -4189,7 +3950,7 @@ function LeaderboardPage({emps,progress,user,T,onShop,onViewProfile}) {
           </div>
         </div>
         <button onClick={()=>{playSound("open");onShop&&onShop();}}
-          style={{background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 20px",fontWeight:T.minimal?500:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8,transition:"transform .15s,opacity .15s",boxShadow:`0 4px 14px ${T.accent}55`}}
+          style={{background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 20px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:8,transition:"transform .15s,opacity .15s",boxShadow:`0 4px 14px ${T.accent}55`}}
           onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.05)";e.currentTarget.style.opacity="0.95";}}
           onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.opacity="1";}}
         >
@@ -4340,147 +4101,262 @@ function NotifCenter({T,anns,dms,tasks,user,emps,onClose,setPage,onDismiss}) {
 }
 
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin,rememberMe,setRememberMe}) {
-  const [tick,setTick]=useState(0);
-  const [focused,setFocused]=useState(false);
-  const [tagLine,setTagLine]=useState(0);
-  const taglines=["Staff Portal for MNU's Neer Locker.","Sign in to get started.","Manage tasks, inventory, and your team.","Keep things running smoothly.","All your shift tools in one place.","Built for the Neer Locker team.","Stay connected with your crew.","Tasks. Inventory. Communication.","Your work hub, simplified.","Track everything that matters.","Quick access for every shift.","Reliable. Simple. Yours."];
+// ─── SKELETON LOADING ─────────────────────────────────────────────────────────
 
-  useEffect(()=>{
-    const i=setInterval(()=>setTick(t=>t+1),120);
-    const tl=setInterval(()=>setTagLine(l=>(l+1)%taglines.length),3500);
-    return()=>{clearInterval(i);clearInterval(tl);};
-  },[]);
-
-  const SCHOOL_EMOJIS=["🎓","📚","✏️","📝","🏫","📐","🔬","📖","🎒","🏆"];
-  const particles=SCHOOL_EMOJIS.map((e,i)=>({
-    emoji:e, x:2+i*6.5,
-    y:i%2===0?((tick*0.22+i*30)%22):(78+((tick*0.2+i*25)%22)),
-    opacity:0.09+Math.abs(Math.sin(tick*0.018+i))*0.08,
-    scale:0.5+Math.abs(Math.sin(tick*0.012+i))*0.5,
-    rot:(tick*0.5+i*24)%360,
-  }));
-  const stars=Array.from({length:6},(_,i)=>({
-    x:(((tick*0.8+i*60)%130))-15, y:5+i*15,
-    opacity:Math.max(0,Math.sin((tick*0.05+i*1.1)))*0.6, w:40+i*12,
-  }));
-  const orbs=[
-    {x:8,  y:12, size:360, color:"#C8102E", spd:0.4, blur:50},
-    {x:85, y:75, size:300, color:"#1e7fa8", spd:0.6, blur:45},
-    {x:65, y:8,  size:220, color:"#7c3aed", spd:0.8, blur:40},
-    {x:3,  y:80, size:240, color:"#1e7fa8", spd:0.5, blur:40},
-    {x:92, y:35, size:200, color:"#C8102E", spd:0.7, blur:35},
-    {x:45, y:90, size:180, color:"#7c3aed", spd:0.9, blur:35},
-  ];
-  const wpts=Array.from({length:18},(_,i)=>{
-    const x=i*(100/17);
-    const y=50+Math.sin(tick*0.04+i*0.6)*18+Math.sin(tick*0.025+i*0.9)*10;
-    return`${i===0?"M":"L"}${x},${y}`;
-  }).join(" ");
-
+// ─── SPLASH SCREEN ───────────────────────────────────────────────────────────
+function SplashScreen({T}) {
+  const [show,setShow]=useState(false);
+  useEffect(()=>{const t=setTimeout(()=>setShow(true),80);return()=>clearTimeout(t);},[]);
   return (
-    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"24px 20px 80px",position:"relative",overflow:"hidden",background:T.dark?"#04020a":"#f5f0f6"}}>
-      {orbs.map((o,i)=>(
-        <div key={i} style={{position:"fixed",left:`${o.x+Math.sin(tick*0.009*o.spd+i)*4}%`,top:`${o.y+Math.cos(tick*0.007*o.spd+i)*5}%`,width:o.size,height:o.size,borderRadius:"50%",background:`radial-gradient(circle,${o.color} 0%,transparent 68%)`,opacity:T.dark?0.16:0.09,transform:"translate(-50%,-50%)",filter:`blur(${o.blur}px)`,pointerEvents:"none"}}/>
-      ))}
-      {stars.map((s,i)=>(
-        <div key={i} style={{position:"fixed",left:`${s.x}%`,top:`${s.y}%`,width:s.w,height:2,background:`linear-gradient(90deg,transparent,${T.scarlet},transparent)`,opacity:s.opacity,borderRadius:2,pointerEvents:"none",transform:"rotate(-15deg)"}}/>
-      ))}
-      <div style={{position:"fixed",inset:0,backgroundImage:`linear-gradient(${T.bor} 1px,transparent 1px),linear-gradient(90deg,${T.bor} 1px,transparent 1px)`,backgroundSize:"44px 44px",opacity:T.dark?0.12:0.06,pointerEvents:"none"}}/>
-      <svg style={{position:"fixed",bottom:0,left:0,width:"100%",height:80,pointerEvents:"none",opacity:0.15}} viewBox="0 0 100 80" preserveAspectRatio="none">
-        <path d={wpts} stroke={T.scarlet} strokeWidth="0.8" fill="none"/>
-      </svg>
-      {particles.map((p,i)=>(
-        <div key={i} style={{position:"fixed",left:`${p.x}%`,top:`${p.y}%`,fontSize:18,opacity:p.opacity,transform:`scale(${p.scale}) rotate(${p.rot}deg)`,pointerEvents:"none",userSelect:"none"}}>{p.emoji}</div>
-      ))}
-      <div style={{position:"fixed",top:0,left:0,right:0,height:5,background:`linear-gradient(90deg,${T.scarlet},${T.blue},${T.scarlet},${T.blue})`,backgroundSize:"400% 100%",animation:"shimmer 3s linear infinite",zIndex:10}}/>
-      <div style={{position:"fixed",bottom:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.blue},${T.scarlet},${T.blue})`,backgroundSize:"400% 100%",animation:"shimmer 4s linear infinite reverse",zIndex:10}}/>
-      {siteOffline&&(
-        <div style={{width:"100%",maxWidth:420,background:"#991b1b",borderRadius:10,padding:"8px 14px",display:"flex",alignItems:"flex-start",gap:8,marginBottom:10,boxShadow:"0 2px 8px rgba(0,0,0,.2)",zIndex:10}}>
-          <span style={{fontSize:14,flexShrink:0}}>🔴</span>
-          <div>
-            <div style={{color:"#fff",fontWeight:700,fontSize:12,lineHeight:1.4}}>System Offline — Maintenance in Progress</div>
-            <div style={{color:"rgba(255,255,255,0.8)",fontSize:11,marginTop:2}}>Only authorized administrators may sign in.</div>
-          </div>
-        </div>
-      )}
-      <div style={{width:"100%",maxWidth:420,position:"relative",zIndex:5}}>
-        <div className="fu" style={{marginBottom:16,textAlign:"center"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:14,marginBottom:8}}>
-            <div style={{position:"relative",flexShrink:0,width:72,height:72,display:"flex",alignItems:"center",justifyContent:"center"}}>
-              <div style={{position:"absolute",top:"50%",left:"50%",width:64,height:64,transform:"translate(-50%,-50%)",borderRadius:19,border:`2px solid ${T.scarlet}`,opacity:0.45,animation:"pulse 2s ease-in-out infinite",pointerEvents:"none"}}/>
-              <div style={{position:"absolute",top:"50%",left:"50%",width:76,height:76,transform:"translate(-50%,-50%)",borderRadius:23,border:`1.5px solid ${T.scarlet}`,opacity:0.18,animation:"pulse 2.4s ease-in-out infinite",animationDelay:"0.4s",pointerEvents:"none"}}/>
-              <div style={{width:52,height:52,borderRadius:15,background:`linear-gradient(135deg,${T.scarlet} 0%,${T.sD} 60%,#7c0020 100%)`,boxShadow:`0 6px 20px ${T.scarlet}55,0 0 0 2px ${T.scarlet}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:25,animation:"popIn .6s cubic-bezier(.34,1.56,.64,1)",position:"relative",zIndex:1}}>🎓</div>
-            </div>
-            <div style={{textAlign:"left"}}>
-              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:24,fontWeight:800,color:T.txt,letterSpacing:"-0.3px",lineHeight:1.1}}>
-                {"MNU's"} <span style={{color:T.scarlet,textShadow:`0 0 18px ${T.scarlet}44`}}>Neer Locker</span>
-              </div>
-              <div style={{color:T.sub,fontSize:11,fontWeight:400,marginTop:2}}>Staff Portal &middot; MidAmerica Nazarene University</div>
-            </div>
-          </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-            <div key={tagLine} style={{animation:"fadeUp .4s ease both"}}>
-              <span style={{fontSize:12,color:T.accent,fontWeight:700,fontStyle:"italic"}}>{taglines[tagLine]}</span>
-            </div>
-            <div style={{width:1,height:10,background:T.bor,flexShrink:0}}/>
-            <div style={{display:"inline-flex",alignItems:"center",gap:5,background:T.dark?"rgba(0,0,0,0.35)":"rgba(0,0,0,0.05)",border:`1px solid ${T.bor}`,borderRadius:20,padding:"3px 10px"}}>
-              <span style={{width:5,height:5,borderRadius:"50%",background:T.ok,display:"inline-block",animation:"pulse 1.5s infinite"}}/>
-              <span style={{fontSize:10,color:T.sub,fontWeight:700,letterSpacing:"0.05em"}}>ONLINE</span>
-            </div>
-          </div>
-        </div>
-        <div className="fu" style={{animationDelay:".08s",background:T.dark?"rgba(18,8,12,0.88)":T.surf,backdropFilter:"blur(24px)",border:`1px solid ${focused?T.scarlet+"88":T.bor}`,borderRadius:20,padding:26,display:"grid",gap:16,boxShadow:T.dark?`0 12px 48px rgba(0,0,0,.6),0 0 0 1px ${T.scarlet}11 inset`:`0 12px 40px rgba(0,0,0,.1),0 1px 0 rgba(255,255,255,0.8) inset`,transition:"border-color .25s,box-shadow .25s"}}>
-          <Inp T={T} label="MNU EMAIL" type="email" placeholder="you@mnu.edu" value={emailIn} error={emailErr}
-            onChange={e=>{setEmailIn(e.target.value);setEmailErr("");}}
-            onKeyDown={e=>e.key==="Enter"&&(showPin?doPin():doLogin())}
-            onFocus={()=>setFocused(true)} onBlur={()=>setFocused(false)}
-          />
-          {showPin&&(
-            <div style={{animation:"fadeUp .22s ease"}}>
-              <Inp T={T} label="PIN" type="password" placeholder="Enter your PIN" value={pinIn} maxLength={8}
-                onChange={e=>setPinIn(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doPin()}/>
-            </div>
-          )}
-          {!showPin&&(
-            <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>{playSound("click");setRememberMe&&setRememberMe(r=>!r);}}>
-              <div style={{width:18,height:18,borderRadius:4,border:`2px solid ${T.bor}`,background:rememberMe?(T.minimal?T.accent:T.scarlet):"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s"}}>
-                {rememberMe&&<span style={{color:"#fff",fontSize:11,fontWeight:900,lineHeight:1}}>✓</span>}
-              </div>
-              <span style={{fontSize:13,color:T.sub,fontWeight:600,userSelect:"none"}}>Remember me</span>
-            </div>
-          )}
-          <Btn T={T} full onClick={()=>{playSound("click");showPin?doPin():doLogin();}} style={{padding:"14px 20px",fontSize:16,letterSpacing:"0.02em",boxShadow:`0 6px 24px ${T.scarlet}40,0 2px 0 ${T.scarlet}22 inset`}}>
-            {showPin?"Confirm PIN →":"Sign In →"}
-          </Btn>
-          {passkeyAvailable&&!showPin&&(
-            <button onClick={()=>{playSound("click");doPasskeyLogin();}}
-              style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,width:"100%",padding:"13px 20px",background:T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.04)",border:`1px solid ${T.bor}`,borderRadius:T.sp.r,cursor:"pointer",fontFamily:"inherit",fontSize:14,fontWeight:700,color:T.sub,transition:"all .18s"}}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet+"88";e.currentTarget.style.color=T.txt;}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
-            >
-              <span style={{fontSize:20}}>🔑</span>
-              <span>Sign in as <strong style={{color:T.txt}}>{passkeyEmail.split("@")[0]}</strong> with biometrics</span>
-            </button>
-          )}
-          <div style={{textAlign:"center"}}>
-            <button onClick={()=>setScreen("techLogin")} style={{background:"none",border:"none",color:T.faint,fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:"0.04em",transition:"color .15s"}}
-              onMouseEnter={e=>e.currentTarget.style.color=T.sub}
-              onMouseLeave={e=>e.currentTarget.style.color=T.faint}
-            >Technical Administrator Access</button>
-          </div>
+    <div style={{
+      position:"fixed",inset:0,
+      background:T.dark?"#04020a":"#f5f0f6",
+      display:"flex",flexDirection:"column",
+      alignItems:"center",justifyContent:"center",
+      gap:28,zIndex:9999,
+      opacity:show?1:0,
+      transition:"opacity .3s ease",
+    }}>
+      {/* Logo */}
+      <div style={{
+        width:96,height:96,borderRadius:24,
+        overflow:"hidden",
+        boxShadow:`0 8px 32px rgba(200,16,46,0.35), 0 0 0 1px rgba(200,16,46,0.2)`,
+        animation:"popIn .5s cubic-bezier(.34,1.56,.64,1) .1s both",
+      }}>
+        <img src={MNU_ICON} alt="MNU Neer Locker" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+      </div>
+
+      {/* App name */}
+      <div style={{
+        textAlign:"center",
+        animation:"fadeUp .4s ease .3s both",
+      }}>
+        <div style={{
+          fontFamily:"'Clash Display',sans-serif",
+          fontSize:26,fontWeight:800,
+          color:T.txt,letterSpacing:"-0.5px",
+          marginBottom:4,
+        }}>MNU&apos;s <span style={{color:"#C8102E"}}>Neer Locker</span></div>
+        <div style={{fontSize:12,color:T.sub,fontWeight:500,letterSpacing:"0.06em",textTransform:"uppercase"}}>
+          Staff Portal
         </div>
       </div>
-      {notice&&(
-        <div style={{width:"100%",maxWidth:420,marginTop:10,background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"8px 14px",display:"flex",gap:8,alignItems:"flex-start",boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>
-          <span style={{fontSize:13,flexShrink:0}}>🚨</span>
-          <span style={{color:"#991b1b",fontWeight:600,fontSize:12,lineHeight:1.5}}>{notice}</span>
+
+      {/* Morphing square loader */}
+      <div style={{
+        animation:"fadeUp .4s ease .5s both",
+        display:"flex",flexDirection:"column",alignItems:"center",gap:12,
+      }}>
+        <div style={{
+          width:36,height:36,
+          background:"#C8102E",
+          borderRadius:"6%",
+          animation:"morphSquare 2s ease-in-out infinite",
+          boxShadow:"0 0 24px rgba(200,16,46,0.4)",
+        }}/>
+        <div style={{fontSize:11,color:T.sub,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase"}}>
+          Loading…
         </div>
-      )}
-      <ClaudeTag T={T}/><VersionBadge T={T}/>
+      </div>
     </div>
   );
 }
+
+function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin,rememberMe,setRememberMe}) {
+  const [phase,setPhase]=useState(0);
+  const [waveT,setWaveT]=useState(0);
+  const [entered,setEntered]=useState(false);
+
+  useEffect(()=>{
+    const id=setInterval(()=>setWaveT(t=>t+1),50);
+    return()=>clearInterval(id);
+  },[]);
+
+  useEffect(()=>{
+    setEntered(false);
+    const t=setTimeout(()=>setEntered(true),60);
+    return()=>clearTimeout(t);
+  },[phase]);
+
+  // Smooth 3-layer wave, always scarlet→white
+  const makeWavePath=(W,H,scale,speed,phaseOff)=>{
+    const t=waveT*speed+phaseOff;
+    let d=`M0,${H} L`;
+    for(let i=0;i<=80;i++){
+      const x=(i/80)*W;
+      const r=(i/80)*Math.PI*3;
+      const raw=H*scale*(Math.sin(r+t)*0.55+Math.sin(r*1.7-t*1.2)*0.3+Math.sin(r*2.9+t*0.5)*0.15);
+      const y=Math.max(1,Math.min(H-1, H*0.45+raw));
+      d+=`${x.toFixed(1)},${y.toFixed(1)} `;
+    }
+    return d+`${W},${H} Z`;
+  };
+
+  const anim=(d)=>({
+    opacity:entered?1:0,
+    transform:entered?'translateY(0)':'translateY(14px)',
+    transition:`opacity .45s ease ${d}ms,transform .45s cubic-bezier(.34,1.4,.64,1) ${d}ms`,
+  });
+
+  const WW=600;
+
+  // Render animated wave — always transitions to white
+  const Wave=({H,speedMult=1})=>(
+    <svg width="100%" height={H} viewBox={`0 0 ${WW} ${H}`} preserveAspectRatio="none"
+      style={{display:"block",position:"absolute",bottom:0,left:0,width:"100%",height:H}}>
+      <path d={makeWavePath(WW,H,0.38,0.026*speedMult,1.8)} fill="rgba(160,0,18,0.55)"/>
+      <path d={makeWavePath(WW,H,0.48,0.020*speedMult,0.7)} fill="rgba(190,8,28,0.7)"/>
+      <path d={makeWavePath(WW,H,0.58,0.016*speedMult,0)} fill="#fff"/>
+    </svg>
+  );
+
+  const css=`
+    @keyframes pgIn{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:none;}}
+    @keyframes pgOut{from{opacity:1;transform:none;}to{opacity:0;transform:translateY(-14px);}}
+    .ls-page{animation:pgIn .45s cubic-bezier(.34,1.4,.64,1) both;}
+  `;
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"#0a0a12",display:"flex",flexDirection:"column",overflowY:"auto"}}>
+      <style>{css}</style>
+
+      {/* ── WELCOME ── */}
+      {phase===0&&(
+        <div className="ls-page" style={{display:"flex",flexDirection:"column",minHeight:"100%",width:"100%",maxWidth:480,margin:"0 auto"}}>
+          {/* Scarlet top — fills ~55% */}
+          <div style={{background:"#C8102E",position:"relative",flexShrink:0,display:"flex",flexDirection:"column",flex:"0 0 55vh"}}>
+            {/* Logo */}
+            <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{width:80,height:80,borderRadius:22,overflow:"hidden",boxShadow:"0 8px 30px rgba(0,0,0,0.4)",border:"3px solid rgba(255,255,255,0.25)"}}>
+                <img src={MNU_ICON} alt="MNU" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+              </div>
+            </div>
+            {/* Wave */}
+            <div style={{position:"relative",height:90,flexShrink:0}}>
+              <Wave H={90}/>
+            </div>
+          </div>
+
+          {/* White content — fills rest */}
+          <div style={{background:"#fff",flex:1,padding:"28px 32px 40px",display:"flex",flexDirection:"column",marginTop:-1}}>
+            {siteOffline&&(
+              <div style={{background:"#fee2e2",borderRadius:12,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start",marginBottom:18,...anim(0)}}>
+                <span style={{fontSize:14}}>🔴</span>
+                <div>
+                  <div style={{color:"#991b1b",fontWeight:700,fontSize:13}}>System Offline</div>
+                  <div style={{color:"#b91c1c",fontSize:11,marginTop:2}}>Only authorized administrators may sign in.</div>
+                </div>
+              </div>
+            )}
+            <div style={{fontSize:34,fontWeight:800,color:"#111",letterSpacing:"-0.5px",marginBottom:8,...anim(80)}}>Welcome</div>
+            <div style={{fontSize:15,color:"#888",lineHeight:1.6,marginBottom:"auto",...anim(160)}}>All your shift tools in one place.</div>
+            <div style={{height:40}}/>
+            <button onClick={()=>setPhase(1)} style={{...anim(240),display:"flex",alignItems:"center",justifyContent:"space-between",background:"#C8102E",border:"none",borderRadius:16,padding:"17px 22px",cursor:"pointer",fontFamily:"inherit",width:"100%",transition:"opacity .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.opacity="0.88"}
+              onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+              <span style={{fontSize:17,fontWeight:700,color:"#fff"}}>Login</span>
+              <div style={{width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.22)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            </button>
+            {notice&&(
+              <div style={{marginTop:14,background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{fontSize:13,flexShrink:0}}>🚨</span>
+                <span style={{color:"#991b1b",fontWeight:600,fontSize:12,lineHeight:1.5}}>{notice}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── LOGIN ── */}
+      {phase===1&&(
+        <div className="ls-page" style={{display:"flex",flexDirection:"column",minHeight:"100%",width:"100%",maxWidth:480,margin:"0 auto"}}>
+          {/* Scarlet top — shorter */}
+          <div style={{background:"#C8102E",position:"relative",flexShrink:0,flex:"0 0 22vh",display:"flex",flexDirection:"column"}}>
+            <div style={{position:"relative",height:70,flexShrink:0,marginTop:"auto"}}>
+              <Wave H={70} speedMult={1.1}/>
+            </div>
+          </div>
+
+          {/* White form */}
+          <div style={{background:"#fff",flex:1,padding:"22px 32px 40px",display:"flex",flexDirection:"column",gap:18,overflowY:"auto"}}>
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",...anim(0)}}>
+              <div>
+                <div style={{fontSize:28,fontWeight:800,color:"#111",letterSpacing:"-0.5px"}}>Login</div>
+                <div style={{fontSize:12,color:"#aaa",marginTop:4}}>MidAmerica Nazarene University</div>
+              </div>
+              <button onClick={()=>setPhase(0)} style={{background:"none",border:"none",color:"#C8102E",cursor:"pointer",fontSize:13,fontFamily:"inherit",fontWeight:700,paddingTop:4}}>← Back</button>
+            </div>
+
+            {!showPin&&(
+              <div style={anim(80)}>
+                <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>MNU Email</div>
+                <input value={emailIn} onChange={e=>setEmailIn(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&doLogin()}
+                  placeholder="you@mnu.edu" type="email" autoComplete="email"
+                  style={{width:"100%",background:"#f7f7f7",border:`1.5px solid ${emailErr?"#ef4444":"#e8e8e8"}`,borderRadius:12,padding:"14px 16px",fontSize:15,fontFamily:"inherit",color:"#111",outline:"none",transition:"border-color .15s",display:"block"}}
+                  onFocus={e=>e.target.style.borderColor="#C8102E"}
+                  onBlur={e=>e.target.style.borderColor=emailErr?"#ef4444":"#e8e8e8"}
+                />
+                {emailErr&&<div style={{color:"#ef4444",fontSize:11,marginTop:6,fontWeight:500}}>{emailErr}</div>}
+              </div>
+            )}
+
+            {showPin&&(
+              <div style={anim(80)}>
+                <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>PIN</div>
+                <input value={pinIn} onChange={e=>setPinIn(e.target.value.replace(/\D/g,"").slice(0,6))}
+                  onKeyDown={e=>e.key==="Enter"&&doPin()}
+                  placeholder="••••" type="password" inputMode="numeric" autoFocus
+                  style={{width:"100%",background:"#f7f7f7",border:"1.5px solid #e8e8e8",borderRadius:12,padding:"14px 16px",fontSize:22,fontFamily:"inherit",color:"#111",outline:"none",letterSpacing:"0.5em",transition:"border-color .15s",display:"block"}}
+                  onFocus={e=>e.target.style.borderColor="#C8102E"}
+                  onBlur={e=>e.target.style.borderColor="#e8e8e8"}
+                />
+              </div>
+            )}
+
+            {!showPin&&(
+              <div style={{display:"flex",alignItems:"center",gap:10,...anim(160)}}>
+                <div onClick={()=>setRememberMe(r=>!r)}
+                  style={{width:20,height:20,borderRadius:6,border:`2px solid ${rememberMe?"#C8102E":"#d1d5db"}`,background:rememberMe?"#C8102E":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all .15s",flexShrink:0}}>
+                  {rememberMe&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
+                <span style={{fontSize:13,color:"#888",cursor:"pointer"}} onClick={()=>setRememberMe(r=>!r)}>Remember me</span>
+              </div>
+            )}
+
+            <button onClick={showPin?doPin:doLogin}
+              style={{...anim(240),width:"100%",background:"#C8102E",border:"none",borderRadius:14,padding:"15px",fontSize:16,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s",marginTop:4}}
+              onMouseEnter={e=>e.currentTarget.style.opacity="0.88"}
+              onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+              {showPin?"Confirm PIN →":"Login →"}
+            </button>
+
+            <div style={{textAlign:"center",marginTop:4,...anim(320)}}>
+              <button onClick={()=>setScreen("techLogin")}
+                style={{background:"none",border:"none",color:"#C8102E",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit"}}>
+                Technical Administrator Access
+              </button>
+            </div>
+
+            {notice&&(
+              <div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{fontSize:13,flexShrink:0}}>🚨</span>
+                <span style={{color:"#991b1b",fontWeight:600,fontSize:12,lineHeight:1.5}}>{notice}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+
+
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -4572,7 +4448,7 @@ function StaffProfileModal({T,emp,progress,onClose}) {
 
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(8px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:800,padding:20,animation:"fadeUp .2s ease both"}}>
-      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:380,animation:"tourCardIn .3s cubic-bezier(.34,1.56,.64,1) both",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.5)"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:18,width:"100%",maxWidth:380,animation:"tourCardIn .3s cubic-bezier(.34,1.56,.64,1) both",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.5)"}}>
         {/* Header gradient banner */}
         <div style={{background:`linear-gradient(135deg,${lv.color}33,${lv.color}11)`,padding:"24px 20px 20px",position:"relative"}}>
           {/* Close */}
@@ -4701,7 +4577,7 @@ const BADGE_CATALOG = {
   badge_legend:   {id:"badge_legend",   name:"Legend",         icon:E("👑","♛"), color:"#eab308", glow:"#eab30888", desc:"Top performer status"},
   badge_sparkle:  {id:"badge_sparkle",  name:"Sparkle",        icon:E("✨","★"), color:"#a855f7", glow:"#a855f788", desc:"Sparkle trail"},
   badge_goat:     {id:"badge_goat",     name:"G.O.A.T.",       icon:E("🐐","◆"), color:"#0d9488", glow:"#0d948888", desc:"Greatest of all time"},
-  badge_mnu:      {id:"badge_mnu",      name:"MNU Pride",      icon:E("🎓","◈"), color:"#C8102E", glow:"#C8102E88", desc:"MNU school spirit"},
+  badge_mnu:      {id:"badge_mnu",      name:"MNU Pride",      icon:(<img src={MNU_ICON} alt="MNU" style={{width:"1em",height:"1em",objectFit:"contain",verticalAlign:"middle"}}/>), color:"#C8102E", glow:"#C8102E88", desc:"MNU school spirit"},
   badge_grinder:  {id:"badge_grinder",  name:"Grinder",        icon:E("⚙️","◎"), color:"#64748b", glow:"#64748b88", desc:"Never stops working"},
   badge_nightowl: {id:"badge_nightowl", name:"Night Owl",      icon:E("🦉","◉"), color:"#818cf8", glow:"#818cf888", desc:"Working late hours"},
   badge_streak7:  {id:"badge_streak7",  name:"7-Day",          icon:E("🔥","·"), color:"#ea580c", glow:"#ea580c88", desc:"7 days straight"},
@@ -4742,15 +4618,18 @@ export default function App() {
   const [T,setT]=useState(T0);
   const [dark,setDk]=useState(LS.get('nl3-dark')!==null?LS.get('nl3-dark'):window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [compact,setCompact]=useState(()=>!!LS.get('nl3-compact'));
-  const [minimalMode,setMinimalMode]=useState(()=>{const v=!!LS.get('nl3-minimal');window._minimalMode=v;return v;});
-  const [showEmojis,setShowEmojis]=useState(()=>LS.get('nl3-emojis')!==false);
-  const [voiceOnGlobal,setVoiceOnGlobal]=useState(()=>LS.get("nl3-finn-voice")!==false);
   const [accent,setAccent]=useState("");
   const [soundOn,setSoundOn]=useState(true);
+  const [voiceOnGlobal,setVoiceOnGlobal]=useState(()=>LS.get("nl3-finn-voice")!==false);
   const [soundVol,setSoundVol]=useState(0.22);
   const [deviceMode,setDeviceMode]=useState("auto"); // "auto" | "mobile" | "desktop"
 
-  const [screen,setScreen]=useState("login");
+  const [screen,setScreen]=useState("splash");
+  useEffect(()=>{
+    // Brief splash then show login
+    const t=setTimeout(()=>setScreen("login"),1800);
+    return()=>clearTimeout(t);
+  },[]);
   const [user,setUser]=useState(null);
   const userRef=useRef(null);
   const progressRef=useRef({});
@@ -4759,6 +4638,7 @@ export default function App() {
   const [loggingOut,setLoggingOut]=useState(false);
   const [techAction,setTechAction]=useState("");
   const [techSection,setTechSection]=useState("overview");
+  const [navOpen,setNavOpen]=useState(false); // lifted so floating buttons can react
   const [techSidebarOpen,setTechSidebarOpen]=useState(true);
 
   const [emailIn,setEmailIn]=useState(LS.get("nl3-remember-email")||"");
@@ -4869,6 +4749,7 @@ export default function App() {
   const [showWelcomePortal,setShowWelcomePortal]=useState(false);
   const [finnAnim,setFinnAnim]=useState(false);
   const openFinn=()=>{setFinnAnim(true);setTimeout(()=>setShowFinn(true),420);};
+  const [showHelp,setShowHelp]=useState(false);
   const [feedbackForm,setFeedbackForm]=useState({type:"feature",msg:""});
   const [techPinInput,setTechPinInput]=useState("");
   const [techPinErr,setTechPinErr]=useState("");
@@ -5287,7 +5168,7 @@ export default function App() {
     return()=>mq.removeEventListener('change',handler);
   },[compact,accent]);
 
-  const applyTheme=useCallback(async(d,c,a,mn)=>{const ac=a!==undefined?a:accent;setDk(d);setCompact(c);setAccent(ac);const useMn=mn!==undefined?mn:minimalMode;setMinimalMode(useMn);window._minimalMode=useMn;setT(useMn?{...mkMinimalTheme(d,c,ac),showEmojis}:{...mkTheme(d,c,ac),showEmojis});LS.set("nl3-minimal",useMn?1:null);LS.set("nl3-dark",d);LS.set("nl3-compact",c);if(a!==undefined)LS.set("nl3-accent",a);},[accent]);
+  const applyTheme=useCallback(async(d,c,a)=>{const ac=a!==undefined?a:accent;setDk(d);setCompact(c);setAccent(ac);setT({...mkTheme(d,c,ac)});LS.set("nl3-dark",d);LS.set("nl3-compact",c);if(a!==undefined)LS.set("nl3-accent",a);},[accent]);
 
   const applySoundSettings=useCallback(async(on,vol)=>{
     setSoundOn(on);setSoundVol(vol);
@@ -5845,7 +5726,7 @@ export default function App() {
     if(emps.find(e=>e.email===email&&e.id!==user?.id)){toast("Email already in use","err");return;}
     const next=emps.map(e=>e.id===user?.id?{...e,email}:e);
     setUser(u=>({...u,email}));setEmps(next);
-    DB.set("nl3-emps",next);
+    DB.set("nl3-emps");
     setEmailSaved(true);
     setTimeout(()=>setEmailSaved(false),3500);
     setForm(p=>({...p,pEmail:email}));
@@ -5859,7 +5740,7 @@ export default function App() {
     const next=emps.map(e=>e.id===user?.id?{...e,status}:e);
     setEmps(next);
     // Persist in background
-    DB.set("nl3-emps",next);
+    DB.set("nl3-emps");
     toast(`Status set to ${status}!`);
   };
 
@@ -5927,7 +5808,7 @@ export default function App() {
   const toggleOffline=async()=>{
     const next=!siteOffline;
     setSiteOffline(next);
-    await DB.set("nl3-offline",next); // stored in app_settings
+    await DB.set("nl3-offline"); // stored in app_settings
     if(next){
       addErr("warn","Site set OFFLINE by Technical Administrator");
       setTechAction("🔴 Site is now OFFLINE — only Tech Admin can log in.");
@@ -5972,7 +5853,7 @@ export default function App() {
 
   // ── RENDER ────────────────────────────────────────────────────────────────────
   return (
-    <div style={{fontFamily:T.minimal?"'Google Sans','Segoe UI',sans-serif":"'DM Sans',sans-serif",minHeight:"100vh",background:T.bg,color:T.txt}}>
+    <div style={{fontFamily:"'DM Sans',sans-serif",minHeight:"100vh",background:(screen==="login"||screen==="splash")?"transparent":T.bg,color:T.txt}}>
       <style>{buildCSS(T)}</style>
       <ToastList items={toasts} T={T}/>
       <XPToastList items={xpToasts}/>
@@ -6016,7 +5897,6 @@ export default function App() {
               <Btn T={T} full variant="ghost" onClick={()=>setScreen("login")}>Back</Btn>
             </div>
           </div>
-          <VersionBadge T={T}/>
         </div>
       )}
 
@@ -6028,33 +5908,26 @@ export default function App() {
         <div style={{display:"flex",minHeight:"100vh"}}>
           <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,overflowX:"hidden"}}>
             {/* Top bar */}
-            <header style={{background:T.surf,borderBottom:"1px solid "+T.bor,padding:"env(safe-area-inset-top, 0px) 8px 0",position:"sticky",top:0,zIndex:300,boxShadow:T.minimal?"none":"0 2px 10px rgba(0,0,0,.06)"}}>
-              {!T.minimal&&<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.scarlet},${T.blue})`}}/>}
+            <header style={{background:T.surf,borderBottom:"1px solid "+T.bor,padding:"env(safe-area-inset-top, 0px) 8px 0",position:"sticky",top:0,zIndex:300,boxShadow:"0 2px 10px rgba(0,0,0,.06)"}}>
+              {<div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.scarlet},${T.blue})`}}/>}
               <div style={{display:"flex",alignItems:"center",gap:12,minHeight:56,padding:"0 4px"}}>
                 {/* Brand — tappable, goes home */}
-                <button data-tour="logo" onClick={()=>{setSearch("");setPrevPage(page);setPage("home");playSound("click");}} style={{background:"none",border:"none",fontFamily:T.minimal?"'Google Sans',sans-serif":"'Clash Display',sans-serif",fontSize:15,fontWeight:T.minimal?500:800,color:T.txt,cursor:"pointer",display:"flex",alignItems:"center",gap:5,padding:0,transition:"opacity .15s",flexShrink:0,whiteSpace:"nowrap"}}
-                  onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
-                  onMouseLeave={e=>e.currentTarget.style.opacity="1"}
-                >
-                  <span style={{fontSize:17}}>🎓</span>
-                  <span style={{display:"flex",gap:4}}>{"MNU's"} <span style={{color:T.accent}}>Neer Locker</span></span>
+                <button onClick={()=>{setSearch("");setPrevPage(page);setPage("home");playSound("click");}}
+                  style={{display:"flex",alignItems:"center",gap:9,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:10,flexShrink:0}}>
+                  <div style={{width:30,height:30,borderRadius:8,overflow:"hidden",flexShrink:0}}>
+                    <img src={MNU_ICON} alt="MNU" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",lineHeight:1.2}}>
+                    <span style={{fontSize:11,fontWeight:700,color:T.txt,whiteSpace:"nowrap"}}>MNU&apos;s</span>
+                    <span style={{fontSize:11,fontWeight:800,color:T.scarlet,whiteSpace:"nowrap",letterSpacing:"-0.2px"}}>Neer Locker</span>
+                  </div>
                 </button>
 
                 {/* Responsive right section */}
               <div style={{display:"flex",alignItems:"center",gap:4,flexShrink:0,marginLeft:"auto",minWidth:0}}>
                 {/* Tablet/Desktop: full search bar */}
-                <button onClick={()=>{setShowGlobalSearch(true);playSound("open");}}
-                  title="Search (⌘K)"
-                  className="search-full"
-                  style={{display:"flex",alignItems:"center",gap:5,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:"5px 10px",cursor:"pointer",color:T.sub,fontSize:12,fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap"}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor=T.accent+"66";e.currentTarget.style.color=T.txt;}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.sub;}}
-                >
-                  <span style={{fontSize:14}}>🔍</span>
-                  <span className="search-label">Search</span>
-                  <span className="search-label" style={{fontSize:10,opacity:0.5}}>⌘K</span>
-                </button>
-                <NotifBell T={T} anns={anns} dms={dms} tasks={tasks} user={user} onOpen={()=>{playSound("open");setShowNotifCenter(true);}}/>
+                
+                
                 {/* Profile button */}
                 <button onClick={()=>{setPage("set");setSettingsTab("profile");playSound("click");}}
                   style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",borderRadius:10,transition:"background .15s",fontFamily:"inherit",minWidth:0}}
@@ -6068,14 +5941,18 @@ export default function App() {
                     <span style={{fontSize:10,color:T.sub,fontWeight:500}}>{ROLES[user.role]?.label||""}</span>
                   </div>
                 </button>
-                <button onClick={()=>{playSound("click");haptic("light");doLogout();}} title="Sign Out" style={{flexShrink:0,background:"none",border:"1px solid "+T.bor,borderRadius:8,padding:"5px 8px",cursor:"pointer",color:T.sub,fontSize:13,fontFamily:"inherit",transition:"all .15s",display:"flex",alignItems:"center",gap:4}} onMouseEnter={e=>e.currentTarget.style.color=T.scarlet} onMouseLeave={e=>e.currentTarget.style.color=T.sub}><span>↩</span><span className="header-name" style={{fontSize:11,fontWeight:700}}>Sign Out</span></button>
+                <button onClick={()=>{playSound("click");haptic("light");doLogout();}} title="Sign Out" style={{flexShrink:0,background:"none",border:"1px solid "+T.bor,borderRadius:8,padding:"5px 8px",cursor:"pointer",color:T.sub,fontSize:13,fontFamily:"inherit",transition:"all .15s",display:"flex",alignItems:"center",gap:4}} onMouseEnter={e=>e.currentTarget.style.color=T.scarlet} onMouseLeave={e=>e.currentTarget.style.color=T.sub}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg></button>
               </div>
               </div>
             </header>
 
             {/* Floating circle NavMenu — always visible top-left */}
             <div style={{position:"fixed",left:10,top:62,zIndex:350}}>
-              <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T} onFinn={()=>openFinn()} onShop={()=>setShowShop(true)}/>
+              <NavMenu user={user} page={page} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} tasks={tasks} anns={anns} dms={dms} T={T} onFinn={()=>openFinn()} onShop={()=>setShowShop(true)} onFeedback={()=>setShowFeedback(true)} navOpen={navOpen} setNavOpen={setNavOpen}/>
             </div>
 
             {/* Page content */}
@@ -6166,7 +6043,7 @@ export default function App() {
               )}
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl} onShop={()=>setShowShop(true)} equippedBadges={equippedBadges} nameColorId={nameColorId}/>}
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} equippedBadges={equippedBadges} nameColorId={nameColorId}/>}
 
               {/* TASKS */}
               {page==="tasks"&&(
@@ -6445,8 +6322,8 @@ export default function App() {
                           const hasNameColor=localStorage.getItem("nl3-unlocked-colors")?.includes("name_color")||false;
                           if(!hasAnyBadge&&!hasNameColor) return null;
                           return (
-                            <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:14,padding:16}}>
-                              <div style={{fontWeight:T.minimal?600:700,fontSize:T.minimal?15:14,color:T.txt,marginBottom:12,letterSpacing:T.minimal?"-0.2px":"normal"}}>
+                            <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:14,padding:16}}>
+                              <div style={{fontWeight:700,fontSize:14,color:T.txt,marginBottom:12,letterSpacing:"normal"}}>
                                 {E("🏅","◆")} Badges & Name Style
                               </div>
                               {/* Badge slots — up to 3 equipped */}
@@ -6540,14 +6417,14 @@ export default function App() {
                           );
                         })()}
                         {/* Guided tour button */}
-                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:14,padding:20,display:"flex",gap:14,alignItems:"center"}}>
-                          <div style={{width:44,height:44,borderRadius:T.minimal?"50%":12,background:T.accent+"18",border:`1px solid ${T.accent}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22}}>{E("✨","★")}</div>
+                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:14,padding:20,display:"flex",gap:14,alignItems:"center"}}>
+                          <div style={{width:44,height:44,borderRadius:12,background:T.accent+"18",border:`1px solid ${T.accent}33`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:22}}>{E("✨","★")}</div>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontWeight:T.minimal?600:700,fontSize:T.minimal?15:14,color:T.txt,marginBottom:2,letterSpacing:T.minimal?"-0.2px":"normal"}}>New here?</div>
+                            <div style={{fontWeight:700,fontSize:14,color:T.txt,marginBottom:2,letterSpacing:"normal"}}>New here?</div>
                             <div style={{fontSize:12,color:T.sub,lineHeight:1.5}}>Take a quick guided tour of Neer Locker — under a minute.</div>
                           </div>
                           <button onClick={()=>{playSound("open");setShowOnboarding(true);}}
-                            style={{background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 20px",fontWeight:T.minimal?500:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s",flexShrink:0,whiteSpace:"nowrap"}}
+                            style={{background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 20px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s",flexShrink:0,whiteSpace:"nowrap"}}
                             onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
                             onMouseLeave={e=>e.currentTarget.style.opacity="1"}
                           >Start tour</button>
@@ -6701,7 +6578,7 @@ export default function App() {
                           <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Layout Density</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>How much information is shown on screen at once.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                            {[{k:false,label:"Comfortable",icon:"🛋️",desc:"More spacing, easier to read"},{k:true,label:"Compact",icon:"📊",desc:"More data, tighter layout"}].map(opt=>(
+                            {[{k:false,label:"Comfortable",icon:"🛋️",desc:"More spacing, easier to read"},{k:true,label:"Compact",icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),desc:"More data, tighter layout"}].map(opt=>(
                               <button key={String(opt.k)} onClick={()=>{playSound("click");applyTheme(dark,opt.k);}} style={{background:compact===opt.k?T.accent+"18":"none",border:`2px solid ${compact===opt.k?T.scarlet:T.bor}`,borderRadius:12,padding:"12px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all .2s"}}>
                                 <div style={{fontSize:20,marginBottom:4}}>{opt.icon}</div>
                                 <div style={{fontWeight:700,color:compact===opt.k?T.scarlet:T.txt,fontSize:13}}>{opt.label}</div>
@@ -6711,36 +6588,7 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Minimal Mode */}
-                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                            <div>
-                              <div style={{fontWeight:700,color:T.txt,display:"flex",alignItems:"center",gap:8}}>
-                                ✦ Minimal Mode
-                                {minimalMode&&<span style={{fontSize:10,fontWeight:700,background:T.accent+"20",color:T.accent,borderRadius:100,padding:"2px 8px"}}>ACTIVE</span>}
-                              </div>
-                              <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2,lineHeight:1.5}}>Google Antigravity-inspired look. Clean white cards, pill buttons, sans-serif. Same features.</div>
-                            </div>
-                            <button onClick={()=>{
-                              const next=!minimalMode;
-                              applyTheme(dark,compact,undefined,next);
-                              playSound("click");
-                            }} style={{width:50,height:27,borderRadius:14,background:minimalMode?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                              <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?(minimalMode?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:minimalMode?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
-                            </button>
-                          </div>
-                          {minimalMode&&(
-                            <div style={{marginTop:12,padding:"10px 12px",background:T.bg,borderRadius:8,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                              <div style={{fontSize:11,color:T.sub}}>Preview:</div>
-                              <div style={{background:T.dark?"#ffffff":"#202124",color:T.dark?"#000":"#fff",borderRadius:9999,padding:"4px 12px",fontSize:11,fontWeight:500,fontFamily:"'Google Sans',sans-serif"}}>Primary</div>
-                              <div style={{background:"transparent",color:T.txt,border:"1.5px solid "+T.txt,borderRadius:9999,padding:"4px 12px",fontSize:11,fontWeight:500}}>Ghost</div>
-                              <div style={{background:T.surf,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:11,color:T.txt}}>Card</div>
-                            </div>
-                          )}
-
-                        </div>
-
-                        {/* Device / UI Scaling */}
+                                                {/* Device / UI Scaling */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:2}}>◈ Atlas & UI Scaling</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12,lineHeight:1.5}}>Choose how the app scales to your device. This adjusts font sizes and tap target sizes across the whole app.</div>
@@ -6770,151 +6618,6 @@ export default function App() {
                         </div>
 
                         {/* Push Notifications */}
-                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
-                          <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>🔔 Push Notifications</div>
-                          <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:10,lineHeight:1.5}}>
-                            Get notified for new tasks, announcements, and messages — even when the app is in the background.
-                          </div>
-                          {notifPerms==="unsupported"?(
-                            <div style={{fontSize:12,color:T.sub,fontStyle:"italic"}}>Your browser doesn&apos;t support notifications.</div>
-                          ):notifPerms==="denied"?(
-                            <div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#991b1b",fontWeight:600}}>
-                              ⚠️ Notifications are blocked. Go to your browser settings and allow notifications for this site, then come back here.
-                            </div>
-                          ):(
-                            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
-                                <div>
-                                  <div style={{fontWeight:600,color:T.txt,fontSize:13}}>Enable Notifications</div>
-                                  <div style={{fontSize:11,color:T.sub,marginTop:1}}>Tasks · Announcements · Messages</div>
-                                </div>
-                                {/* Toggle */}
-                                <button onClick={async()=>{
-                                  if(!notifEnabled){
-                                    const sub=await NOTIF.subscribe(user.id);
-                                    setNotifPerms(NOTIF.permission());
-                                    if(sub){
-                                      setNotifEnabled(true);
-                                      notifEnabledRef.current=true;
-                                      LS.set("nl3-notif-enabled",true);
-                                      playSound("notify");
-                                      toast("Notifications enabled! ✅");
-                                    } else {
-                                      toast("Notification setup failed — check permissions","err");
-                                    }
-                                  } else {
-                                    await NOTIF.unsubscribe(user.id);
-                                    setNotifEnabled(false);
-                                    notifEnabledRef.current=false;
-                                    LS.set("nl3-notif-enabled",false);
-                                    playSound("click");
-                                    toast("Notifications disabled","warn");
-                                  }
-                                }} style={{flexShrink:0,width:48,height:26,borderRadius:13,background:notifEnabled?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s"}}>
-                                  <div style={{position:"absolute",top:3,left:notifEnabled?24:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.2)"}}/>
-                                </button>
-                              </div>
-                              {notifEnabled&&(
-                                <div style={{fontSize:11,color:T.ok,fontWeight:600}}>✓ Notifications enabled.</div>
-                              )}
-                              <div style={{fontSize:11,color:T.sub,lineHeight:1.6,background:T.bg,borderRadius:8,padding:"8px 12px"}}>
-                                <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Status:</div>
-                                Permission: <span style={{color:notifPerms==="granted"?T.ok:T.err,fontWeight:700}}>{notifPerms}</span>
-                                {" · "}PWA mode: <span style={{color:NOTIF.isPWA()?T.ok:T.warn,fontWeight:700}}>{NOTIF.isPWA()?"Yes":"No (browser tab)"}</span>
-                                <div style={{marginTop:6}}><strong>iPhone:</strong> Open from Safari → Share → Add to Home Screen, then enable here.</div>
-                                <div><strong>Android/Desktop:</strong> Works in Chrome — just enable above.</div>
-                              </div>
-                              {notifEnabled&&(
-                                <button onClick={async()=>{
-                                  try{
-                                    const r=await fetch("https://neer-locker.vercel.app/api/send-push",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:user.id,title:"Finn — Test Notification",body:"Push notifications are working! Check this off.",tag:"test"})});
-                                    const d=await r.json();
-                                    if(d.sent>0) toast("Test notification sent! ✅");
-                                    else toast("Sent but 0 delivered — re-enable notifications","err");
-                                  }catch(e){ toast("Send failed: "+e.message,"err"); }
-                                }} style={{background:T.bG,border:`1px solid ${T.blue}44`,borderRadius:8,padding:"7px 14px",fontSize:12,fontWeight:700,color:T.blue,cursor:"pointer",fontFamily:"inherit",marginTop:8}}>
-                                  🔔 Send Test Notification
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Emoji toggle — minimal mode only */}
-                        {minimalMode&&(
-                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:16,padding:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <div>
-                            <div style={{fontWeight:700,color:T.txt}}>Emoji Icons</div>
-                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Show emoji icons throughout the app</div>
-                          </div>
-                          <button onClick={()=>{const next=!showEmojis;setShowEmojis(next);window._showEmojis=next;LS.set("nl3-emojis",next);setT(prev=>({...prev,showEmojis:next}));playSound("click");}} style={{width:50,height:27,borderRadius:14,background:showEmojis?T.scarlet:(T.dark?"#505050":"#909090"),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                            <div style={{width:21,height:21,borderRadius:"50%",position:"absolute",top:3,left:showEmojis?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)",background:showEmojis?"#fff":(T.dark?"#e0e0e0":"#202124")}}/>
-                          </button>
-                        </div>
-                        )}
-                        {/* Minimal sound toggle */}
-                        {minimalMode&&<div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:12,padding:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <div>
-                            <div style={{fontWeight:700,color:T.txt}}>Minimal Sounds</div>
-                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Clean short tones in minimal mode</div>
-                          </div>
-                          <button onClick={()=>{
-                            const next=!window._minimalSounds;
-                            window._minimalSounds=next;
-                            LS.set("nl3-minimal-sound",next);
-                            setT(prev=>({...prev}));
-                            playSound("click");
-                          }} style={{width:50,height:27,borderRadius:14,background:(window._minimalSounds!==false)?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                            <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?((window._minimalSounds!==false)?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:(window._minimalSounds!==false)?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
-                          </button>
-                        </div>}
-
-                        {/* Accent color */}
-                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
-                          <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Accent Color</div>
-                          <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Choose your preferred accent color for highlights and buttons.</div>
-                          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                            {(()=>{
-                              const unlockedIds=JSON.parse(localStorage.getItem("nl3-unlocked-colors")||"[]");
-                              const baseColors=[
-                                {id:"base",label:"Scarlet",value:"#C8102E",locked:false},
-                                {id:"base",label:"Blue",value:"#1e7fa8",locked:false},
-                                {id:"base",label:"Purple",value:"#7c3aed",locked:false},
-                                {id:"base",label:"Green",value:"#15803d",locked:false},
-                                {id:"base",label:"Orange",value:"#c2410c",locked:false},
-                                {id:"base",label:"Pink",value:"#be185d",locked:false},
-                              ];
-                              const shopColors=[
-                                {id:"color_teal",    label:"Teal",    value:"#0d9488"},
-                                {id:"color_indigo",  label:"Indigo",  value:"#4f46e5"},
-                                {id:"color_rose",    label:"Rose",    value:"#e11d48"},
-                                {id:"color_amber",   label:"Amber",   value:"#d97706"},
-                                {id:"color_emerald", label:"Emerald", value:"#059669"},
-                                {id:"color_violet",  label:"Violet",  value:"#9333ea"},
-                                {id:"color_slate",   label:"Slate",   value:"#475569"},
-                                {id:"color_cyan",    label:"Cyan",    value:"#0891b2"},
-                                {id:"color_lime",    label:"Lime",    value:"#65a30d"},
-                                {id:"color_fuchsia", label:"Fuchsia", value:"#c026d3"},
-                                {id:"color_midnight",label:"Midnight",value:"#1e1b4b"},
-                                {id:"color_gold",    label:"Gold",    value:"#b45309"},
-                              ].map(c=>({...c,locked:!unlockedIds.includes(c.id)}));
-                              return [...baseColors,...shopColors].map(ac=>{
-                                const isActive=T.accent===ac.value;
-                                return (
-                                  <div key={ac.label} style={{position:"relative"}} title={ac.locked?`${ac.label} — buy in XP Shop`:ac.label}>
-                                    <button onClick={()=>{if(ac.locked){setShowShop(true);toast("Buy this color in the XP Shop! 🛍","warn");return;}playSound("click");applyTheme(dark,compact,ac.value);}}
-                                      style={{width:30,height:30,borderRadius:"50%",background:ac.value,border:`3px solid ${isActive?"#000":"transparent"}`,cursor:ac.locked?"pointer":"pointer",transition:"transform .15s,border-color .15s",boxShadow:isActive?`0 0 0 2px ${ac.value}`:"none",opacity:ac.locked?0.35:1,filter:ac.locked?"grayscale(0.5)":"none"}}
-                                      onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
-                                      onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
-                                    />
-                                    {ac.locked&&<div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none",fontSize:10}}>🔒</div>}
-                                  </div>
-                                );
-                              });
-                            })()}
-                          </div>
-                        </div>
-
                         {/* Font size */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Text Size</div>
@@ -6944,8 +6647,8 @@ export default function App() {
                             LS.set("nl3-finn-voice",next);
                             if(!next){ window.speechSynthesis.cancel(); }
                             setForm(p=>({...p}));
-                          }} style={{width:50,height:27,borderRadius:14,background:voiceOnGlobal?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                            <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?(voiceOnGlobal?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:voiceOnGlobal?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                          }} style={{width:50,height:27,borderRadius:14,background:voiceOnGlobal?T.scarlet:"#909090",position:"relative",display:"flex",alignItems:"center",cursor:"pointer",border:"none",padding:0}}>
+                            <div style={{width:21,height:21,borderRadius:"50%",background:T.dark?"#e0e0e0":"#fff",position:"absolute",top:3,left:voiceOnGlobal?26:3,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}/>
                           </button>
                         </div>
                         {/* Haptics toggle */}
@@ -6965,8 +6668,8 @@ export default function App() {
                               LS.set("nl3-haptics-off",next);
                               if(!next) setTimeout(()=>haptic("success"),50);
                               setForm(p=>({...p,_h:Date.now()}));
-                            }} style={{width:50,height:27,borderRadius:14,background:!window._hapticsOff?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                              <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?(!window._hapticsOff?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:!window._hapticsOff?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                            }} style={{width:50,height:27,borderRadius:14,background:!window._hapticsOff?T.scarlet:"#909090",position:"relative",display:"flex",alignItems:"center",cursor:"pointer",border:"none",padding:0}}>
+                              <div style={{width:21,height:21,borderRadius:"50%",background:T.dark?"#e0e0e0":"#fff",position:"absolute",top:3,left:!window._hapticsOff?26:3,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}/>
                             </button>
                           </div>
                         </div>
@@ -6978,8 +6681,8 @@ export default function App() {
                               <div style={{fontWeight:600,fontSize:T.fs.md,color:T.txt}}>Sound Effects</div>
                               <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:1}}>Click sounds, notifications, and feedback tones</div>
                             </div>
-                            <button onClick={()=>{const next=!soundOn;applySoundSettings(next,soundVol);if(next)setTimeout(()=>playSound("click"),50);}} style={{width:50,height:27,borderRadius:14,background:soundOn?(T.minimal?T.accent:T.scarlet):(T.minimal?(T.dark?"#505050":"#909090"):(T.dark?"#555":"#bbb")),border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
-                              <div style={{width:21,height:21,borderRadius:"50%",background:T.minimal?(soundOn?"#fff":(T.dark?"#e0e0e0":"#202124")):"#fff",position:"absolute",top:3,left:soundOn?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
+                            <button onClick={()=>{const next=!soundOn;applySoundSettings(next,soundVol);if(next)setTimeout(()=>playSound("click"),50);}} style={{width:50,height:27,borderRadius:14,background:soundOn?T.scarlet:"#909090",border:"none",cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+                              <div style={{width:21,height:21,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:soundOn?26:3,transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)"}}/>
                             </button>
                           </div>
                           {/* Volume */}
@@ -7131,7 +6834,7 @@ export default function App() {
                         <button key={day} type="button" onClick={()=>{
                           const curr=form.tRepeatDays||[];
                           setForm(p=>({...p,tRepeatDays:active?curr.filter(d=>d!==day):[...curr,day],tRepeat:false}));
-                        }} style={{background:active?(T.minimal?T.accent:T.scarlet):T.bg,color:active?"#fff":T.sub,border:`1px solid ${active?T.accent:T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                        }} style={{background:active?(T.scarlet):T.bg,color:active?"#fff":T.sub,border:`1px solid ${active?T.accent:T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
                           {day}
                         </button>
                       );
@@ -7199,26 +6902,7 @@ export default function App() {
           {showBriefing&&<LoginBriefing user={user} tasks={tasks} anns={anns} dms={dms} emps={emps} T={T} onClose={()=>setShowBriefing(false)}/>}
 
           {/* Finn button — bottom right above ideas */}
-          <button onClick={()=>{playSound("finn");openFinn();}} title="Ask Finn" data-tour="finn-button"
-            className="float-action-btn" style={{position:"fixed",bottom:page==="dms"?222:148,right:14,zIndex:9998,background:finnSkinGold?"linear-gradient(135deg,#b45309,#eab308,#fef3c7,#eab308,#b45309)":"#0f2744",border:finnSkinGold?"2px solid #eab308aa":"2px solid #1e7fa8aa",borderRadius:"50%",width:40,height:40,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:finnSkinGold?"0 4px 14px rgba(234,179,8,.5),0 0 20px rgba(234,179,8,.3)":"0 4px 14px rgba(0,0,0,.28)",transition:"transform .15s,box-shadow .15s,bottom .25s",touchAction:"manipulation",padding:0}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.14)";e.currentTarget.style.boxShadow="0 5px 18px rgba(0,0,0,.3)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 4px 14px rgba(0,0,0,.28)";}}
-          >
-            <svg width="22" height="22" viewBox="0 0 22 22">
-              <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
-              <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
-              <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-              <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-              <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-              <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-              <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-              <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-              <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-              <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.85"/>
-              <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-              <circle cx="11" cy="11" r="1" fill="#fff"/>
-            </svg>
-          </button>
+          
 
           {/* Offline banner */}
           {isOffline&&(
@@ -7282,14 +6966,13 @@ export default function App() {
           {/* Finn chat panel */}
           {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} act={act} onClose={()=>setShowFinn(false)} setPage={p=>{setPrevPage(page);setPage(p);}} toast={toast} saveTask={(t)=>{setTasks(prev=>{const exists=prev.find(x=>x.id===t.id);return exists?prev.map(x=>x.id===t.id?t:x):[t,...prev];});upsertTask(t);}} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact} upsertTask={upsertTask} dismissAnn={dismissAnn} voiceOnGlobal={voiceOnGlobal} setVoiceOnGlobal={setVoiceOnGlobal}/>}
 
-          <HelpModal T={T} bottom={page==="dms"?120:52}/>
             {showRating&&<RatingModal T={T} user={user} open={showRating} onClose={()=>setShowRating(false)}/>}
             {viewingProfile&&<StaffProfileModal T={T} emp={viewingProfile} progress={progress} onClose={()=>setViewingProfile(null)}/>}
             {showPfpUpload&&<PfpUploadModal T={T} user={user} emps={emps} setEmps={setEmps} open={showPfpUpload} onClose={()=>setShowPfpUpload(false)} toast={toast}/>}
             {showShop&&<XPShopModal T={T} user={user} progress={progress} open={showShop} onClose={()=>setShowShop(false)} onSpendXP={(uid,pg)=>setProgress(prev=>({...prev,[uid]:pg}))} onPurchase={(item)=>{
               if(item.type==="color"||item.type==="rainbow"){
                 // Apply the color immediately
-                applyTheme(dark,compact,item.color==="linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7)"?"#C8102E":item.color);
+                applyTheme(dark,compact,item.color==="linear-gradient(90deg)"?"#C8102E":item.color);
                 // Save unlocked colors to localStorage so settings shows them
                 const saved=JSON.parse(localStorage.getItem("nl3-unlocked-colors")||"[]");
                 if(!saved.includes(item.id)){saved.push(item.id);localStorage.setItem("nl3-unlocked-colors",JSON.stringify(saved));}
@@ -7374,13 +7057,9 @@ export default function App() {
             }}/>}
             {showOnboarding&&<OnboardingTour T={T} user={user} open={showOnboarding} onClose={()=>setShowOnboarding(false)} setPage={p=>{setPrevPage(page);setPage(p);}} setShowFinn={setShowFinn} setShowFeedback={setShowFeedback}/>}
 
-          {/* Feedback / Ideas button — higher in DMs to clear send bar */}
-          <button onClick={()=>{playSound("open");setShowFeedback(true);}} title="Send an idea or report a bug" data-tour="feedback-button"
-            className="float-action-btn" style={{position:"fixed",bottom:page==="dms"?170:100,right:14,zIndex:9998,background:T.dark?"#1a1020":"#fffbeb",color:"#b45309",border:`2px solid #f59e0baa`,borderRadius:"50%",width:40,height:40,fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.18)",transition:"transform .15s,box-shadow .15s,bottom .25s",touchAction:"manipulation"}}
-            onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.14)";e.currentTarget.style.boxShadow="0 5px 18px rgba(0,0,0,.2)";}}
-            onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 3px 12px rgba(0,0,0,.15)";}}
-          >💡</button>
+          
 
+          <HelpModal T={T} bottom={52} navOpen={navOpen} externalOpen={showHelp} onExternalClose={()=>setShowHelp(false)}/>
           {/* Feedback modal */}
           {showFeedback&&(
             <Modal T={T} title={`${E("💡","i")} Send Feedback`} onClose={()=>{setShowFeedback(false);setFeedbackForm({type:"feature",msg:""});}}>
@@ -7414,7 +7093,7 @@ export default function App() {
           )}
 
           {loggingOut&&<LogoutAnim T={T}/>}
-          <ClaudeTag T={T}/><VersionBadge T={T} hide={showFinn}/>
+          <ClaudeTag T={T}/><VersionBadge T={T} hide={showFinn} navOpen={navOpen}/>
         </div>
       )}
 
@@ -7453,10 +7132,10 @@ export default function App() {
               {/* Sidebar items */}
               <div style={{flex:1,overflowY:"auto",padding:"10px 6px",display:"flex",flexDirection:"column",gap:2}}>
                 {[
-                  {key:"overview", icon:"🏠", label:"Overview"},
+                  {key:"overview", icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>), label:"Overview"},
                   {key:"staff",    icon:"👥", label:"Staff & Access"},
                   {key:"xp",      icon:"⭐", label:"XP & Badges"},
-                  {key:"content",  icon:"📋", label:"Content"},
+                  {key:"content",  icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>), label:"Content"},
                   {key:"messages", icon:"💬", label:"Messages"},
                   {key:"system",   icon:"🛡️", label:"System"},
                   {key:"ratings",  icon:"⭐", label:"Ratings"},
@@ -7933,7 +7612,7 @@ export default function App() {
                     });
                   }
                   const next=[...dms,...newMsgs];
-                  setDms(next);await DB.set("nl3-dms",next);
+                  setDms(next);await DB.set("nl3-dms");
                   addErr("warn",`Tech admin sent warning to ${target?.name} (${chatPartners.length} thread(s)): "${msg}"`);
                   playSound("warn");
                   toast(`Warning sent into ${chatPartners.length||1} conversation(s)!`,"warn");
@@ -8033,7 +7712,7 @@ export default function App() {
                     return (
                       <div key={t.id} onClick={()=>{setSelectedTasks(prev=>{const n=new Set(prev);checked?n.delete(t.id):n.add(t.id);return n;});}}
                         style={{display:"flex",alignItems:"center",gap:10,background:checked?T.accent+"18":T.bg,border:`1px solid ${checked?T.accent+"66":T.bor}`,borderRadius:10,padding:"8px 12px",cursor:"pointer",transition:"all .15s"}}>
-                        <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${checked?T.scarlet:T.bor}`,background:checked?(T.minimal?T.accent:T.scarlet):"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                        <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${checked?T.scarlet:T.bor}`,background:checked?(T.scarlet):"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                           {checked&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
                         </div>
                         <div style={{flex:1,minWidth:0}}>
@@ -8482,7 +8161,7 @@ function OnboardingTour({T,user,open,onClose,setPage,setShowFinn,setShowFeedback
     {
       navigate: ()=>setPage("home"),
       target: '[data-tour="logo"]',
-      icon: E("🎓","◈"),
+      icon: (<img src={MNU_ICON} alt="MNU" style={{width:"1em",height:"1em",objectFit:"contain",verticalAlign:"middle"}}/>),
       title: "The brand — your home button",
       subtitle: "Tap to go home from anywhere",
       body: "This is your logo. Tap it anytime to return to the Home dashboard — works from every page.",
@@ -8743,7 +8422,7 @@ function OnboardingTour({T,user,open,onClose,setPage,setShowFinn,setShowFeedback
         zIndex:1000,
         pointerEvents:"none"
       }}>
-        <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:420,padding:0,animation:exiting?"tourCardOut .24s ease both":"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.4)",pointerEvents:"auto"}}>
+        <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:18,width:"100%",maxWidth:420,padding:0,animation:exiting?"tourCardOut .24s ease both":"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.4)",pointerEvents:"auto"}}>
           {/* Progress bar */}
           <div style={{height:3,background:T.bor,position:"relative"}}>
             <div style={{position:"absolute",inset:0,right:"auto",width:`${progress}%`,background:T.accent,transition:"width .35s cubic-bezier(.23,1,.32,1)"}}/>
@@ -8758,13 +8437,13 @@ function OnboardingTour({T,user,open,onClose,setPage,setShowFinn,setShowFeedback
           </div>
           {/* Content */}
           <div style={{padding:"4px 22px 18px",textAlign:"center"}}>
-            <div key={step} style={{width:52,height:52,borderRadius:T.minimal?"50%":14,background:T.minimal?T.surfH:T.accent+"18",border:T.minimal?`1px solid ${T.bor}`:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,margin:"6px auto 12px",animation:"tourIconPop .45s cubic-bezier(.34,1.85,.64,1)"}}>{s.icon}</div>
-            <div key={`t-${step}`} style={{fontSize:T.minimal?21:19,fontWeight:T.minimal?600:700,color:T.txt,letterSpacing:"-0.4px",marginBottom:3,fontFamily:T.minimal?"'Google Sans',sans-serif":"inherit",animation:"tourFadeSlide .4s ease both"}}>{s.title}</div>
+            <div key={step} style={{width:52,height:52,borderRadius:14,background:T.accent+"18",border:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,margin:"6px auto 12px",animation:"tourIconPop .45s cubic-bezier(.34,1.85,.64,1)"}}>{s.icon}</div>
+            <div key={`t-${step}`} style={{fontSize:19,fontWeight:700,color:T.txt,letterSpacing:"-0.4px",marginBottom:3,fontFamily:"inherit",animation:"tourFadeSlide .4s ease both"}}>{s.title}</div>
             <div key={`s-${step}`} style={{fontSize:12,color:T.accent,fontWeight:500,letterSpacing:"0.02em",marginBottom:10,animation:"tourFadeSlide .4s ease both .05s",animationFillMode:"both"}}>{s.subtitle}</div>
             <div key={`b-${step}`} style={{fontSize:13,color:T.sub,lineHeight:1.6,maxWidth:340,margin:"0 auto",animation:"tourFadeSlide .4s ease both .1s",animationFillMode:"both"}}>{s.body}</div>
             {s.action&&(
               <button onClick={()=>{playSound("click");s.action.fn();}}
-                style={{marginTop:14,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"8px 18px",fontWeight:T.minimal?500:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s"}}
+                style={{marginTop:14,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"8px 18px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s"}}
                 onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
                 onMouseLeave={e=>e.currentTarget.style.opacity="1"}
               >{E("✨","→")} {s.action.label}</button>
@@ -8779,7 +8458,7 @@ function OnboardingTour({T,user,open,onClose,setPage,setShowFinn,setShowFeedback
               playSound(last?"success":"click");
               if(last){onClose();LS.set("nl3-onboarded",1);}
               else setStep(st=>st+1);
-            }} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 14px",fontWeight:T.minimal?500:700,fontSize:12,cursor:(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted")?"not-allowed":"pointer",fontFamily:"inherit",transition:"opacity .15s",opacity:(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted")?0.4:1}}
+            }} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 14px",fontWeight:700,fontSize:12,cursor:(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted")?"not-allowed":"pointer",fontFamily:"inherit",transition:"opacity .15s",opacity:(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted")?0.4:1}}
               onMouseEnter={e=>{if(!(s.requireNotif&&Notification.permission!=="granted"))e.currentTarget.style.opacity="0.88";}}
               onMouseLeave={e=>{if(!(s.requireNotif&&Notification.permission!=="granted"))e.currentTarget.style.opacity="1";}}
             >{last?(E("✓","")+" Finish"):(s.requireNotif&&typeof Notification!=="undefined"&&Notification.permission!=="granted"?"Enable first":"Next →")}</button>
@@ -8802,8 +8481,9 @@ function OnboardingTour({T,user,open,onClose,setPage,setShowFinn,setShowFeedback
   );
 }
 
-function HelpModal({T,bottom}) {
+function HelpModal({T,bottom,navOpen,externalOpen,onExternalClose}) {
   const [open,setOpen]=useState(false);
+  useEffect(()=>{if(externalOpen){setOpen(true);onExternalClose&&onExternalClose();}},[externalOpen]);
   const items=[
     {icon:E("⊙","○"),title:"Circle Menu Button (top-left)",desc:"The floating circle button fixed below the logo — always visible as you scroll. Tap it to open navigation from any page."},
     {icon:E("🤖","⬡"),title:"Ask Finn — Your AI Assistant",desc:"Tap the Finn button (bottom-right hex icon) to chat with Finn, your Fusion Integrated Neural Navigator. Ask about tasks, inventory, XP, or say 'take me to tasks' to navigate. Finn can also create tasks and announcements for you!"},
@@ -8822,17 +8502,17 @@ function HelpModal({T,bottom}) {
   ];
   return (
     <>
-      <button onClick={()=>{playSound("open");setOpen(true);}} className="float-action-btn" style={{position:"fixed",bottom:bottom??52,right:14,zIndex:9998,background:T.minimal?(T.dark?"#ffffff":"#202124"):T.scarlet,color:T.minimal?(T.dark?"#000000":"#ffffff"):"#fff",border:T.minimal?`1.5px solid ${T.bor}`:"none",borderRadius:"50%",width:40,height:40,fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:T.minimal?"none":"0 4px 14px rgba(0,0,0,.22)",transition:"transform .15s,filter .15s,bottom .25s",touchAction:"manipulation"}}
+      <button onClick={()=>{playSound("open");setOpen(true);}} className="float-action-btn" style={{position:"fixed",bottom:bottom??360,right:14,zIndex:9998,background:T.scarlet,color:"#fff",border:"none",borderRadius:"50%",width:40,height:40,fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.22)",transition:"transform .15s,filter .15s,bottom .25s",touchAction:"manipulation",opacity:navOpen?0:1,pointerEvents:navOpen?"none":"auto",transform:navOpen?"translateX(80px)":"translateX(0)"}}
         onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.12)";e.currentTarget.style.filter="brightness(1.1)";}}
         onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.filter="none";}}
         title="Help" data-tour="help-button"
       >?</button>
       {open&&(
         <div onClick={e=>e.target===e.currentTarget&&setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:20}}>
-          <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?16:18,width:"100%",maxWidth:480,maxHeight:"85vh",display:"flex",flexDirection:"column",animation:"fadeUp .22s ease both",overflow:"hidden"}}>
+          <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:18,width:"100%",maxWidth:480,maxHeight:"85vh",display:"flex",flexDirection:"column",animation:"fadeUp .22s ease both",overflow:"hidden"}}>
             {/* Sticky header with always-visible × */}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"18px 22px 14px",borderBottom:`1px solid ${T.bor}`,flexShrink:0,background:T.surf,borderRadius:"18px 18px 0 0",position:"sticky",top:0,zIndex:10}}>
-              <div style={{fontFamily:T.minimal?"'Google Sans',sans-serif":"'Clash Display',sans-serif",fontSize:T.minimal?17:19,fontWeight:T.minimal?600:800,color:T.txt,letterSpacing:T.minimal?"-0.3px":"normal"}}>{E("❓","?")} Help & Navigation</div>
+              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:19,fontWeight:800,color:T.txt,letterSpacing:"normal"}}>{E("❓","?")} Help & Navigation</div>
               <button onClick={()=>{playSound("click");setOpen(false);}}
                 style={{width:34,height:34,borderRadius:"50%",background:T.surfH,border:`1px solid ${T.bor}`,color:T.txt,fontSize:18,cursor:"pointer",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s",flexShrink:0}}
                 onMouseEnter={e=>{e.currentTarget.style.background=T.scarlet;e.currentTarget.style.color="#fff";e.currentTarget.style.borderColor=T.scarlet;}}
@@ -8845,13 +8525,13 @@ function HelpModal({T,bottom}) {
                 Welcome to <strong style={{color:T.accent}}>MNU&apos;s Neer Locker</strong> — your staff portal. Here&apos;s where to find everything:
               </div>
               <button onClick={()=>{setOpen(false);window._startOnboarding&&window._startOnboarding();playSound("open");}}
-                style={{width:"100%",marginBottom:14,background:T.accent,color:"#fff",border:"none",borderRadius:T.minimal?9999:12,padding:"11px 18px",fontWeight:T.minimal?500:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"opacity .15s"}}
+                style={{width:"100%",marginBottom:14,background:T.accent,color:"#fff",border:"none",borderRadius:12,padding:"11px 18px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"opacity .15s"}}
                 onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
                 onMouseLeave={e=>e.currentTarget.style.opacity="1"}
               >{E("✨","→")} Start guided walkthrough</button>
               <div style={{display:"grid",gap:10}}>
                 {items.map((item,i)=>(
-                  <div key={item.title} style={{display:"flex",gap:12,alignItems:"flex-start",background:T.surfH,borderRadius:T.minimal?12:12,border:T.minimal?`1px solid ${T.bor}`:"none",padding:"12px 14px",animation:`fadeUp .2s ${i*30}ms ease both`}}>
+                  <div key={item.title} style={{display:"flex",gap:12,alignItems:"flex-start",background:T.surfH,borderRadius:12,border:"none",padding:"12px 14px",animation:`fadeUp .2s ${i*30}ms ease both`}}>
                     <span style={{fontSize:20,flexShrink:0}}>{item.icon}</span>
                     <div>
                       <div style={{fontWeight:700,fontSize:13,color:T.txt}}>{item.title}</div>
@@ -9056,31 +8736,31 @@ function RatingModal({T,user,open,onClose}) {
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:700,padding:16,animation:"fadeUp .25s ease both"}}>
-      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:18,width:"100%",maxWidth:440,overflow:"hidden",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.4)"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:18,width:"100%",maxWidth:440,overflow:"hidden",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.4)"}}>
         {submitted?(
           <div style={{padding:"48px 28px",textAlign:"center"}}>
             <div style={{fontSize:52,marginBottom:14,animation:"tourIconPop .5s cubic-bezier(.34,1.85,.64,1)"}}>{E("🎉","★")}</div>
-            <div style={{fontSize:T.minimal?22:20,fontWeight:T.minimal?600:800,color:T.txt,marginBottom:6,letterSpacing:"-0.3px"}}>Thank you!</div>
+            <div style={{fontSize:20,fontWeight:800,color:T.txt,marginBottom:6,letterSpacing:"-0.3px"}}>Thank you!</div>
             <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>Your feedback helps make Neer Locker better for everyone.</div>
           </div>
         ):(
           <>
             <div style={{padding:"22px 24px 12px"}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                <div style={{width:44,height:44,borderRadius:T.minimal?"50%":12,background:T.accent+"18",border:T.minimal?`1px solid ${T.accent}33`:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{E("⭐","★")}</div>
+                <div style={{width:44,height:44,borderRadius:12,background:T.accent+"18",border:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{E("⭐","★")}</div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:T.minimal?19:18,fontWeight:T.minimal?600:800,color:T.txt,letterSpacing:"-0.3px",fontFamily:T.minimal?"'Google Sans',sans-serif":"inherit"}}>How's Neer Locker?</div>
+                  <div style={{fontSize:18,fontWeight:800,color:T.txt,letterSpacing:"-0.3px",fontFamily:"inherit"}}>How's Neer Locker?</div>
                   <div style={{fontSize:12,color:T.sub,marginTop:2}}>Rate your experience this month</div>
                 </div>
               </div>
-              <div style={{background:T.surfH,borderRadius:T.minimal?14:12,padding:"14px 12px",marginBottom:14}}>
+              <div style={{background:T.surfH,borderRadius:12,padding:"14px 12px",marginBottom:14}}>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",gap:4}}>
                   {[1,2,3,4,5,6,7,8,9,10].map(n=>{
                     const active=n<=(hover||rating);
                     return (
                       <button key={n} onMouseEnter={()=>setHover(n)} onMouseLeave={()=>setHover(0)}
                         onClick={()=>{setRating(n);playSound("click");haptic&&haptic("light");}}
-                        style={{background:active?T.accent:T.bg,color:active?"#fff":T.sub,border:`1.5px solid ${active?T.accent:T.bor}`,borderRadius:T.minimal?9999:8,padding:"10px 0",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .12s",transform:active?"scale(1.05)":"scale(1)"}}
+                        style={{background:active?T.accent:T.bg,color:active?"#fff":T.sub,border:`1.5px solid ${active?T.accent:T.bor}`,borderRadius:8,padding:"10px 0",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .12s",transform:active?"scale(1.05)":"scale(1)"}}
                       >{n}</button>
                     );
                   })}
@@ -9094,14 +8774,14 @@ function RatingModal({T,user,open,onClose}) {
                 <textarea value={feedback} onChange={e=>setFeedback(e.target.value)}
                   placeholder="What could we add or fix? What do you love?"
                   rows={3} maxLength={500}
-                  style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:T.minimal?12:10,color:T.txt,padding:"10px 12px",fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:72}}
+                  style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"10px 12px",fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:72}}
                 />
                 <div style={{fontSize:10,color:T.mut,textAlign:"right",marginTop:3}}>{feedback.length}/500</div>
               </div>
             </div>
             <div style={{display:"flex",gap:10,padding:"0 20px 20px"}}>
               <button onClick={later} disabled={submitting} style={{flex:1,background:"none",color:T.sub,border:`1px solid ${T.bor}`,borderRadius:9999,padding:"11px 18px",fontWeight:500,fontSize:13,cursor:submitting?"not-allowed":"pointer",fontFamily:"inherit",opacity:submitting?0.5:1}}>Maybe later</button>
-              <button onClick={submit} disabled={rating===0||submitting} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"11px 18px",fontWeight:T.minimal?500:700,fontSize:13,cursor:(rating===0||submitting)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(rating===0||submitting)?0.4:1,transition:"opacity .15s"}}>{submitting?"Sending…":"Submit rating"}</button>
+              <button onClick={submit} disabled={rating===0||submitting} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"11px 18px",fontWeight:700,fontSize:13,cursor:(rating===0||submitting)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(rating===0||submitting)?0.4:1,transition:"opacity .15s"}}>{submitting?"Sending…":"Submit rating"}</button>
             </div>
           </>
         )}
@@ -9172,10 +8852,10 @@ function PfpUploadModal({T,user,emps,setEmps,open,onClose,toast}) {
 
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:900,padding:16,animation:"fadeUp .25s ease both"}}>
-      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:T.minimal?20:16,width:"100%",maxWidth:380,padding:22,animation:"tourCardIn .3s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.4)"}}>
+      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:16,width:"100%",maxWidth:380,padding:22,animation:"tourCardIn .3s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.4)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
           <div>
-            <div style={{fontWeight:T.minimal?600:800,fontSize:17,color:T.txt,letterSpacing:"-0.3px"}}>Profile Picture</div>
+            <div style={{fontWeight:800,fontSize:17,color:T.txt,letterSpacing:"-0.3px"}}>Profile Picture</div>
             <div style={{fontSize:12,color:T.sub,marginTop:2}}>Saves to cloud · visible to your team</div>
           </div>
           <button onClick={onClose} style={{background:T.surfH,border:`1px solid ${T.bor}`,color:T.txt,width:30,height:30,borderRadius:"50%",fontSize:16,cursor:"pointer",fontFamily:"inherit"}}>×</button>
@@ -9202,7 +8882,7 @@ function PfpUploadModal({T,user,emps,setEmps,open,onClose,toast}) {
         </div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={onClose} disabled={uploading} style={{flex:1,background:"none",color:T.sub,border:`1px solid ${T.bor}`,borderRadius:9999,padding:"10px 16px",fontWeight:500,fontSize:12,cursor:uploading?"not-allowed":"pointer",fontFamily:"inherit",opacity:uploading?0.5:1}}>Cancel</button>
-          <button onClick={upload} disabled={!file||uploading} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 16px",fontWeight:T.minimal?500:700,fontSize:12,cursor:(!file||uploading)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(!file||uploading)?0.4:1}}>{uploading?"Uploading…":"Save to Cloud"}</button>
+          <button onClick={upload} disabled={!file||uploading} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"10px 16px",fontWeight:700,fontSize:12,cursor:(!file||uploading)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(!file||uploading)?0.4:1}}>{uploading?"Uploading…":"Save to Cloud"}</button>
         </div>
       </div>
     </div>
