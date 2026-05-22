@@ -350,6 +350,37 @@ const okEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e||"").trim());
 const initial = e => String(e||"").trim()[0]?.toUpperCase()||"?";
 const daysLeft= d => { if(!d) return null; const diff=Math.ceil((new Date(d)-Date.now())/86400000); return diff; };
 
+// ─── ICON HELPERS ─────────────────────────────────────────────────────────────
+const IC = {
+  check:    (s=12,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+  chat:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  bell:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+  bolt:     (s=16,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+  star:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  trash:    (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>,
+  clip:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>,
+  cal:      (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+  monitor:  (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
+  cpu:      (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>,
+  wifi:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>,
+  box:      (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,
+  warn:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+  info:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+  shield:   (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+  sun:      (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+  moon:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+  halfMoon: (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg>,
+  refresh:  (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>,
+  phone:    (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
+  tablet:   (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,
+  people:   (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.87"/></svg>,
+  lock:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+  key:      (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6"/><path d="M15.5 7.5l3 3L22 7l-3-3"/></svg>,
+  person:   (s=16,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>,
+  mega:     (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>,
+  spacious: (s=18,c="currentColor")=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="7" rx="2"/><rect x="3" y="14" width="18" height="7" rx="2"/></svg>,
+};
+
 // ─── STORAGE ──────────────────────────────────────────────────────────────────
 // ─── SUPABASE CLIENT ─────────────────────────────────────────────────────────
 const SUPABASE_URL = "https://ocpzvyjbuhznnhxsxlvy.supabase.co";
@@ -1013,7 +1044,7 @@ function LoginBriefing({user,tasks,anns,dms,emps,T,onClose}) {
 
         {unreadDMs>0&&(
           <div style={{background:`${T.blue}18`,border:`1px solid ${T.blue}44`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:18}}>💬</span>
+            {IC.chat(18,T.blue)}
             <div style={{fontSize:13,color:T.txt,fontWeight:700}}>You have <span style={{color:T.blue}}>{unreadDMs} unread message{unreadDMs!==1?"s":""}</span></div>
           </div>
         )}
@@ -1607,7 +1638,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
             onMouseLeave={ev=>{if(selected?.id!==GROUP_ID)ev.currentTarget.style.background="transparent";}}
           >
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:36,height:36,borderRadius:"50%",background:`${T.scarlet}22`,border:`2px solid ${T.scarlet}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>💬</div>
+              <div style={{width:36,height:36,borderRadius:"50%",background:`${T.scarlet}22`,border:`2px solid ${T.scarlet}55`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{IC.chat(20,T.scarlet)}</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={{fontSize:14,fontWeight:700,color:T.txt}}>{GROUP_NAME}</span>
@@ -1735,7 +1766,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
         </div>
       ):(
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",color:T.mut,flexDirection:"column",gap:10}}>
-          <span style={{fontSize:36}}>💬</span>
+          {IC.chat(40,T.sub)}
           <span style={{fontSize:14,fontWeight:600}}>Select a conversation</span>
         </div>
       )}
@@ -1780,21 +1811,21 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
         <div onClick={()=>setShowCtx(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{background:T.surf,borderRadius:16,padding:8,minWidth:200,boxShadow:"0 12px 40px rgba(0,0,0,.25)"}}>
             <div style={{padding:"8px 14px",fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em"}}>{task.title.slice(0,30)}</div>
-            {!isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.ok,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>✅ Mark Complete</button>}
+            {!isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.ok,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>{IC.check(16,T.ok)} Mark Complete</button>}
             {isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.sub,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>↩ Mark Incomplete</button>}
-            <button onClick={()=>{setShowCtx(false);setExpanded(e=>!e);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.txt,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>📋 {expanded?"Hide":"View"} Details</button>
-            {canManage&&<button onClick={()=>{setShowCtx(false);onDelete(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.err,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>🗑️ Delete Task</button>}
+            <button onClick={()=>{setShowCtx(false);setExpanded(e=>!e);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.txt,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>{IC.clip(16,T.txt)} {expanded?"Hide":"View"} Details</button>
+            {canManage&&<button onClick={()=>{setShowCtx(false);onDelete(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.err,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>{IC.trash(16,T.err)} Delete Task</button>}
           </div>
         </div>
       )}
       <div style={{position:"relative",overflow:"hidden",animation:_anim}}>
         <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"space-between",pointerEvents:"none"}}>
           <div style={{background:"#16a34a",width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX>20?Math.min((swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:"16px 0 0 16px"}}>
-            <span style={{fontSize:22,color:"#fff"}}>✓</span>
+            {IC.check(22,"#fff")}
           </div>
           {canManage&&(
             <div style={{background:T.err,width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX<-20?Math.min((-swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:"0 16px 16px 0"}}>
-              <span style={{fontSize:22,color:"#fff"}}>🗑</span>
+              {IC.trash(22,"#fff")}
             </div>
           )}
         </div>
@@ -1911,7 +1942,7 @@ function TechMetrics({T}) {
   );
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}} className="two-col">
-      {[{label:"CPU Usage",val:cpu,color:T.blue,icon:"💻"},{label:"Memory",val:mem,color:"#7c3aed",icon:"🧠"},{label:"API Response",val:Math.round(ping/2),raw:`${ping}ms`,color:T.ok,icon:"📡"}].map(m=>(
+      {[{label:"CPU Usage",val:cpu,color:T.blue,icon:IC.monitor(14,T.blue)},{label:"Memory",val:mem,color:"#7c3aed",icon:IC.cpu(14,"#7c3aed")},{label:"API Response",val:Math.round(ping/2),raw:`${ping}ms`,color:T.ok,icon:IC.wifi(14,T.ok)}].map(m=>(
           <div key={m.label} style={{background:T.card,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:6}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <span style={{fontSize:12,color:T.sub,fontWeight:700}}>{m.icon} {m.label}</span>
@@ -3646,7 +3677,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
               FINN &mdash; QUICK NAVIGATE
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),label:"Messages",page:"dms"}].map(s=>(
+              {[{icon:IC.check(18,T.ok),label:"Tasks",page:"tasks"},{icon:IC.box(18,T.txt),label:"Inventory",page:"inv"},{icon:IC.bell(18,T.txt),label:"Announcements",page:"anns"},{icon:IC.chat(18,T.txt),label:"Messages",page:"dms"}].map(s=>(
                 <button key={s.page} onClick={()=>{setPage(s.page);onClose();playSound("click");}}
                   style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit",color:T.txt,fontSize:13,fontWeight:600,transition:"all .15s"}}
                   onMouseEnter={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.borderColor=T.accent+"66";}}
@@ -3679,7 +3710,7 @@ function XPToastList({items}) {
     <div style={{position:"fixed",bottom:80,right:16,zIndex:9999,display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end",pointerEvents:"none"}}>
       {items.map(t=>(
         <div key={t.id} style={{background:"linear-gradient(135deg,#16a34a,#15803d)",border:"1px solid #86efac",color:"#fff",borderRadius:10,padding:"7px 14px",fontWeight:800,fontSize:13,display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 16px rgba(0,0,0,.2)",animation:"finnSlideUp .3s cubic-bezier(.23,1,.32,1) both"}}>
-          <span style={{fontSize:16}}>⚡</span>
+          {IC.bolt(16)}
           <span>+{t.amount} XP</span>
           {t.label&&<span style={{fontSize:11,opacity:0.85,fontWeight:600}}>· {t.label}</span>}
         </div>
@@ -3961,7 +3992,7 @@ function LeaderboardPage({emps,progress,user,T,onShop,onViewProfile}) {
       {eotm&&(
         <div style={{background:`linear-gradient(135deg,${eotm.lv.color}22,${eotm.lv.color}11)`,border:`2px solid ${eotm.lv.color}55`,borderRadius:18,padding:20,marginBottom:20,textAlign:"center",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${eotm.lv.color},${T.scarlet})`}}/>
-          <div style={{fontSize:28,marginBottom:6}}>⭐</div>
+          <div style={{marginBottom:6,display:"flex",justifyContent:"center"}}>{IC.star(28,"#f59e0b")}</div>
           <div style={{fontSize:11,fontWeight:800,color:T.sub,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:6}}>Employee of the Month</div>
           <LevelLogo level={eotm.lv.level} color={eotm.lv.color} size={56}/>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,marginTop:10}}>{eotm.name}</div>
@@ -4005,7 +4036,7 @@ function LeaderboardPage({emps,progress,user,T,onShop,onViewProfile}) {
                       </div>
                     );
                   })()}
-                  {isEotm&&<span style={{fontSize:14}}>⭐</span>}
+                  {isEotm&&IC.star(14,"#f59e0b")}
                   {isMe&&<span style={{background:T.scarlet,color:"#fff",borderRadius:4,padding:"1px 6px",fontSize:10,fontWeight:800}}>YOU</span>}
                 </div>
                 <div style={{fontSize:11,color:e.lv.color,fontWeight:700,marginTop:1}}>{e.lv.title} · Level {e.lv.level}</div>
@@ -4053,7 +4084,7 @@ function NotifBell({T,anns,dms,tasks,user,onOpen}) {
       onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
       onMouseLeave={e=>e.currentTarget.style.background="none"}
     >
-      <span style={{fontSize:18}}>🔔</span>
+      {IC.bell(18,"currentColor")}
       {count>0&&<div style={{position:"absolute",top:0,right:0,background:T.scarlet,color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{count>9?"9+":count}</div>}
     </button>
   );
@@ -4065,9 +4096,9 @@ function NotifCenter({T,anns,dms,tasks,user,emps,onClose,setPage,onDismiss}) {
   const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).slice(0,5);
   const overdue=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id)&&t.dueDate&&new Date(t.dueDate)<new Date()).slice(0,3);
   const items=[
-    ...overdue.map(t=>({id:"t"+t.id,icon:"⚠️",title:"Overdue: "+t.title,sub:"Due "+new Date(t.dueDate).toLocaleDateString(),color:T.err,action:()=>{setPage("tasks");onClose();}})),
-    ...unreadDMs.map(d=>({id:"d"+d.id,icon:"💬",title:emps.find(e=>e.id===d.from)?.name||"Message",sub:d.text.slice(0,50),color:T.blue,action:()=>{setPage("dms");onClose();}})),
-    ...activeAnns.map(a=>({id:"a"+a.id,icon:({info:"ℹ️",warn:"⚠️",danger:"🚨"})[a.level]||"🔔",title:a.msg.slice(0,60),sub:"Announcement",color:T.scarlet,action:()=>{onDismiss(a.id);}})),
+    ...overdue.map(t=>({id:"t"+t.id,icon:IC.warn(18,T.err),title:"Overdue: "+t.title,sub:"Due "+new Date(t.dueDate).toLocaleDateString(),color:T.err,action:()=>{setPage("tasks");onClose();}})),
+    ...unreadDMs.map(d=>({id:"d"+d.id,icon:IC.chat(18,T.blue),title:emps.find(e=>e.id===d.from)?.name||"Message",sub:d.text.slice(0,50),color:T.blue,action:()=>{setPage("dms");onClose();}})),
+    ...activeAnns.map(a=>({id:"a"+a.id,icon:({info:IC.info(18,T.scarlet),warn:IC.warn(18,T.warn),danger:IC.shield(18,T.err)})[a.level]||IC.bell(18,T.scarlet),title:a.msg.slice(0,60),sub:"Announcement",color:T.scarlet,action:()=>{onDismiss(a.id);}})),
   ];
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,0.3)",backdropFilter:"blur(4px)",display:"flex",justifyContent:"flex-end",alignItems:"flex-start",paddingTop:60,animation:"fadeIn .15s ease"}}>
@@ -4085,7 +4116,7 @@ function NotifCenter({T,anns,dms,tasks,user,emps,onClose,setPage,onDismiss}) {
                 onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
                 onMouseLeave={e=>e.currentTarget.style.background="none"}
               >
-                <span style={{fontSize:20,flexShrink:0}}>{item.icon}</span>
+                <span style={{flexShrink:0,display:"flex",alignItems:"center"}}>{item.icon}</span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,fontWeight:700,color:T.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.title}</div>
                   <div style={{fontSize:11,color:T.sub,marginTop:2}}>{item.sub}</div>
@@ -6126,7 +6157,7 @@ export default function App() {
                                   onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
                                   onMouseLeave={e=>e.currentTarget.style.opacity="1"}
                                 >
-                                  <span>📋</span> v{a.patchVersion} {a.patchBuild} Release Notes
+                                  {IC.clip(13,lc)} v{a.patchVersion} {a.patchBuild} Release Notes
                                 </summary>
                                 <div style={{marginTop:8,background:T.bg,borderRadius:10,padding:"10px 14px",display:"grid",gap:5}}>
                                   {a.patchNotes.map((note,ni)=>(
@@ -6180,7 +6211,7 @@ export default function App() {
               {page==="schedule"&&(
                 <div className="fu" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",marginTop:48,padding:24}}>
                   <div style={{background:T.card,border:"1px solid "+T.bor,borderRadius:20,padding:32,maxWidth:380,width:"100%",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
-                    <div style={{fontSize:52}}>📅</div>
+                    <div style={{display:"flex",justifyContent:"center"}}>{IC.cal(52,T.sub)}</div>
                     <div>
                       <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,marginBottom:8}}>Staff Schedule</div>
                       {scheduleUrl?(
@@ -6267,15 +6298,15 @@ export default function App() {
                         <Hr T={T}/>
                         <div>
                           <Inp T={T} label="NICKNAME (only you can see this)" placeholder="Add a nickname…" value={form.pName??""} onChange={e=>{setNameSaved(false);setForm(p=>({...p,pName:e.target.value}));}}/>
-                          <div style={{fontSize:11,color:T.sub,marginTop:4,lineHeight:1.5}}>
-                            🔒 Your nickname is stored on this device only and is never shown to other staff members. Your display name shown to others is set by your manager.
+                          <div style={{fontSize:11,color:T.sub,marginTop:4,lineHeight:1.5,display:"flex",alignItems:"flex-start",gap:5}}>
+                            <span style={{flexShrink:0,marginTop:1}}>{IC.lock(11,T.sub)}</span> Your nickname is stored on this device only and is never shown to other staff members. Your display name shown to others is set by your manager.
                           </div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
                           <Btn T={T} sm onClick={saveName}>Save Nickname</Btn>
                           {nameSaved&&(
                             <div style={{display:"flex",alignItems:"center",gap:5,animation:"fadeUp .2s ease",color:T.ok,fontWeight:700,fontSize:13}}>
-                              <span style={{fontSize:16}}>✅</span> Nickname saved!
+                              {IC.check(16,T.ok)} Nickname saved!
                             </div>
                           )}
                         </div>
@@ -6350,7 +6381,7 @@ export default function App() {
                                           style={{display:"flex",alignItems:"center",gap:6,background:isEquipped?b.color+"22":T.bg,border:`1.5px solid ${isEquipped?b.color:T.bor}`,borderRadius:9999,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",opacity:equippedBadges.length>=5&&!isEquipped?0.5:1}}>
                                           <span style={{fontSize:16}}>{b.icon}</span>
                                           <span style={{fontSize:12,fontWeight:700,color:isEquipped?b.color:T.txt}}>{b.name}</span>
-                                          {isEquipped&&<span style={{fontSize:10,color:b.color,fontWeight:800}}>✓</span>}
+                                          {isEquipped&&IC.check(10,b.color)}
                                         </button>
                                       );
                                     })}
@@ -6374,7 +6405,7 @@ export default function App() {
                                       <button key={id} onClick={()=>{playSound("click");saveNameColor(id);}}
                                         style={{flex:1,background:nameColorId===id?T.accent+"18":T.bg,border:`1.5px solid ${nameColorId===id?T.accent:T.bor}`,borderRadius:9999,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:id==="name_color"?T.accent:T.txt,transition:"all .15s"}}>
                                         {id==="base"?"Default":E("✨","★")+" Accent Color"}
-                                        {nameColorId===id&&<span style={{marginLeft:4,fontSize:10,fontWeight:800,color:T.accent}}>✓</span>}
+                                        {nameColorId===id&&IC.check(10,T.accent)}
                                       </button>
                                     ))}
                                   </div>
@@ -6396,7 +6427,7 @@ export default function App() {
                                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                                       <button onClick={()=>{playSound("click");saveEquippedFrame("");}}
                                         style={{background:!equippedFrame?T.accent+"18":T.bg,border:`1.5px solid ${!equippedFrame?T.accent:T.bor}`,borderRadius:9999,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:T.txt,transition:"all .15s"}}>
-                                        None {!equippedFrame&&<span style={{color:T.accent,marginLeft:4}}>✓</span>}
+                                        None {!equippedFrame&&IC.check(10,T.accent)}
                                       </button>
                                       {unlockedFrames.map(id=>{
                                         const fi=frameInfo[id];if(!fi) return null;
@@ -6405,7 +6436,7 @@ export default function App() {
                                           <button key={id} onClick={()=>{playSound("click");saveEquippedFrame(id);}}
                                             style={{background:isEquipped?fi.color+"22":T.bg,border:`1.5px solid ${isEquipped?fi.color:T.bor}`,borderRadius:9999,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:isEquipped?fi.color:T.txt,transition:"all .15s",display:"flex",alignItems:"center",gap:6}}>
                                             <span style={{width:10,height:10,borderRadius:"50%",background:fi.color,boxShadow:`0 0 6px ${fi.color}`}}/>
-                                            {fi.label} {isEquipped&&<span>✓</span>}
+                                            {fi.label} {isEquipped&&IC.check(10,fi.color)}
                                           </button>
                                         );
                                       })}
@@ -6446,7 +6477,7 @@ export default function App() {
                           {pinSaved&&(
                             <div style={{display:"flex",alignItems:"center",gap:10,background:`${T.ok}15`,border:`1px solid ${T.ok}55`,borderRadius:10,padding:"10px 14px",animation:"fadeUp .25s cubic-bezier(.23,1,.32,1)"}}>
                               <div style={{width:32,height:32,borderRadius:"50%",background:T.ok,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"bounceIn .4s cubic-bezier(.34,1.56,.64,1)"}}>
-                                <span style={{fontSize:16,color:"#fff"}}>✓</span>
+                                {IC.check(16,"#fff")}
                               </div>
                               <div>
                                 <div style={{fontWeight:800,fontSize:14,color:T.ok}}>PIN saved successfully!</div>
@@ -6457,7 +6488,7 @@ export default function App() {
                         </div>
                         {/* Biometric / Passkey registration */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
-                          <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>🔑 Face ID / Touch ID / Fingerprint</div>
+                          <div style={{fontWeight:700,color:T.txt,marginBottom:4,display:"flex",alignItems:"center",gap:6}}>{IC.key(16,T.txt)} Face ID / Touch ID / Fingerprint</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:10,lineHeight:1.5}}>
                             {WA.supported()
                               ?"Register your device biometric to sign in without typing your email."
@@ -6501,14 +6532,14 @@ export default function App() {
                             </div>
                           )}
                           {localStorage.getItem("nl3-passkey-cred-"+user?.id)&&(
-                            <div style={{marginTop:8,fontSize:11,color:T.ok,fontWeight:600}}>✓ Biometric login is active on this device</div>
+                            <div style={{marginTop:8,fontSize:11,color:T.ok,fontWeight:600,display:"flex",alignItems:"center",gap:4}}>{IC.check(11,T.ok)} Biometric login is active on this device</div>
                           )}
                         </div>
 
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:8}}>Security Info</div>
                           {["Rate limiting — 5 attempts → 5 min lockout","Input sanitization on all fields","Session cleared on sign-out","Auto-save on logout","Auto logout after 30 min inactivity"].map(f=>(
-                            <div key={f} style={{fontSize:T.fs.sm,color:T.sub,padding:"3px 0",display:"flex",gap:8}}><span style={{color:T.ok}}>✓</span>{f}</div>
+                            <div key={f} style={{fontSize:T.fs.sm,color:T.sub,padding:"3px 0",display:"flex",gap:8,alignItems:"center"}}>{IC.check(12,T.ok)}{f}</div>
                           ))}
                         </div>
                       </div>
@@ -6546,9 +6577,9 @@ export default function App() {
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Choose your theme or follow your device setting.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                             {[
-                              {key:"system",label:"System",icon:"🌓",desc:"Follows your device"},
-                              {key:"light", label:"Light",  icon:"☀️", desc:"Always light"},
-                              {key:"dark",  label:"Dark",   icon:"🌙", desc:"Always dark"},
+                              {key:"system",label:"System",icon:IC.halfMoon(20,T.txt),desc:"Follows your device"},
+                              {key:"light", label:"Light",  icon:IC.sun(20,T.txt),    desc:"Always light"},
+                              {key:"dark",  label:"Dark",   icon:IC.moon(20,T.txt),   desc:"Always dark"},
                             ].map(opt=>{
                               const current=LS.get('nl3-dark')===null?"system":dark?"dark":"light";
                               const active=current===opt.key;
@@ -6563,10 +6594,10 @@ export default function App() {
                                     applyTheme(opt.key==="dark",compact);
                                   }
                                 }} style={{background:active?T.accent+"18":"none",border:`2px solid ${active?T.accent:T.bor}`,borderRadius:12,padding:"12px 8px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",transition:"all .2s"}}>
-                                  <div style={{fontSize:20,marginBottom:4}}>{opt.icon}</div>
+                                  <div style={{marginBottom:4,display:"flex",justifyContent:"center"}}>{opt.icon}</div>
                                   <div style={{fontWeight:700,color:active?T.accent:T.txt,fontSize:13}}>{opt.label}</div>
                                   <div style={{fontSize:10,color:T.sub,marginTop:2}}>{opt.desc}</div>
-                                  {active&&<div style={{fontSize:10,color:T.accent,fontWeight:800,marginTop:4}}>✓ Active</div>}
+                                  {active&&<div style={{fontSize:10,color:T.accent,fontWeight:800,marginTop:4,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>{IC.check(10,T.accent)} Active</div>}
                                 </button>
                               );
                             })}
@@ -6578,7 +6609,7 @@ export default function App() {
                           <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Layout Density</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>How much information is shown on screen at once.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                            {[{k:false,label:"Comfortable",icon:"🛋️",desc:"More spacing, easier to read"},{k:true,label:"Compact",icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),desc:"More data, tighter layout"}].map(opt=>(
+                            {[{k:false,label:"Comfortable",icon:IC.spacious(18,T.txt),desc:"More spacing, easier to read"},{k:true,label:"Compact",icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),desc:"More data, tighter layout"}].map(opt=>(
                               <button key={String(opt.k)} onClick={()=>{playSound("click");applyTheme(dark,opt.k);}} style={{background:compact===opt.k?T.accent+"18":"none",border:`2px solid ${compact===opt.k?T.scarlet:T.bor}`,borderRadius:12,padding:"12px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all .2s"}}>
                                 <div style={{fontSize:20,marginBottom:4}}>{opt.icon}</div>
                                 <div style={{fontWeight:700,color:compact===opt.k?T.scarlet:T.txt,fontSize:13}}>{opt.label}</div>
@@ -6594,19 +6625,19 @@ export default function App() {
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12,lineHeight:1.5}}>Choose how the app scales to your device. This adjusts font sizes and tap target sizes across the whole app.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                             {[
-                              {mode:"auto",   icon:"🔄", label:"Auto",    desc:"Detects your screen size automatically"},
-                              {mode:"mobile", icon:"📱", label:"Mobile",  desc:"Larger text & buttons, optimized for touch"},
-                              {mode:"tablet", icon:"📟", label:"Tablet",  desc:"Medium size, great for iPad & tablet web app"},
-                              {mode:"desktop",icon:"🖥️", label:"Desktop", desc:"Compact, more information visible at once"},
+                              {mode:"auto",   icon:IC.refresh(20,T.txt), label:"Auto",    desc:"Detects your screen size automatically"},
+                              {mode:"mobile", icon:IC.phone(20,T.txt),   label:"Mobile",  desc:"Larger text & buttons, optimized for touch"},
+                              {mode:"tablet", icon:IC.tablet(20,T.txt),  label:"Tablet",  desc:"Medium size, great for iPad & tablet web app"},
+                              {mode:"desktop",icon:IC.monitor(20,T.txt), label:"Desktop", desc:"Compact, more information visible at once"},
                             ].map(opt=>{
                               const active=deviceMode===opt.mode;
                               return (
                                 <button key={opt.mode} onClick={()=>applyDeviceMode(opt.mode)}
                                   style={{background:active?T.accent+"18":"none",border:`2px solid ${active?T.accent:T.bor}`,borderRadius:12,padding:"12px 8px",cursor:"pointer",textAlign:"center",fontFamily:"inherit",transition:"all .2s"}}>
-                                  <div style={{fontSize:22,marginBottom:4}}>{opt.icon}</div>
+                                  <div style={{marginBottom:4,display:"flex",justifyContent:"center"}}>{opt.icon}</div>
                                   <div style={{fontWeight:700,color:active?T.accent:T.txt,fontSize:13}}>{opt.label}</div>
                                   <div style={{fontSize:10,color:T.sub,marginTop:3,lineHeight:1.4}}>{opt.desc}</div>
-                                  {active&&<div style={{marginTop:6,fontSize:10,color:T.accent,fontWeight:800}}>✓ Active</div>}
+                                  {active&&<div style={{marginTop:6,fontSize:10,color:T.accent,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:3}}>{IC.check(10,T.accent)} Active</div>}
                                 </button>
                               );
                             })}
@@ -7133,12 +7164,12 @@ export default function App() {
               <div style={{flex:1,overflowY:"auto",padding:"10px 6px",display:"flex",flexDirection:"column",gap:2}}>
                 {[
                   {key:"overview", icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>), label:"Overview"},
-                  {key:"staff",    icon:"👥", label:"Staff & Access"},
-                  {key:"xp",      icon:"⭐", label:"XP & Badges"},
+                  {key:"staff",    icon:IC.people(16,"currentColor"), label:"Staff & Access"},
+                  {key:"xp",      icon:IC.star(16,"currentColor"),  label:"XP & Badges"},
                   {key:"content",  icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>), label:"Content"},
-                  {key:"messages", icon:"💬", label:"Messages"},
-                  {key:"system",   icon:"🛡️", label:"System"},
-                  {key:"ratings",  icon:"⭐", label:"Ratings"},
+                  {key:"messages", icon:IC.chat(16,"currentColor"),   label:"Messages"},
+                  {key:"system",   icon:IC.shield(16,"currentColor"), label:"System"},
+                  {key:"ratings",  icon:IC.star(16,"currentColor"),   label:"Ratings"},
                 ].map(s=>(
                   <button key={s.key} onClick={()=>{
                       setTechSection(s.key);playSound("click");
@@ -7157,7 +7188,7 @@ export default function App() {
                       fontSize:13,textAlign:"left",width:"100%",flexShrink:0,
                       whiteSpace:"nowrap",
                     }}>
-                    <span style={{fontSize:16,flexShrink:0,width:22,textAlign:"center"}}>{s.icon}</span>
+                    <span style={{flexShrink:0,width:22,display:"flex",alignItems:"center",justifyContent:"center"}}>{s.icon}</span>
                     {techSidebarOpen&&<span style={{transition:"opacity .2s",opacity:techSidebarOpen?1:0}}>{s.label}</span>}
                   </button>
                 ))}
@@ -7223,14 +7254,14 @@ export default function App() {
                 setTimeout(()=>setTechAction(""),4000);
                 playSound("delete");
                 toast("All XP reset","warn");
-              }}>🔄 Reset All XP</Btn>
+              }}>{IC.refresh(14,"currentColor")} Reset All XP</Btn>
             </div>
 
             {/* ── XP GRANT PANEL ─────────────────────────────────────────── */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
 <div id="tech-section-xp" style={{scrollMarginTop:90}}/>
               <div style={{fontWeight:700,color:T.txt,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:18}}>⭐</span> Grant XP to Staff
+                {IC.star(18,"#f59e0b")} Grant XP to Staff
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}} className="two-col">
                 {/* Target selector */}
@@ -7713,11 +7744,11 @@ export default function App() {
                       <div key={t.id} onClick={()=>{setSelectedTasks(prev=>{const n=new Set(prev);checked?n.delete(t.id):n.add(t.id);return n;});}}
                         style={{display:"flex",alignItems:"center",gap:10,background:checked?T.accent+"18":T.bg,border:`1px solid ${checked?T.accent+"66":T.bor}`,borderRadius:10,padding:"8px 12px",cursor:"pointer",transition:"all .15s"}}>
                         <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${checked?T.scarlet:T.bor}`,background:checked?(T.scarlet):"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                          {checked&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
+                          {checked&&IC.check(11,"#fff")}
                         </div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:13,fontWeight:700,color:t.done?T.mut:T.txt,textDecoration:t.done?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                          <div style={{fontSize:11,color:T.sub,marginTop:1}}>👤 {assignee} · {t.priority} · {t.done?"Done":"Open"}</div>
+                          <div style={{fontSize:11,color:T.sub,marginTop:1,display:"flex",alignItems:"center",gap:4}}>{IC.person(11,T.sub)} {assignee} · {t.priority} · {t.done?"Done":"Open"}</div>
                         </div>
                       </div>
                     );
@@ -7730,7 +7761,7 @@ export default function App() {
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
-                  <div style={{fontWeight:700,color:T.txt}}>📋 App Patch Notes — v{VERSION}</div>
+                  <div style={{fontWeight:700,color:T.txt,display:"flex",alignItems:"center",gap:6}}>{IC.clip(15,T.txt)} App Patch Notes — v{VERSION}</div>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     <button onClick={()=>setSelPatchNotes(new Set((PATCH_NOTES[VERSION]||[]).map((_,i)=>i)))} style={{background:T.surfH,color:T.sub,border:`1px solid ${T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>All</button>
                     <button onClick={()=>setSelPatchNotes(new Set())} style={{background:T.surfH,color:T.sub,border:`1px solid ${T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>None</button>
@@ -7741,7 +7772,7 @@ export default function App() {
                       const ann={id:uid(),msg:`📋 v${VERSION} ${BUILD_TAG} — MNU Neer Locker Update`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:sel,patchVersion:VERSION,patchBuild:BUILD_TAG};
                       saveAnns([ann,...anns]);
                       toast(`Announced ${sel.length} note${sel.length!==1?"s":""}! ✅`);
-                    }}>📢 Announce ({selPatchNotes.size})</Btn>
+                    }}>{IC.mega(14,"currentColor")} Announce ({selPatchNotes.size})</Btn>
                   </div>
                 </div>
                 {/* Selectable notes list */}
@@ -7750,7 +7781,7 @@ export default function App() {
                     <div key={i} onClick={()=>{setSelPatchNotes(prev=>{const n=new Set(prev);n.has(i)?n.delete(i):n.add(i);return n;});}}
                       style={{display:"flex",alignItems:"flex-start",gap:8,padding:"5px 10px",cursor:"pointer",borderRadius:8,background:selPatchNotes.has(i)?T.accent+"14":"transparent",transition:"background .12s"}}>
                       <div style={{width:15,height:15,borderRadius:4,border:`2px solid ${selPatchNotes.has(i)?T.accent:T.bor}`,background:selPatchNotes.has(i)?T.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
-                        {selPatchNotes.has(i)&&<span style={{color:"#fff",fontSize:9,fontWeight:900}}>✓</span>}
+                        {selPatchNotes.has(i)&&IC.check(9,"#fff")}
                       </div>
                       <span style={{fontSize:12,color:selPatchNotes.has(i)?T.txt:T.sub,lineHeight:1.5}}>{note}</span>
                     </div>
@@ -7764,14 +7795,14 @@ export default function App() {
                     onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}
                   >
-                    <span style={{fontSize:16}}>{ver===VERSION?"🆕":"📦"}</span>
+                    <span style={{display:"flex",alignItems:"center"}}>{ver===VERSION?IC.star(14,T.scarlet):IC.box(14,T.sub)}</span>
                     <span>v{ver} {ver===VERSION?BUILD_TAG:""}</span>
                     {ver===VERSION&&<span style={{background:T.scarlet,color:"#fff",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:800}}>CURRENT</span>}
                   </summary>
                   <div style={{padding:"6px 14px 12px",borderTop:`1px solid ${T.bor}`}}>
                     {notes.map((note,i)=>(
                       <div key={i} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:i<notes.length-1?`1px solid ${T.bor}33`:"none",alignItems:"flex-start"}}>
-                        <span style={{color:T.ok,fontWeight:800,fontSize:12,flexShrink:0,marginTop:1}}>✓</span>
+                        <span style={{flexShrink:0,marginTop:1,display:"flex"}}>{IC.check(12,T.ok)}</span>
                         <span style={{fontSize:12,color:T.sub,lineHeight:1.5}}>{note}</span>
                       </div>
                     ))}
@@ -7851,7 +7882,7 @@ export default function App() {
                   <div style={{padding:"6px 14px 12px",borderTop:`1px solid ${T.bor}`}}>
                     {notes.map((note,i)=>(
                       <div key={i} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:i<notes.length-1?`1px solid ${T.bor}33`:"none",alignItems:"flex-start"}}>
-                        <span style={{color:"#1e7fa8",fontWeight:800,fontSize:12,flexShrink:0,marginTop:1}}>✓</span>
+                        <span style={{flexShrink:0,marginTop:1,display:"flex"}}>{IC.check(12,"#1e7fa8")}</span>
                         <span style={{fontSize:12,color:T.sub,lineHeight:1.5}}>{note}</span>
                       </div>
                     ))}
@@ -7892,15 +7923,15 @@ export default function App() {
                 return (
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
                     {[
-                      {label:"Logins",val:logins,icon:"✅",color:"#16a34a"},
-                      {label:"Failed PINs",val:failed,icon:"🔐",color:failed>0?T.warn:"#16a34a"},
-                      {label:"Lockouts",val:locked,icon:"🔒",color:locked>0?T.err:"#16a34a"},
-                      {label:"Anomalies",val:anomalies,icon:"⚠️",color:anomalies>0?T.warn:"#16a34a"},
-                      {label:"Injections",val:injections,icon:"🚨",color:injections>0?T.err:"#16a34a"},
-                      {label:"Log entries",val:log.length,icon:"📋",color:T.sub},
+                      {label:"Logins",val:logins,icon:IC.check(18,"#16a34a"),color:"#16a34a"},
+                      {label:"Failed PINs",val:failed,icon:IC.key(18,failed>0?T.warn:"#16a34a"),color:failed>0?T.warn:"#16a34a"},
+                      {label:"Lockouts",val:locked,icon:IC.lock(18,locked>0?T.err:"#16a34a"),color:locked>0?T.err:"#16a34a"},
+                      {label:"Anomalies",val:anomalies,icon:IC.warn(18,anomalies>0?T.warn:"#16a34a"),color:anomalies>0?T.warn:"#16a34a"},
+                      {label:"Injections",val:injections,icon:IC.shield(18,injections>0?T.err:"#16a34a"),color:injections>0?T.err:"#16a34a"},
+                      {label:"Log entries",val:log.length,icon:IC.clip(18,T.sub),color:T.sub},
                     ].map(s=>(
                       <div key={s.label} style={{background:T.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid "+T.bor}}>
-                        <div style={{fontSize:18}}>{s.icon}</div>
+                        <div style={{display:"flex",justifyContent:"center"}}>{s.icon}</div>
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:20,fontWeight:800,color:s.color}}>{s.val}</div>
                         <div style={{fontSize:10,color:T.sub,fontWeight:600}}>{s.label}</div>
                       </div>
