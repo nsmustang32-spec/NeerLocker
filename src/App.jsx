@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
-const VERSION   = "1.9.1";
+const VERSION   = "1.10.0";
 const FINN_VERSION = "1.4.0";
 const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
@@ -79,6 +79,25 @@ const BUILD_TAG = "FR";
 
 // ─── PATCH NOTES ─────────────────────────────────────────────────────────────
 const PATCH_NOTES = {
+  "1.10.0": [
+    "UI: Full visual redesign — new card system, section headers, and spacing throughout",
+    "UI: Tech Admin dashboard redesigned to match app style and dark/light theme",
+    "Login: Native PIN pad with instant haptic response and zero input lag",
+    "Login: Remembered user card — tap avatar to go straight to PIN, no typing",
+    "Login: Biometrics shown as primary option when registered",
+    "Tasks: Swipe-to-complete fully rebuilt with velocity detection and spring physics",
+    "Tasks: Due date quick-pick chips — Today, Tomorrow, This Fri, Next Mon",
+    "Tasks: Empty state redesigned with icon, subtitle, and direct CTA",
+    "Inventory: Empty state with Add Item shortcut",
+    "Announcements: Empty state redesigned",
+    "Notifications: Bell button on Home now correctly opens NotifCenter panel",
+    "Emojis: All UI emojis replaced with crisp inline SVG icons",
+    "Swipe Navigation: Full two-panel live sliding with hold-halfway support",
+    "Swipe Navigation: Velocity-based flick commit, rubber band at edges",
+    "Fix: PIN verification stale closure bug — rapid input now works correctly",
+    "Fix: PIN saved to both pin_hash and pin columns for consistent reads",
+    "Fix: onAlerts prop now threaded correctly from App → HomePage → HeroBanner",
+  ],
   "1.9.1": [    "XP Shop: 36 items across Colors, Power-ups, Badges, Profile, and Fun categories",
     "XP Shop: 13 accent colors including animated Rainbow (2500 XP)",
     "XP Shop: Streak Saver, 2x XP Boost, XP Gifts, Task Hint power-ups",
@@ -542,6 +561,8 @@ const buildCSS = T => `
   @keyframes eotmGlow{0%,100%{filter:drop-shadow(0 0 4px #f59e0b88);}50%{filter:drop-shadow(0 0 12px #f59e0bcc);}}
   @keyframes creatorPulse{0%,100%{filter:drop-shadow(0 0 6px #16a34a) drop-shadow(0 0 12px #16a34a66);}50%{filter:drop-shadow(0 0 12px #16a34a) drop-shadow(0 0 24px #16a34aaa);}}
   @keyframes rainbowSpin{0%{filter:hue-rotate(0deg);}100%{filter:hue-rotate(360deg);}}
+  @keyframes pageSlideInFromRight{from{opacity:0;transform:translateX(28px);}to{opacity:1;transform:translateX(0);}}
+  @keyframes pageSlideInFromLeft{from{opacity:0;transform:translateX(-28px);}to{opacity:1;transform:translateX(0);}}
 `;
 
 // ─── REUSABLE UI ──────────────────────────────────────────────────────────────
@@ -724,25 +745,15 @@ function ToastList({items,T={}}) {
 
 function VersionBadge({T,hide,navOpen}) {
   return (
-    <div style={{position:"fixed",bottom:12,right:8,zIndex:499,background:T.surf,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:10,fontWeight:700,letterSpacing:"0.03em",userSelect:"none",display:"flex",gap:5,alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,.1)",opacity:(hide||navOpen)?0:1,transform:(hide||navOpen)?"translateY(20px)":"translateY(0)",transition:"opacity .25s ease,transform .25s ease",pointerEvents:hide?"none":"auto"}}>
-      <span style={{color:T.accent,fontWeight:800}}>MNU</span>
-      <span style={{color:T.faint}}>·</span>
-      <span style={{color:T.sub}}>Neer Locker</span>
-      <span style={{color:T.faint}}>·</span>
-      <span style={{color:T.accent}}>v{VERSION}</span>
-      <span style={{color:T.mut,fontWeight:600}}>{BUILD_TAG}</span>
+    <div style={{position:"fixed",bottom:2,right:10,zIndex:499,userSelect:"none",pointerEvents:"none",opacity:(hide||navOpen)?0:0.38,transition:"opacity .25s ease"}}>
+      <span style={{fontSize:10,color:T.sub,fontWeight:500,letterSpacing:"0.02em"}}>v{VERSION} · MNU Neer Locker</span>
     </div>
   );
 }
 
 function ClaudeTag({T}) {
-  return (
-    <div style={{position:"fixed",bottom:8,left:8,fontSize:10,color:T.faint,fontWeight:500,letterSpacing:"0.01em",userSelect:"none",zIndex:290,opacity:0.6,lineHeight:1.75,pointerEvents:"none"}}>
-      Built using Claude · Created by Nate Smith<br/>
-      <span style={{color:"#1e7fa8",fontWeight:600}}>⬡ Powered by Finn v{FINN_VERSION}</span><br/>
-      <span style={{color:"#16a34a",fontWeight:600}}>🛡 Secured by Vigil HyperCore v{VIGIL_VERSION}</span>
-    </div>
-  );
+  // Removed from fixed overlay — now rendered inline in HomePage under Quick Actions
+  return null;
 }
 
 // ─── CLOCK ────────────────────────────────────────────────────────────────────
@@ -751,7 +762,7 @@ function LiveClock({T}) {
   useEffect(()=>{const i=setInterval(()=>setTime(new Date()),1000);return()=>clearInterval(i);},[]);
   return (
     <div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,fontWeight:700,color:T.sub,whiteSpace:"nowrap"}}>
-      <span style={{fontSize:14}}>🕐</span>
+      <span style={{display:"inline-flex",alignItems:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
       <span>{time.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</span>
     </div>
   );
@@ -805,7 +816,7 @@ function TechWelcomeAnim({T}) {
         <svg width="100" height="100" style={{position:"absolute",inset:0,animation:progress<1?"spin 1s linear infinite":"none",opacity:progress<1?0.6:0,transition:"opacity .4s"}}>
           <circle cx="50" cy="50" r="32" fill="none" stroke={T.scarlet} strokeWidth="2" strokeDasharray="16 16" strokeLinecap="round"/>
         </svg>
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34}}>🔧</div>
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:34}}><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
       </div>
 
       {/* Terminal-style log lines */}
@@ -878,7 +889,7 @@ function TechExitAnim({T}) {
           <circle cx="50" cy="50" r="32" fill="none" stroke={T.scarlet} strokeWidth="2" strokeDasharray="16 16" strokeLinecap="round"/>
         </svg>
         <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,
-          transform:progress>=1?"scale(0.8)":"scale(1)",opacity:progress>=1?0.4:1,transition:"transform .4s ease,opacity .4s ease"}}>🔧</div>
+          transform:progress>=1?"scale(0.8)":"scale(1)",opacity:progress>=1?0.4:1,transition:"transform .4s ease,opacity .4s ease"}}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
       </div>
 
       {/* Terminal exit log */}
@@ -977,7 +988,7 @@ function LoginBriefing({user,tasks,anns,dms,emps,T,onClose}) {
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:600,padding:"20px 20px 140px",transition:"background .2s"}} onClick={e=>e.target===e.currentTarget&&close()}>
       <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:18,padding:T.sp.xl,width:"100%",maxWidth:480,maxHeight:"68vh",overflowY:"auto",opacity:show?1:0,transform:show?"translateY(0)":"translateY(-16px)",transition:"opacity .25s,transform .3s cubic-bezier(.23,1,.32,1)",boxShadow:"0 12px 48px rgba(0,0,0,.25)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:17,fontWeight:800,color:T.txt}}>👋 Hey {user.name}!</div>
+          <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:17,fontWeight:800,color:T.txt}}>Hey {user.name}!</div>
           <button onClick={close} style={{background:"none",border:"none",color:T.mut,fontSize:22,cursor:"pointer",lineHeight:1}}>×</button>
         </div>
 
@@ -1015,13 +1026,13 @@ function LoginBriefing({user,tasks,anns,dms,emps,T,onClose}) {
 
         {unreadDMs>0&&(
           <div style={{background:`${T.blue}18`,border:`1px solid ${T.blue}44`,borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-            <span style={{fontSize:18}}>💬</span>
+            <span style={{display:"inline-flex"}}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
             <div style={{fontSize:13,color:T.txt,fontWeight:700}}>You have <span style={{color:T.blue}}>{unreadDMs} unread message{unreadDMs!==1?"s":""}</span></div>
           </div>
         )}
 
         {myTasks.length===0&&myAnns.length===0&&unreadDMs===0&&(
-          <div style={{textAlign:"center",padding:"20px 0",color:T.sub,fontSize:14}}>🎉 You&apos;re all caught up! Nothing new.</div>
+          <div style={{textAlign:"center",padding:"20px 0",color:T.sub,fontSize:14,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> You&apos;re all caught up! Nothing new.</div>
         )}
 
         <div style={{marginTop:16}}>
@@ -1288,7 +1299,7 @@ function HeroBanner({user,T,onProfileClick,onSearch,onAlerts,equippedBadges=[],n
         <div style={{padding:"14px 20px 0",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
           <div>
             <div style={{fontSize:22,fontWeight:800,color:"#fff",letterSpacing:"-0.3px",lineHeight:1.1}}>
-              Hi {firstName} 👋
+              Hi {firstName}
             </div>
             <div style={{fontSize:13,color:"rgba(255,255,255,0.72)",marginTop:3,fontWeight:400}}>
               {greet} — {time.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"})}
@@ -1302,8 +1313,8 @@ function HeroBanner({user,T,onProfileClick,onSearch,onAlerts,equippedBadges=[],n
                 <line x1="15.5" y1="15.5" x2="21" y2="21" stroke="rgba(255,255,255,0.9)" strokeWidth="2.5"/>
               </svg>
             </button>
-            {/* Bell */}
-            <button onClick={onProfileClick}
+            {/* Bell — opens NotifCenter */}
+            <button onClick={()=>onAlerts&&onAlerts()}
               style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.18)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,backdropFilter:"blur(8px)"}}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             </button>
@@ -1325,7 +1336,7 @@ function HeroBanner({user,T,onProfileClick,onSearch,onAlerts,equippedBadges=[],n
 }
 
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl,onShop,onFinn,onSearch,equippedBadges,nameColorId}) {
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl,onShop,onFinn,onSearch,onAlerts,equippedBadges,nameColorId,onNewTask,onNewAnn}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
   const doneTasks=tasks.filter(t=>t.done&&(t.assignedTo===user.id||t.assignedTo==="all"));
   const online=emps.filter(e=>e.id!==user.id&&e.status==="online");
@@ -1338,8 +1349,11 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
   const scarlet="#C8102E";
   const urgentTasks=myTasks.filter(t=>t.due&&new Date(t.due)<=new Date(Date.now()+86400000));
 
-  const Card=({children,style={}})=>(
-    <div style={{background:T.dark?"#1a2535":"#fff",borderRadius:16,padding:14,boxShadow:T.dark?"0 2px 12px rgba(0,0,0,0.3)":"0 2px 12px rgba(0,0,0,0.06)",border:`1px solid ${T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.05)"}`, ...style}}>
+  const Card=({children,style={},onClick,...rest})=>(
+    <div onClick={onClick} {...rest} style={{background:T.dark?"#1a2535":"#fff",borderRadius:16,padding:14,boxShadow:T.dark?"0 2px 12px rgba(0,0,0,0.3)":"0 2px 12px rgba(0,0,0,0.06)",border:`1px solid ${T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.05)"}`,transition:"transform .15s,box-shadow .15s",...style}}
+      onMouseEnter={onClick?e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=T.dark?"0 6px 20px rgba(0,0,0,0.4)":"0 6px 20px rgba(0,0,0,0.1)";}:undefined}
+      onMouseLeave={onClick?e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=T.dark?"0 2px 12px rgba(0,0,0,0.3)":"0 2px 12px rgba(0,0,0,0.06)";}:undefined}
+    >
       {children}
     </div>
   );
@@ -1358,7 +1372,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
       <HeroBanner user={user} T={T}
         onProfileClick={()=>{setPage("set");setPrevPage("home");playSound("click");}}
         onSearch={()=>{onSearch&&onSearch();}}
-        onAlerts={()=>{setPage("anns");playSound("open");}}
+        onAlerts={onAlerts}
         equippedBadges={equippedBadges} nameColorId={nameColorId}/>
 
       {/* ── CONTENT ── */}
@@ -1404,7 +1418,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
                 <div>
                   <div style={{fontSize:20,fontWeight:800,color:T.txt,lineHeight:1}}>{myProgress.xp.toLocaleString()}</div>
                   <div style={{fontSize:10,color:T.sub,marginTop:2}}>XP · {lvInfo?.title||myProgress.title}</div>
-                  {myProgress.streak>0&&<div style={{fontSize:9,fontWeight:700,color:"#f59e0b",marginTop:2}}>🔥 {myProgress.streak} day streak</div>}
+                  {myProgress.streak>0&&<div style={{display:"flex",alignItems:"center",gap:2,fontSize:9,fontWeight:700,color:"#f59e0b",marginTop:2}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M12 2c0 0-5 4-5 10a5 5 0 0 0 10 0c0-4-2-7-2-7s-1 3-3 3c-1.1 0-2-.9-2-2 0-2 2-4 2-4z"/></svg>{myProgress.streak} day streak</div>}
                 </div>
               </div>
             </Card>
@@ -1429,13 +1443,13 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
         {isEligible&&lvInfo&&(
           <Card>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={{fontSize:12,fontWeight:700,color:T.txt}}>🏆 {lvInfo.title}</div>
+              <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:700,color:T.txt}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M6 9H4a2 2 0 0 0-2 2v0a6 6 0 0 0 6 6h0"/><path d="M18 9h2a2 2 0 0 1 2 2v0a6 6 0 0 1-6 6h0"/><path d="M6 2h12v10a6 6 0 0 1-12 0V2z"/></svg>{lvInfo.title}</div>
               <div style={{fontSize:11,fontWeight:700,color:scarlet}}>{Math.round(lvInfo.pct)}%</div>
             </div>
             <div style={{width:"100%",height:7,borderRadius:4,background:T.dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)",overflow:"hidden"}}>
               <div style={{height:"100%",width:`${lvInfo.pct}%`,borderRadius:4,background:`linear-gradient(90deg,${scarlet},#ff4d6d)`,transition:"width 1s ease"}}/>
             </div>
-            <div style={{fontSize:10,color:T.sub,marginTop:6}}>{lvInfo.xpToNext>0?`${lvInfo.xpToNext} XP to ${lvInfo.nextTitle}`:"Max level reached 🎉"}</div>
+            <div style={{fontSize:10,color:T.sub,marginTop:6}}>{lvInfo.xpToNext>0?`${lvInfo.xpToNext} XP to ${lvInfo.nextTitle}`:"Max level reached!"}</div>
           </Card>
         )}
 
@@ -1504,20 +1518,66 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           <SecHeader label="Quick Actions"/>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             {[
-              {label:"New Task",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,action:()=>setPage("tasks")},
-              {label:"Message",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,action:()=>setPage("dms")},
-              {label:"Inventory",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,action:()=>setPage("inv")},
-              {label:"XP Shop",icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,action:onShop},
-            ].map(({label,icon,action})=>(
+              {
+                label:"New Task",
+                sub: can(user,"assign")?"Create & assign":"View tasks",
+                icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>,
+                action:()=>{ if(can(user,"assign")&&onNewTask){ onNewTask(); } else { setPage("tasks"); } }
+              },
+              {
+                label:"Message",
+                sub:"Team & direct chat",
+                icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+                action:()=>setPage("dms")
+              },
+              {
+                label:"Inventory",
+                sub:"Stock & items",
+                icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,
+                action:()=>setPage("inv")
+              },
+              {
+                label:"XP Shop",
+                sub:"Spend your XP",
+                icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+                action:onShop
+              },
+            ].map(({label,sub,icon,action})=>(
               <Card key={label} style={{cursor:"pointer",padding:12}} onClick={()=>{action&&action();playSound("click");}}>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   <div style={{width:32,height:32,borderRadius:9,background:"rgba(200,16,46,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                     {icon}
                   </div>
-                  <div style={{fontSize:12,fontWeight:700,color:T.txt}}>{label}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:T.txt,lineHeight:1.2}}>{label}</div>
+                  <div style={{fontSize:10,color:T.sub,fontWeight:500}}>{sub}</div>
                 </div>
               </Card>
             ))}
+          </div>
+        </div>
+
+        {/* ── INLINE CREDIT FOOTER ── */}
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5,padding:"18px 0 4px",borderTop:`1px solid ${T.dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"}`,marginTop:4}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
+            <span style={{fontSize:10,color:T.faint,fontWeight:500}}>Built using Claude</span>
+            <span style={{color:T.dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.12)",fontSize:10}}>·</span>
+            <span style={{fontSize:10,color:T.faint,fontWeight:500}}>Created by Nate Smith</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <svg width="9" height="9" viewBox="0 0 22 22" fill="none">
+                <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" stroke="#1e7fa8" strokeWidth="1.5" fill="none" opacity="0.8"/>
+                <circle cx="11" cy="11" r="2.5" fill="#1e7fa8" opacity="0.8"/>
+              </svg>
+              <span style={{fontSize:10,color:"#1e7fa8",fontWeight:600,opacity:0.75}}>Finn v{FINN_VERSION}</span>
+            </div>
+            <span style={{color:T.dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.12)",fontSize:10}}>·</span>
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" opacity="0.8">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              <span style={{fontSize:10,color:"#16a34a",fontWeight:600,opacity:0.75}}>Vigil v{VIGIL_VERSION}</span>
+            </div>
           </div>
         </div>
 
@@ -1596,9 +1656,9 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
     <div style={{display:"grid",gridTemplateColumns:"200px 1fr",gap:0,height:"calc(100vh - 140px)",border:`1px solid ${T.bor}`,borderRadius:14,overflow:"hidden",background:T.card}}>
       {/* Contacts */}
       <div style={{borderRight:`1px solid ${T.bor}`,overflowY:"auto",display:"flex",flexDirection:"column"}}>
-        <div style={{padding:"14px 16px",borderBottom:`1px solid ${T.bor}`,fontWeight:800,fontSize:14,color:T.txt,flexShrink:0}}>💬 Messages</div>
+        <div style={{padding:"14px 16px",borderBottom:`1px solid ${T.bor}`,fontWeight:800,fontSize:14,color:T.txt,flexShrink:0,display:"flex",alignItems:"center",gap:7}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages</div>
         <div style={{background:`${T.warn}18`,borderBottom:`1px solid ${T.warn}44`,padding:"9px 14px",display:"flex",gap:7,alignItems:"flex-start",flexShrink:0}}>
-          <span style={{fontSize:14,flexShrink:0}}>⚠️</span>
+          <span style={{display:"inline-flex",flexShrink:0,alignItems:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
           <span style={{fontSize:12,color:T.warn,fontWeight:700,lineHeight:1.5}}>Messages may be reviewed by management &amp; technical administrators.</span>
         </div>
         <div style={{flex:1,overflowY:"auto"}}>
@@ -1609,7 +1669,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
             onMouseLeave={ev=>{if(selected?.id!==GROUP_ID)ev.currentTarget.style.background="transparent";}}
           >
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:36,height:36,borderRadius:"50%",background:`${T.scarlet}22`,border:`2px solid ${T.scarlet}55`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>💬</div>
+              <div style={{width:36,height:36,borderRadius:"50%",background:`${T.scarlet}22`,border:`2px solid ${T.scarlet}55`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>💬</div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <span style={{fontSize:14,fontWeight:700,color:T.txt}}>{GROUP_NAME}</span>
@@ -1660,14 +1720,14 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
           </div>
           <div style={{flex:1,overflowY:"auto",padding:"16px 18px",display:"flex",flexDirection:"column",gap:10}}>
             {getThread(selected.id).length===0
-              ?<div style={{textAlign:"center",color:T.mut,fontSize:15,marginTop:60,animation:"fadeUp .3s ease"}}>No messages yet. Say hi! 👋</div>
+              ?<Empty icon={<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="1.5" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>} msg="No messages yet" sub="Start a conversation with a teammate." T={T}/>
               :getThread(selected.id).map((msg,i)=>{
                 const mine=msg.from===user.id;
                 const isSystem=msg.system===true;
                 if(isSystem) return (
                   <div key={msg.id} style={{display:"flex",justifyContent:"center",animation:`fadeUp .2s ${i*15}ms ease both`}}>
                     <div style={{background:`${T.warn}22`,border:`1px solid ${T.warn}55`,borderRadius:10,padding:"8px 16px",fontSize:13,fontWeight:700,color:T.warn,textAlign:"center",maxWidth:"80%"}}>
-                      ⚠️ {msg.text}
+                      <span style={{display:"inline-flex",alignItems:"center",gap:4,verticalAlign:"middle"}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>{msg.text}
                       <div style={{fontSize:11,opacity:0.7,marginTop:3,fontWeight:400}}>{fmtT(msg.at)}</div>
                     </div>
                   </div>
@@ -1694,14 +1754,14 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
                           <span>{fmtT(msg.at)}</span>
                           {mine&&(
                             <span style={{color:"rgba(255,255,255,0.75)",fontSize:13,fontWeight:600}}>
-                              {msgRead?"✓✓":"✓"}
+                              {msgRead?<svg width="14" height="10" viewBox="0 0 28 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="1 9 6 14 14 5"/><polyline points="9 9 14 14 22 5"/></svg>:<svg width="10" height="10" viewBox="0 0 24 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="4 9 9 14 20 5"/></svg>}
                             </span>
                           )}
                         </div>
                       </div>
                       {/* Read label only on last sent message */}
                       {mine&&isLastMine&&msgRead&&(
-                        <div style={{fontSize:10,color:T.blue,fontWeight:800,textAlign:"right",marginTop:3,paddingRight:6,letterSpacing:"0.02em"}}>✓✓ Read</div>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",gap:3,fontSize:10,color:T.blue,fontWeight:800,textAlign:"right",marginTop:3,paddingRight:6,letterSpacing:"0.02em"}}><svg width="14" height="10" viewBox="0 0 28 16" fill="none" stroke={T.blue} strokeWidth="2.5" strokeLinecap="round"><polyline points="1 9 6 14 14 5"/><polyline points="9 9 14 14 22 5"/></svg> Read</div>
                       )}
                     </div>
                   </div>
@@ -1737,7 +1797,7 @@ function DMSection({user,emps,dms,setDms,T,toast,onXP}) {
         </div>
       ):(
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",color:T.mut,flexDirection:"column",gap:10}}>
-          <span style={{fontSize:36}}>💬</span>
+          <span style={{display:"inline-flex"}}><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
           <span style={{fontSize:14,fontWeight:600}}>Select a conversation</span>
         </div>
       )}
@@ -1758,16 +1818,41 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
   const startLongPress=(e)=>{ longPressRef.current=setTimeout(handleLongPress,500); };
   const cancelLongPress=()=>{ clearTimeout(longPressRef.current); };
 
-  const handleSwipeStart=(e)=>{ swipeStart.current=e.touches[0].clientX; setSwiping(false); };
+  const swipeVel=useRef(0);
+  const swipeLastX=useRef(0);
+  const swipeLastT=useRef(0);
+  const handleSwipeStart=(e)=>{
+    swipeStart.current=e.touches[0].clientX;
+    swipeLastX.current=e.touches[0].clientX;
+    swipeLastT.current=Date.now();
+    swipeVel.current=0;
+    setSwiping(false);
+  };
   const handleSwipeMove=(e)=>{
     if(swipeStart.current===null) return;
     const dx=e.touches[0].clientX-swipeStart.current;
-    if(Math.abs(dx)>8){ setSwiping(true); setSwipeX(Math.max(-80,Math.min(80,dx))); }
+    const now=Date.now();
+    const dt=now-swipeLastT.current;
+    if(dt>0) swipeVel.current=(e.touches[0].clientX-swipeLastX.current)/dt;
+    swipeLastX.current=e.touches[0].clientX;
+    swipeLastT.current=now;
+    if(Math.abs(dx)>6){
+      setSwiping(true);
+      // Cap at 90px, rubber band past 70
+      const cap=70;
+      const clamped=dx>0?Math.min(dx,cap+(dx-cap)*0.2):Math.max(dx,-cap+(dx+cap)*0.2);
+      setSwipeX(clamped);
+    }
   };
   const handleSwipeEnd=()=>{
-    if(swipeX>50&&!isDone){ onToggle(task.id); }
-    else if(swipeX<-50&&canManage){ onDelete(task.id); }
-    setSwipeX(0); setSwiping(false); swipeStart.current=null;
+    const threshold=52;
+    const flick=Math.abs(swipeVel.current)>0.4;
+    if((swipeX>threshold||flick&&swipeX>20)&&!isDone){
+      haptic("medium"); onToggle(task.id);
+    } else if((swipeX<-threshold||flick&&swipeX<-20)&&canManage){
+      haptic("medium"); onDelete(task.id);
+    }
+    setSwipeX(0); setSwiping(false); swipeStart.current=null; swipeVel.current=0;
   };
   const assignee=task.assignedTo==="all"?null:emps.find(e=>e.id===task.assignedTo);
   const creator=emps.find(e=>e.id===task.createdBy);
@@ -1782,28 +1867,38 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
         <div onClick={()=>setShowCtx(false)} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center"}}>
           <div style={{background:T.surf,borderRadius:16,padding:8,minWidth:200,boxShadow:"0 12px 40px rgba(0,0,0,.25)"}}>
             <div style={{padding:"8px 14px",fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em"}}>{task.title.slice(0,30)}</div>
-            {!isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.ok,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>✅ Mark Complete</button>}
+            {!isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.ok,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.ok} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Mark Complete</button>}
             {isDone&&<button onClick={()=>{setShowCtx(false);onToggle(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.sub,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>↩ Mark Incomplete</button>}
-            <button onClick={()=>{setShowCtx(false);setExpanded(e=>!e);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.txt,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>📋 {expanded?"Hide":"View"} Details</button>
-            {canManage&&<button onClick={()=>{setShowCtx(false);onDelete(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.err,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}>🗑️ Delete Task</button>}
+            <button onClick={()=>{setShowCtx(false);setExpanded(e=>!e);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.txt,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.txt} strokeWidth="2" strokeLinecap="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> {expanded?"Hide":"View"} Details</button>
+            {canManage&&<button onClick={()=>{setShowCtx(false);onDelete(task.id);}} style={{width:"100%",padding:"12px 14px",background:"none",border:"none",borderRadius:10,cursor:"pointer",fontSize:14,fontWeight:700,color:T.err,textAlign:"left",fontFamily:"inherit",display:"flex",alignItems:"center",gap:10}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.err} strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Delete Task</button>}
           </div>
         </div>
       )}
       <div style={{position:"relative",overflow:"hidden",animation:_anim}}>
-        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"space-between",pointerEvents:"none"}}>
-          <div style={{background:"#16a34a",width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX>20?Math.min((swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:"16px 0 0 16px"}}>
-            <span style={{fontSize:22,color:"#fff"}}>✓</span>
+        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"space-between",pointerEvents:"none",borderRadius:14,overflow:"hidden"}}>
+          {/* Complete reveal — right swipe */}
+          <div style={{background:"#16a34a",minWidth:80,height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,paddingLeft:16,
+            opacity:swipeX>8?Math.min((swipeX-8)/44,1):0,
+            transform:`translateX(${Math.min(0,swipeX-80)}px)`,
+            transition:swiping?"none":"all .25s cubic-bezier(.23,1,.32,1)"}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.8" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span style={{fontSize:10,fontWeight:800,color:"#fff",letterSpacing:"0.05em"}}>DONE</span>
           </div>
+          {/* Delete reveal — left swipe */}
           {canManage&&(
-            <div style={{background:T.err,width:70,height:"100%",display:"flex",alignItems:"center",justifyContent:"center",opacity:swipeX<-20?Math.min((-swipeX-20)/30,1):0,transition:swiping?"none":"opacity .2s",borderRadius:"0 16px 16px 0"}}>
-              <span style={{fontSize:22,color:"#fff"}}>🗑</span>
+            <div style={{background:T.err,minWidth:80,height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,paddingRight:16,marginLeft:"auto",
+              opacity:swipeX<-8?Math.min((-swipeX-8)/44,1):0,
+              transform:`translateX(${Math.max(0,swipeX+80)}px)`,
+              transition:swiping?"none":"all .25s cubic-bezier(.23,1,.32,1)"}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              <span style={{fontSize:10,fontWeight:800,color:"#fff",letterSpacing:"0.05em"}}>DELETE</span>
             </div>
           )}
         </div>
         <div style={_sw}>
           <div className="card"
             onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-            onTouchStart={startLongPress} onTouchEnd={cancelLongPress} onTouchMove={cancelLongPress}
+            onTouchStart={e=>{startLongPress(e);handleSwipeStart(e);}} onTouchEnd={e=>{cancelLongPress();handleSwipeEnd();}} onTouchMove={e=>{cancelLongPress();handleSwipeMove(e);}}
             onContextMenu={e=>{e.preventDefault();setShowCtx(true);}}
             style={{background:isDone?T.bg:T.card,border:"1px solid "+(expanded?T.accent+"66":overdue?T.accent+"55":hov?T.borH:T.bor),borderRadius:14,opacity:isDone?0.55:1,overflow:"hidden",transition:"border-color .2s"}}>
             <div style={{padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"flex-start",gap:12}}>
@@ -1811,7 +1906,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
                 style={{width:22,height:22,borderRadius:6,border:"2px solid "+(isDone?T.blue:hov?T.blue:T.bor),background:isDone?T.blue:"transparent",cursor:"pointer",flexShrink:0,marginTop:2,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,fontWeight:900,fontFamily:"inherit",transition:"all .18s"}}
                 onMouseEnter={e=>e.currentTarget.style.transform="scale(1.2)"}
                 onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}
-              >{isDone?"✓":""}</button>
+              >{isDone?<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>:""}</button>
               <div style={{flex:1,minWidth:0,cursor:"pointer"}} onClick={()=>setExpanded(e=>!e)}>
                 <div style={{display:"flex",alignItems:"center",gap:7,flexWrap:"wrap"}}>
                   <span style={{fontWeight:700,fontSize:T.fs.lg,textDecoration:isDone?"line-through":"none",color:isDone?T.mut:T.txt,transition:"color .18s"}}>{task.title}</span>
@@ -1827,8 +1922,8 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
                   </div>
                 )}
                 <div style={{display:"flex",gap:10,marginTop:4,fontSize:11,color:T.mut,flexWrap:"wrap",alignItems:"center"}}>
-                  <span>👤 {assignee?assignee.name:"Everyone"}</span>
-                  {task.dueDate&&<span style={{color:overdue?T.scarlet:dl!==null&&dl<=2?T.warn:T.mut}}>📅 {fmtD(task.dueDate)}</span>}
+                  <span style={{display:"inline-flex",alignItems:"center",gap:3}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>{assignee?assignee.name:"Everyone"}</span>
+                  {task.dueDate&&<span style={{display:"inline-flex",alignItems:"center",gap:3,color:overdue?T.scarlet:dl!==null&&dl<=2?T.warn:T.mut}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{fmtD(task.dueDate)}</span>}
                 </div>
               </div>
               <button onClick={()=>setExpanded(e=>!e)}
@@ -1848,7 +1943,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
                   <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
                     <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>ASSIGNED TO</div>
-                    <div style={{fontSize:13,fontWeight:600,color:T.txt}}>👤 {assignee?assignee.name:"Everyone"}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:4,fontSize:13,fontWeight:600,color:T.txt}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>{assignee?assignee.name:"Everyone"}</div>
                   </div>
                   <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+T.bor}}>
                     <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>PRIORITY</div>
@@ -1857,7 +1952,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
                   {task.dueDate&&(
                     <div style={{background:T.surf,borderRadius:10,padding:"10px 14px",border:"1px solid "+(overdue?T.accent+"55":T.bor)}}>
                       <div style={{fontSize:11,fontWeight:800,color:T.mut,letterSpacing:"0.06em",marginBottom:4}}>DUE DATE</div>
-                      <div style={{fontSize:13,fontWeight:600,color:overdue?T.scarlet:T.txt}}>📅 {fmtD(task.dueDate)}</div>
+                      <div style={{display:"flex",alignItems:"center",gap:4,fontSize:13,fontWeight:600,color:overdue?T.scarlet:T.txt}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>{fmtD(task.dueDate)}</div>
                     </div>
                   )}
                   {creator&&(
@@ -1869,7 +1964,7 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
                 </div>
                 {task.repeat&&(
                   <div style={{display:"flex",alignItems:"center",gap:6,fontSize:12,color:T.blue,fontWeight:600}}>
-                    🔁 Repeats automatically when completed
+                    <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> Repeats automatically when completed</span>
                   </div>
                 )}
               </div>
@@ -1884,13 +1979,22 @@ function TaskCard({task,emps,canManage,onToggle,onDelete,T,isDone,delay}) {
 // ─── SEARCH BAR ──────────────────────────────────────────────────────────────
 function SearchBar({T,value,onChange,placeholder}) {
   const [f,setF]=useState(false);
-  return <input value={value} onChange={e=>onChange(e.target.value)} placeholder={"🔍  "+placeholder}
+  return <input value={value} onChange={e=>onChange(e.target.value)} placeholder={"  "+placeholder}
     style={{flex:1,minWidth:140,background:T.surf,border:"1px solid "+(f?T.blue:T.bor),borderRadius:10,color:T.txt,padding:"9px 14px",fontSize:T.fs.md,fontFamily:"inherit",outline:"none",boxShadow:f?"0 0 0 3px "+T.bG:"none",transition:"border-color .18s,box-shadow .18s"}}
     onFocus={()=>setF(true)} onBlur={()=>setF(false)}/>;
 }
 
 const SLabel=({children,dim,T})=><div style={{fontSize:10,fontWeight:800,letterSpacing:"0.07em",marginBottom:6,color:dim?T.faint:T.mut}}>{children}</div>;
-const Empty=({icon,msg,T})=><div style={{textAlign:"center",padding:"44px 0",color:T.mut}}><div style={{fontSize:34}}>{icon}</div><div style={{marginTop:9,fontSize:13,fontWeight:600,color:T.sub}}>{msg}</div></div>;
+const Empty=({icon,msg,sub,cta,onCta,T})=>(
+  <div style={{textAlign:"center",padding:"clamp(36px,8vh,56px) 24px",display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+    <div style={{width:72,height:72,borderRadius:22,background:T.surfH,border:`1.5px solid ${T.bor}`,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:4}}>
+      {icon}
+    </div>
+    <div style={{fontWeight:700,fontSize:15,color:T.txt}}>{msg}</div>
+    {sub&&<div style={{fontSize:13,color:T.sub,lineHeight:1.5,maxWidth:240}}>{sub}</div>}
+    {cta&&onCta&&<button onClick={onCta} style={{marginTop:4,background:T.scarlet,color:"#fff",border:"none",borderRadius:10,padding:"9px 22px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{cta}</button>}
+  </div>
+);
 const Hr=({T})=><div style={{height:1,background:T.bor,margin:T.sp.md+"px 0"}}/>;
 
 // ─── TECH METRICS (simulated) ─────────────────────────────────────────────────
@@ -1913,7 +2017,7 @@ function TechMetrics({T}) {
   );
   return (
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}} className="two-col">
-      {[{label:"CPU Usage",val:cpu,color:T.blue,icon:"💻"},{label:"Memory",val:mem,color:"#7c3aed",icon:"🧠"},{label:"API Response",val:Math.round(ping/2),raw:`${ping}ms`,color:T.ok,icon:"📡"}].map(m=>(
+      {[{label:"CPU Usage",val:cpu,color:T.blue,icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.blue} strokeWidth="2" strokeLinecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>},{label:"Memory",val:mem,color:"#7c3aed",icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>},{label:"API Response",val:Math.round(ping/2),raw:`${ping}ms`,color:T.ok,icon:"📡"}].map(m=>(
           <div key={m.label} style={{background:T.card,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:6}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <span style={{fontSize:12,color:T.sub,fontWeight:700}}>{m.icon} {m.label}</span>
@@ -2096,86 +2200,129 @@ const WA = {
 // ─── WELCOME PORTAL (first time only) ────────────────────────────────────────
 function WelcomePortal({T, onDone}) {
   const [phase, setPhase] = useState(0);
-  // Pure CSS animations — no JS tick loop so no fps drop
+  const [waveT, setWaveT] = useState(0);
 
   useEffect(()=>{
-    const t1=setTimeout(()=>setPhase(1), 200);
-    const t2=setTimeout(()=>setPhase(2), 1000);
-    const t3=setTimeout(()=>setPhase(3), 2000);
+    const t1=setTimeout(()=>setPhase(1), 120);
+    const t2=setTimeout(()=>setPhase(2), 700);
+    const t3=setTimeout(()=>setPhase(3), 1500);
     return()=>{clearTimeout(t1);clearTimeout(t2);clearTimeout(t3);};
   },[]);
 
+  useEffect(()=>{
+    const id=setInterval(()=>setWaveT(t=>t+1),50);
+    return()=>clearInterval(id);
+  },[]);
+
+  const WW=600;
+  // Wave engine — same as login screen
+  const makeWavePath=(W,H,scale,speed,phaseOff)=>{
+    const t=waveT*speed+phaseOff;
+    let d=`M0,${H} L`;
+    for(let i=0;i<=80;i++){
+      const x=(i/80)*W;
+      const r=(i/80)*Math.PI*3;
+      const raw=H*scale*(Math.sin(r+t)*0.55+Math.sin(r*1.7-t*1.2)*0.3+Math.sin(r*2.9+t*0.5)*0.15);
+      const y=Math.max(1,Math.min(H-1,H*0.45+raw));
+      d+=`${x.toFixed(1)},${y.toFixed(1)} `;
+    }
+    return d+`${W},${H} Z`;
+  };
+
+  // Wave height — taller for more dramatic transition
+  const WAVE_H=110;
+
   return (
-    <div style={{position:"fixed",inset:0,zIndex:99999,background:"#050d1a",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",overflow:"hidden"}}>
-      {/* CSS animated background orbs — no JS */}
-      <div style={{position:"absolute",top:"10%",left:"8%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,#C8102E 0%,transparent 70%)",opacity:0.07,filter:"blur(50px)",animation:"pulse 4s ease-in-out infinite",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",bottom:"15%",right:"10%",width:320,height:320,borderRadius:"50%",background:"radial-gradient(circle,#1e7fa8 0%,transparent 70%)",opacity:0.07,filter:"blur(45px)",animation:"pulse 5s ease-in-out infinite",animationDelay:"1.5s",pointerEvents:"none"}}/>
-      <div style={{position:"absolute",top:"50%",left:"50%",width:250,height:250,borderRadius:"50%",background:"radial-gradient(circle,#7c3aed 0%,transparent 70%)",opacity:0.05,filter:"blur(40px)",transform:"translate(-50%,-50%)",animation:"pulse 6s ease-in-out infinite",animationDelay:"3s",pointerEvents:"none"}}/>
+    <div style={{position:"fixed",inset:0,zIndex:99999,display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
-      {/* Expanding rings — CSS transition only */}
-      {[0,1,2,3].map(i=>(
-        <div key={i} style={{
-          position:"absolute",top:"50%",left:"50%",
-          width:phase>=1?`${300+i*160}px`:"0px",
-          height:phase>=1?`${300+i*160}px`:"0px",
-          transform:"translate(-50%,-50%)",
-          borderRadius:"50%",
-          border:`${i===0?1.5:1}px solid ${i%2===0?"#C8102E":"#1e7fa8"}${["55","44","33","22"][i]}`,
-          animation:phase>=1?`pulse ${3+i*0.5}s ease-in-out infinite`:"none",
-          animationDelay:`${i*0.4}s`,
-          transition:`width ${0.9+i*0.12}s cubic-bezier(.23,1,.32,1) ${i*0.07}s, height ${0.9+i*0.12}s cubic-bezier(.23,1,.32,1) ${i*0.07}s`,
-        }}/>
-      ))}
+      {/* ── SCARLET TOP ~62% — logo fills entire area, waves on top ── */}
+      <div style={{background:"#C8102E",flex:"0 0 62%",position:"relative",overflow:"hidden"}}>
 
-      {/* Spinning hex logo — CSS animation */}
-      <div style={{
-        position:"relative",zIndex:2,
-        animation:phase>=1?"finnHexSpin .7s cubic-bezier(.34,1.56,.64,1) both":"none",
-        filter:phase>=1?"drop-shadow(0 0 12px #1e7fa866) drop-shadow(0 0 24px #C8102E33)":"none",
-      }}>
-        <svg width="76" height="76" viewBox="0 0 22 22">
-          <rect width="22" height="22" rx="6" fill="#0f2744"/>
-          <polygon points="11,1 19.5,6 19.5,16 11,21 2.5,16 2.5,6" fill="none" stroke="#fff" strokeWidth="0.6" opacity="0.2"/>
-          <polygon points="11,5 16,8 16,14 11,17 6,14 6,8" fill="none" stroke="#C8102E" strokeWidth="0.6" opacity="0.5"/>
-          <polygon points="11,1 9.5,7 11,5.5 12.5,7" fill="#fff"/>
-          <polygon points="11,21 9.8,15 11,16.5 12.2,15" fill="#fff" opacity="0.45"/>
-          <polygon points="1,11 7,9.8 5.5,11 7,12.2" fill="#fff" opacity="0.45"/>
-          <polygon points="21,11 15,9.8 16.5,11 15,12.2" fill="#fff" opacity="0.45"/>
-          <line x1="4" y1="4" x2="6" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-          <line x1="18" y1="4" x2="16" y2="6" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-          <line x1="4" y1="18" x2="6" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-          <line x1="18" y1="18" x2="16" y2="16" stroke="#C8102E" strokeWidth="0.8" strokeLinecap="round" opacity="0.9"/>
-          <circle cx="11" cy="11" r="2.5" fill="#0f2744" stroke="#fff" strokeWidth="0.8"/>
-          <circle cx="11" cy="11" r="1" fill="#fff"/>
-        </svg>
-      </div>
+        {/* Subtle radial glow */}
+        <div style={{position:"absolute",inset:0,background:"radial-gradient(circle at 50% 40%,rgba(255,255,255,0.1) 0%,transparent 60%)",pointerEvents:"none"}}/>
 
-      {/* Text block */}
-      <div style={{position:"relative",zIndex:2,textAlign:"center",marginTop:32,opacity:phase>=2?1:0,transform:phase>=2?"translateY(0)":"translateY(20px)",transition:"opacity .6s ease, transform .6s ease"}}>
-        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:700,color:"#ffffff44",letterSpacing:"0.25em",textTransform:"uppercase",marginBottom:10}}>Welcome to</div>
-        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:30,fontWeight:800,color:"#fff",letterSpacing:"-0.5px",lineHeight:1.2}}>
-          {"MNU's"} <span style={{color:"#C8102E",textShadow:"0 0 20px #C8102E66"}}>Neer Locker</span>
+        {/* Content — centered over the full-bleed logo */}
+        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"env(safe-area-inset-top,24px) 24px 0",zIndex:2}}>
+
+          {/* Small floating logo badge on top */}
+          <div style={{
+            opacity:phase>=1?1:0,
+            transform:phase>=1?"scale(1) translateY(0)":"scale(0.6) translateY(20px)",
+            transition:"opacity .55s cubic-bezier(.34,1.56,.64,1), transform .55s cubic-bezier(.34,1.56,.64,1)",
+            marginBottom:20,
+          }}>
+            <div style={{width:"clamp(64px,14vw,88px)",height:"clamp(64px,14vw,88px)",borderRadius:"clamp(14px,3.5vw,22px)",overflow:"hidden",boxShadow:"0 8px 32px rgba(0,0,0,0.45), 0 0 0 2.5px rgba(255,255,255,0.3)",backdropFilter:"blur(4px)"}}>
+              <img src={MNU_ICON} alt="MNU" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
+            </div>
+          </div>
+
+          {/* Wordmark */}
+          <div style={{
+            textAlign:"center",
+            opacity:phase>=2?1:0,
+            transform:phase>=2?"translateY(0)":"translateY(18px)",
+            transition:"opacity .5s ease, transform .5s ease",
+          }}>
+            <div style={{fontSize:"clamp(9px,2vw,11px)",color:"rgba(255,255,255,0.6)",fontWeight:700,letterSpacing:"0.22em",textTransform:"uppercase",marginBottom:8,textShadow:"0 1px 4px rgba(0,0,0,0.3)"}}>Welcome to</div>
+            <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:"clamp(28px,7vw,42px)",fontWeight:800,color:"#fff",letterSpacing:"-0.5px",lineHeight:1.1,textShadow:"0 3px 20px rgba(0,0,0,0.3)"}}>
+              MNU&apos;s Neer Locker
+            </div>
+            <div style={{fontSize:"clamp(11px,2.5vw,14px)",color:"rgba(255,255,255,0.65)",fontWeight:500,marginTop:8,letterSpacing:"0.08em",textTransform:"uppercase",textShadow:"0 1px 8px rgba(0,0,0,0.25)"}}>Staff Portal</div>
+          </div>
         </div>
-        <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:600,color:"#ffffff55",marginTop:8,letterSpacing:"0.08em"}}>Staff Portal</div>
-        <div style={{marginTop:14,display:"flex",alignItems:"center",justifyContent:"center",gap:8,color:"#1e7fa8",fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase"}}>
-          <div style={{width:24,height:1,background:"#1e7fa855"}}/>
-          Fusion Integrated Neural Navigator
-          <div style={{width:24,height:1,background:"#1e7fa855"}}/>
+
+        {/* Wave transition — layered, tall, sits on top of everything in the red zone */}
+        <div style={{position:"absolute",bottom:0,left:0,right:0,height:WAVE_H,zIndex:3,pointerEvents:"none"}}>
+          <svg width="100%" height={WAVE_H} viewBox={`0 0 ${WW} ${WAVE_H}`} preserveAspectRatio="none" style={{display:"block"}}>
+            <path d={makeWavePath(WW,WAVE_H,0.42,0.022,1.8)} fill="rgba(140,0,14,0.45)"/>
+            <path d={makeWavePath(WW,WAVE_H,0.52,0.017,0.7)} fill="rgba(180,6,24,0.7)"/>
+            <path d={makeWavePath(WW,WAVE_H,0.62,0.013,0)}   fill="#fff"/>
+          </svg>
         </div>
       </div>
 
-      {/* Let's Go button */}
-      <div style={{position:"relative",zIndex:2,marginTop:44,opacity:phase>=3?1:0,transform:phase>=3?"translateY(0)":"translateY(16px)",transition:"opacity .5s ease .1s, transform .5s ease .1s"}}>
-        <button onClick={()=>{playSound("success");onDone();}}
-          style={{background:"linear-gradient(135deg,#C8102E,#9e0b23)",color:"#fff",border:"none",borderRadius:14,padding:"15px 44px",fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:17,cursor:"pointer",letterSpacing:"0.03em",boxShadow:"0 6px 28px #C8102E55",transition:"transform .18s,box-shadow .18s"}}
-          onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.06)";e.currentTarget.style.boxShadow="0 8px 36px #C8102E66";}}
-          onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.boxShadow="0 6px 28px #C8102E55";}}
-        >{"Let's Go →"}</button>
-        <div style={{textAlign:"center",marginTop:10,fontSize:11,color:"#ffffff33",fontWeight:500,letterSpacing:"0.06em"}}>Tap to enter</div>
-      </div>
+      {/* ── WHITE BOTTOM ~38% ── */}
+      <div style={{background:"#fff",flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"clamp(12px,3vw,28px) clamp(24px,6vw,56px) clamp(16px,3.5vw,36px)",gap:14}}>
 
-      {/* Scan line — CSS only */}
-      <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.025) 2px,rgba(0,0,0,0.025) 4px)",pointerEvents:"none",zIndex:1}}/>
+        {/* Tagline */}
+        <div style={{
+          opacity:phase>=2?1:0,
+          transform:phase>=2?"translateY(0)":"translateY(12px)",
+          transition:"opacity .45s ease .15s, transform .45s ease .15s",
+          textAlign:"center",
+        }}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginBottom:8}}>
+            <div style={{width:24,height:1,background:"#e0e0e0"}}/>
+            <span style={{fontSize:10,color:"#bbb",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase"}}>Powered by Finn AI</span>
+            <div style={{width:24,height:1,background:"#e0e0e0"}}/>
+          </div>
+          <div style={{fontSize:"clamp(12px,2.5vw,14px)",color:"#888",lineHeight:1.6,maxWidth:300}}>
+            Your complete shift hub — tasks, inventory, messages, and your team.
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div style={{
+          width:"100%",maxWidth:340,
+          opacity:phase>=3?1:0,
+          transform:phase>=3?"translateY(0)":"translateY(14px)",
+          transition:"opacity .45s ease .1s, transform .5s cubic-bezier(.34,1.4,.64,1) .1s",
+        }}>
+          <button onClick={()=>{playSound("success");onDone();}}
+            style={{width:"100%",background:"#C8102E",color:"#fff",border:"none",borderRadius:16,padding:"clamp(14px,2.5vh,18px) 28px",fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:"clamp(15px,3vw,18px)",cursor:"pointer",letterSpacing:"0.02em",boxShadow:"0 6px 24px rgba(200,16,46,0.35)",transition:"opacity .15s, transform .15s",display:"flex",alignItems:"center",justifyContent:"space-between"}}
+            onMouseEnter={e=>{e.currentTarget.style.opacity="0.88";}}
+            onMouseLeave={e=>{e.currentTarget.style.opacity="1";}}
+          >
+            <span>Let&apos;s Go</span>
+            <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </div>
+          </button>
+          <div style={{textAlign:"center",marginTop:10,fontSize:11,color:"#ccc",fontWeight:500,letterSpacing:"0.05em"}}>
+            MidAmerica Nazarene University
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -2317,7 +2464,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         const overdue=openT.filter(t=>t.dueDate&&new Date(t.dueDate)<new Date());
         const dueToday=openT.filter(t=>{if(!t.dueDate)return false; const d=new Date(t.dueDate); const n=new Date(); return d.toDateString()===n.toDateString();});
         const pg=progress[user?.id]||{xp:0,streak:0,title:"Pioneer"};
-        const parts=["Good morning, "+nick+"! ☀️ Here's your brief:"];
+        const parts=["Good morning, "+nick+"! Here's your brief:"];
         if(overdue.length>0) parts.push("⚠️ "+overdue.length+" overdue task"+(overdue.length>1?"s":"")+".");
         if(dueToday.length>0) parts.push("📅 "+dueToday.length+" due today: "+dueToday.map(t=>t.title).join(", ")+".");
         if(openT.length>0&&overdue.length===0&&dueToday.length===0) parts.push("✅ "+openT.length+" open task"+(openT.length>1?"s":"")+" — no urgent deadlines.");
@@ -3592,7 +3739,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
           {q&&<button onClick={()=>setQ("")} style={{background:"none",border:"none",color:T.sub,cursor:"pointer",fontSize:18,padding:"0 4px"}}>✕</button>}
         </div>
         <div style={{display:"flex",gap:6,padding:"8px 14px",borderBottom:`1px solid ${T.bor}`,overflowX:"auto",scrollbarWidth:"none"}}>
-          {[["all","All"],["tasks","✅ Tasks"],["inv","📦 Inventory"],["staff","👤 Staff"],["anns","🔔 Announcements"]].map(([key,label])=>(
+          {[["all","All"],["tasks","Tasks"],["inv","Inventory"],["staff","Staff"],["anns","Announcements"]].map(([key,label])=>(
             <button key={key} onClick={()=>setFilter(key)} style={{background:filter===key?T.scarlet:T.surfH,color:filter===key?"#fff":T.sub,border:`1px solid ${filter===key?T.scarlet:T.bor}`,borderRadius:20,padding:"4px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",flexShrink:0,transition:"all .15s"}}>{label}</button>
           ))}
         </div>
@@ -3648,7 +3795,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
               FINN &mdash; QUICK NAVIGATE
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {[{icon:"✅",label:"Tasks",page:"tasks"},{icon:"📦",label:"Inventory",page:"inv"},{icon:"🔔",label:"Announcements",page:"anns"},{icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),label:"Messages",page:"dms"}].map(s=>(
+              {[{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>,label:"Tasks",page:"tasks"},{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,label:"Inventory",page:"inv"},{icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,label:"Announcements",page:"anns"},{icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),label:"Messages",page:"dms"}].map(s=>(
                 <button key={s.page} onClick={()=>{setPage(s.page);onClose();playSound("click");}}
                   style={{display:"flex",alignItems:"center",gap:8,padding:"10px 14px",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,cursor:"pointer",fontFamily:"inherit",color:T.txt,fontSize:13,fontWeight:600,transition:"all .15s"}}
                   onMouseEnter={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.borderColor=T.accent+"66";}}
@@ -3666,7 +3813,7 @@ function GlobalSearch({T,tasks,inv,emps,anns,onClose,setPage,user}) {
 
 // ─── LEVEL LOGO ───────────────────────────────────────────────────────────────
 function LevelLogo({level,color,size=40}) {
-  const shapes=["⭐","🔰","🔷","🔵","💚","💜","❤️","🧡","💙","🏆"];
+  const shapes=["★","◈","◆","●","✦","◉","♥","◐","◇","⬡"];
   const emoji=shapes[Math.min((level||1)-1,9)];
   return (
     <div style={{width:size,height:size,borderRadius:size*0.28,background:color+"22",border:`2px solid ${color}66`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:size*0.5,boxShadow:`0 0 ${size*0.4}px ${color}44`,flexShrink:0}}>
@@ -3681,7 +3828,7 @@ function XPToastList({items}) {
     <div style={{position:"fixed",bottom:80,right:16,zIndex:9999,display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end",pointerEvents:"none"}}>
       {items.map(t=>(
         <div key={t.id} style={{background:"linear-gradient(135deg,#16a34a,#15803d)",border:"1px solid #86efac",color:"#fff",borderRadius:10,padding:"7px 14px",fontWeight:800,fontSize:13,display:"flex",alignItems:"center",gap:6,boxShadow:"0 4px 16px rgba(0,0,0,.2)",animation:"finnSlideUp .3s cubic-bezier(.23,1,.32,1) both"}}>
-          <span style={{fontSize:16}}>⚡</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           <span>+{t.amount} XP</span>
           {t.label&&<span style={{fontSize:11,opacity:0.85,fontWeight:600}}>· {t.label}</span>}
         </div>
@@ -3727,7 +3874,7 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
     {id:"color_fuchsia",  cat:"colors", name:"Fuchsia",       desc:"Bold and electric",            cost:450,  icon:"●", color:"#c026d3", type:"color"},
     {id:"color_midnight", cat:"colors", name:"Midnight",      desc:"Dark and mysterious",          cost:450,  icon:"●", color:"#1e1b4b", type:"color"},
     {id:"color_gold",     cat:"colors", name:"Gold",          desc:"Premium and prestigious",      cost:800,  icon:"●", color:"#b45309", type:"color"},
-    {id:"color_rainbow",  cat:"colors", name:"Rainbow",       desc:"Animated cycling rainbow 🌈",  cost:2500, icon:"◈", color:"linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7)", type:"rainbow"},
+    {id:"color_rainbow",  cat:"colors", name:"Rainbow",       desc:"Animated cycling rainbow",  cost:2500, icon:"◈", color:"linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7)", type:"rainbow"},
 
     // ── POWER-UPS ──────────────────────────────────────────────────────────────
     {id:"streak_saver",   cat:"powerups", name:"Streak Saver",      desc:"Restore your lost login streak",          cost:300,  icon:E("🔥","·"),  color:"#ea580c", type:"streak_save",  consumable:true},
@@ -3938,7 +4085,7 @@ function LeaderboardPage({emps,progress,user,T,onShop,onViewProfile}) {
   // Employee of the month = highest XP
   const eotm=ranked[0];
 
-  const medals=["🥇","🥈","🥉"];
+  const medals=[<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="6"/><path d="M6 14l-2 8h16l-2-8"/></svg>,<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="6"/><path d="M6 14l-2 8h16l-2-8"/></svg>,<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="6"/><path d="M6 14l-2 8h16l-2-8"/></svg>];
 
   return (
     <div className="fu" style={{marginTop:8}}>
@@ -3968,12 +4115,12 @@ function LeaderboardPage({emps,progress,user,T,onShop,onViewProfile}) {
           <LevelLogo level={eotm.lv.level} color={eotm.lv.color} size={56}/>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,marginTop:10}}>{eotm.name}</div>
           <div style={{fontSize:13,color:eotm.lv.color,fontWeight:700,marginTop:2}}>{eotm.lv.title}</div>
-          <div style={{fontSize:13,color:T.sub,marginTop:4}}>{eotm.pg.xp} XP · Level {eotm.lv.level} · 🔥{eotm.pg.streak} day streak</div>
+          <div style={{fontSize:13,color:T.sub,marginTop:4}}>{eotm.pg.xp} XP · Level {eotm.lv.level} · <span style={{display:"inline-flex",alignItems:"center",gap:2}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M12 2c0 0-5 4-5 10a5 5 0 0 0 10 0c0-4-2-7-2-7s-1 3-3 3c-1.1 0-2-.9-2-2 0-2 2-4 2-4z"/></svg>{eotm.pg.streak}</span> day streak</div>
         </div>
       )}
 
       {/* Full leaderboard */}
-      <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:T.txt,marginBottom:12}}>🏆 Staff Leaderboard</div>
+      <div style={{display:"flex",alignItems:"center",gap:7,fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:T.txt,marginBottom:12}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M6 9H4a2 2 0 0 0-2 2v0a6 6 0 0 0 6 6h0"/><path d="M18 9h2a2 2 0 0 1 2 2v0a6 6 0 0 1-6 6h0"/><path d="M6 2h12v10a6 6 0 0 1-12 0V2z"/></svg> Staff Leaderboard</div>
       <div style={{display:"grid",gap:8}}>
         {ranked.map((e,i)=>{
           const isMe=e.id===user?.id;
@@ -4020,7 +4167,7 @@ function LeaderboardPage({emps,progress,user,T,onShop,onViewProfile}) {
               <div style={{textAlign:"right",flexShrink:0}}>
                 <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:18,fontWeight:800,color:e.lv.color}}>{e.pg.xp}</div>
                 <div style={{fontSize:10,color:T.sub,fontWeight:600}}>XP</div>
-                {e.pg.streak>0&&<div style={{fontSize:11,color:"#ff6b00",fontWeight:700,marginTop:2}}>🔥{e.pg.streak}</div>}
+                {e.pg.streak>0&&<div style={{fontSize:11,color:"#ff6b00",fontWeight:700,marginTop:2}}><span style={{display:"inline-flex",alignItems:"center",gap:1}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M12 2c0 0-5 4-5 10a5 5 0 0 0 10 0c0-4-2-7-2-7s-1 3-3 3c-1.1 0-2-.9-2-2 0-2 2-4 2-4z"/></svg>{e.pg.streak}</span></div>}
               </div>
             </div>
           );
@@ -4055,7 +4202,7 @@ function NotifBell({T,anns,dms,tasks,user,onOpen}) {
       onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
       onMouseLeave={e=>e.currentTarget.style.background="none"}
     >
-      <span style={{fontSize:18}}>🔔</span>
+      <span style={{display:"inline-flex"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
       {count>0&&<div style={{position:"absolute",top:0,right:0,background:T.scarlet,color:"#fff",borderRadius:"50%",width:16,height:16,fontSize:10,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>{count>9?"9+":count}</div>}
     </button>
   );
@@ -4067,9 +4214,9 @@ function NotifCenter({T,anns,dms,tasks,user,emps,onClose,setPage,onDismiss}) {
   const unreadDMs=dms.filter(d=>d.to===user?.id&&!d.read).slice(0,5);
   const overdue=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id)&&t.dueDate&&new Date(t.dueDate)<new Date()).slice(0,3);
   const items=[
-    ...overdue.map(t=>({id:"t"+t.id,icon:"⚠️",title:"Overdue: "+t.title,sub:"Due "+new Date(t.dueDate).toLocaleDateString(),color:T.err,action:()=>{setPage("tasks");onClose();}})),
-    ...unreadDMs.map(d=>({id:"d"+d.id,icon:"💬",title:emps.find(e=>e.id===d.from)?.name||"Message",sub:d.text.slice(0,50),color:T.blue,action:()=>{setPage("dms");onClose();}})),
-    ...activeAnns.map(a=>({id:"a"+a.id,icon:({info:"ℹ️",warn:"⚠️",danger:"🚨"})[a.level]||"🔔",title:a.msg.slice(0,60),sub:"Announcement",color:T.scarlet,action:()=>{onDismiss(a.id);}})),
+    ...overdue.map(t=>({id:"t"+t.id,icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,title:"Overdue: "+t.title,sub:"Due "+new Date(t.dueDate).toLocaleDateString(),color:T.err,action:()=>{setPage("tasks");onClose();}})),
+    ...unreadDMs.map(d=>({id:"d"+d.id,icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e7fa8" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,title:emps.find(e=>e.id===d.from)?.name||"Message",sub:d.text.slice(0,50),color:T.blue,action:()=>{setPage("dms");onClose();}})),
+    ...activeAnns.map(a=>({id:"a"+a.id,icon:a.level==="warn"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>:a.level==="danger"?<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="2" strokeLinecap="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1e7fa8" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,title:a.msg.slice(0,60),sub:"Announcement",color:T.scarlet,action:()=>{onDismiss(a.id);}})),
   ];
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()} style={{position:"fixed",inset:0,zIndex:9998,background:"rgba(0,0,0,0.3)",backdropFilter:"blur(4px)",display:"flex",justifyContent:"flex-end",alignItems:"flex-start",paddingTop:60,animation:"fadeIn .15s ease"}}>
@@ -4079,7 +4226,7 @@ function NotifCenter({T,anns,dms,tasks,user,emps,onClose,setPage,onDismiss}) {
           <button onClick={onClose} style={{background:"none",border:"none",color:T.mut,fontSize:20,cursor:"pointer",lineHeight:1}}>×</button>
         </div>
         {items.length===0?(
-          <div style={{padding:"32px 16px",textAlign:"center",color:T.sub,fontSize:14}}>🎉 All caught up!</div>
+          <div style={{padding:"32px 16px",textAlign:"center",color:T.sub,fontSize:14,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>All caught up!</div>
         ):(
           <div>
             {items.map((item,i)=>(
@@ -4174,45 +4321,38 @@ function SplashScreen({T}) {
   );
 }
 
-function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin,rememberMe,setRememberMe}) {
-  const [phase,setPhase]=useState(0);
+function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowPin,pinIn,setPinIn,doLogin,doPin,notice,setScreen,siteOffline,passkeyAvailable,passkeyEmail,doPasskeyLogin,rememberMe,setRememberMe,emps}) {
   const [waveT,setWaveT]=useState(0);
   const [entered,setEntered]=useState(false);
+  const rememberedUser=emps?.find(e=>e.email.toLowerCase()===(emailIn||"").toLowerCase())||null;
+  // Use a ref for the live pin value — zero render-cycle lag between taps
+  const padRef=useRef("");
+  const [padDigits,setPadDigitsDisplay]=useState(""); // display only
+  const [shake,setShake]=useState(false);
+  const submittingRef=useRef(false);
 
+  useEffect(()=>{ const id=setInterval(()=>setWaveT(t=>t+1),50); return()=>clearInterval(id); },[]);
+  useEffect(()=>{ setEntered(false); const t=setTimeout(()=>setEntered(true),50); return()=>clearTimeout(t); },[showPin]);
+
+  // Shake dots + clear on error
   useEffect(()=>{
-    const id=setInterval(()=>setWaveT(t=>t+1),50);
-    return()=>clearInterval(id);
-  },[]);
+    if(emailErr&&showPin){
+      setShake(true);
+      setTimeout(()=>{ setShake(false); padRef.current=""; setPadDigitsDisplay(""); submittingRef.current=false; },500);
+    }
+  },[emailErr,showPin]);
 
-  useEffect(()=>{
-    setEntered(false);
-    const t=setTimeout(()=>setEntered(true),60);
-    return()=>clearTimeout(t);
-  },[phase]);
-
-  // Smooth 3-layer wave, always scarlet→white
+  const WW=600;
   const makeWavePath=(W,H,scale,speed,phaseOff)=>{
     const t=waveT*speed+phaseOff;
     let d=`M0,${H} L`;
     for(let i=0;i<=80;i++){
-      const x=(i/80)*W;
-      const r=(i/80)*Math.PI*3;
+      const x=(i/80)*W; const r=(i/80)*Math.PI*3;
       const raw=H*scale*(Math.sin(r+t)*0.55+Math.sin(r*1.7-t*1.2)*0.3+Math.sin(r*2.9+t*0.5)*0.15);
-      const y=Math.max(1,Math.min(H-1, H*0.45+raw));
-      d+=`${x.toFixed(1)},${y.toFixed(1)} `;
+      d+=`${x.toFixed(1)},${Math.max(1,Math.min(H-1,H*0.45+raw)).toFixed(1)} `;
     }
     return d+`${W},${H} Z`;
   };
-
-  const anim=(d)=>({
-    opacity:entered?1:0,
-    transform:entered?'translateY(0)':'translateY(14px)',
-    transition:`opacity .45s ease ${d}ms,transform .45s cubic-bezier(.34,1.4,.64,1) ${d}ms`,
-  });
-
-  const WW=600;
-
-  // Render animated wave — always transitions to white
   const Wave=({H,speedMult=1})=>(
     <svg width="100%" height={H} viewBox={`0 0 ${WW} ${H}`} preserveAspectRatio="none"
       style={{display:"block",position:"absolute",bottom:0,left:0,width:"100%",height:H}}>
@@ -4221,199 +4361,245 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
       <path d={makeWavePath(WW,H,0.58,0.016*speedMult,0)} fill="#fff"/>
     </svg>
   );
+  const anim=(d,extra={})=>({
+    opacity:entered?1:0, transform:entered?"translateY(0)":"translateY(16px)",
+    transition:`opacity .4s ease ${d}ms,transform .4s cubic-bezier(.34,1.4,.64,1) ${d}ms`,...extra,
+  });
+  const initials=(name)=>name?.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase()||"?";
+  const PAD=[["1","2","3"],["4","5","6"],["7","8","9"],["","0","⌫"]];
+  const padPress=(val)=>{
+    if(submittingRef.current) return;
+    if(val==="⌫"){
+      padRef.current=padRef.current.slice(0,-1);
+      setPadDigitsDisplay(padRef.current);
+      setEmailErr(""); return;
+    }
+    if(padRef.current.length>=4) return;
+    padRef.current=padRef.current+val;
+    setPadDigitsDisplay(padRef.current);
+    setEmailErr("");
+    if(padRef.current.length===4){
+      submittingRef.current=true;
+      doPin(padRef.current);
+    }
+  };
 
   const css=`
-    @keyframes pgIn{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:none;}}
-    @keyframes pgOut{from{opacity:1;transform:none;}to{opacity:0;transform:translateY(-14px);}}
-    .ls-page{animation:pgIn .45s cubic-bezier(.34,1.4,.64,1) both;}
+    @keyframes pgIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:none;}}
+    @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-9px);}40%{transform:translateX(9px);}60%{transform:translateX(-6px);}80%{transform:translateX(6px);}}
+    .ls-in{animation:pgIn .4s cubic-bezier(.34,1.4,.64,1) both;}
+    .ls-shake{animation:shake .45s ease both;}
   `;
 
   return (
-    <div style={{position:"fixed",inset:0,background:"#C8102E",display:"flex",flexDirection:"column",overflowY:"auto"}}>
+    <div style={{position:"fixed",inset:0,background:"#C8102E",display:"flex",flexDirection:"column",overflow:"hidden"}}>
       <style>{css}</style>
 
-      {/* ── WELCOME ── */}
-      {phase===0&&(
-        <div className="ls-page" style={{display:"flex",flexDirection:"column",height:"100%",width:"100%"}}>
-          {/* Scarlet top — fills ~55% of screen */}
-          <div style={{background:"#C8102E",position:"relative",flexShrink:0,display:"flex",flexDirection:"column",flex:"0 0 55%",minHeight:220}}>
-            {/* Logo centered */}
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,padding:"env(safe-area-inset-top,20px) 20px 0"}}>
-              <div style={{width:88,height:88,borderRadius:24,overflow:"hidden",boxShadow:"0 12px 40px rgba(0,0,0,0.35)",border:"3px solid rgba(255,255,255,0.3)"}}>
-                <img src={MNU_ICON} alt="MNU" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
-              </div>
-              <div style={{textAlign:"center"}}>
-                <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:"#fff",letterSpacing:"-0.3px",lineHeight:1.2}}>MNU&apos;s Neer Locker</div>
-                <div style={{fontSize:12,color:"rgba(255,255,255,0.7)",marginTop:4,fontWeight:500,letterSpacing:"0.08em",textTransform:"uppercase"}}>Staff Portal</div>
-              </div>
-            </div>
-            {/* Wave transition */}
-            <div style={{position:"relative",height:90,flexShrink:0}}>
-              <Wave H={90}/>
-            </div>
-          </div>
-
-          {/* White content — fills rest */}
-          <div style={{background:"#fff",flex:1,padding:"clamp(20px,4vw,36px) clamp(20px,6vw,48px) clamp(24px,4vw,48px)",display:"flex",flexDirection:"column",marginTop:-1}}>
-            {siteOffline&&(
-              <div style={{background:"#fee2e2",borderRadius:12,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start",marginBottom:18,...anim(0)}}>
-                <span style={{fontSize:14}}>🔴</span>
-                <div>
-                  <div style={{color:"#991b1b",fontWeight:700,fontSize:13}}>System Offline</div>
-                  <div style={{color:"#b91c1c",fontSize:11,marginTop:2}}>Only authorized administrators may sign in.</div>
-                </div>
-              </div>
-            )}
-            <div style={{fontSize:"clamp(26px,5vw,38px)",fontWeight:800,color:"#111",letterSpacing:"-0.5px",marginBottom:8,...anim(80)}}>Welcome</div>
-            <div style={{fontSize:"clamp(13px,2.5vw,16px)",color:"#888",lineHeight:1.6,marginBottom:"auto",...anim(160)}}>All your shift tools in one place.</div>
-            <div style={{height:"clamp(16px,3vh,40px)"}}/>
-            <button onClick={()=>setPhase(1)} style={{...anim(240),display:"flex",alignItems:"center",justifyContent:"space-between",background:"#C8102E",border:"none",borderRadius:16,padding:"clamp(14px,2.5vh,18px) 22px",cursor:"pointer",fontFamily:"inherit",width:"100%",transition:"opacity .15s"}}
-              onMouseEnter={e=>e.currentTarget.style.opacity="0.88"}
-              onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-              <span style={{fontSize:"clamp(15px,3vw,18px)",fontWeight:700,color:"#fff"}}>Login</span>
-              <div style={{width:38,height:38,borderRadius:"50%",background:"rgba(255,255,255,0.22)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </div>
-            </button>
-            {notice&&(
-              <div style={{marginTop:14,background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start"}}>
-                <span style={{fontSize:13,flexShrink:0}}>🚨</span>
-                <span style={{color:"#991b1b",fontWeight:600,fontSize:12,lineHeight:1.5}}>{notice}</span>
-              </div>
-            )}
-            <div style={{height:"env(safe-area-inset-bottom,0px)"}}/>
-          </div>
+      {/* ── SCARLET HEADER (always visible) ── */}
+      <div style={{background:"#C8102E",position:"relative",flexShrink:0,flex:"0 0 clamp(150px,28vh,220px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"env(safe-area-inset-top,20px) 20px 80px",paddingTop:"max(env(safe-area-inset-top,20px),20px)",gap:8}}>
+        <div style={{width:56,height:56,borderRadius:16,overflow:"hidden",boxShadow:"0 8px 28px rgba(0,0,0,0.35)",border:"2.5px solid rgba(255,255,255,0.3)",flexShrink:0,marginTop:4}}>
+          <img src={MNU_ICON} alt="MNU" style={{width:"100%",height:"100%",objectFit:"cover",display:"block"}}/>
         </div>
-      )}
+        <div style={{textAlign:"center"}}>
+          <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:17,fontWeight:800,color:"#fff",letterSpacing:"-0.3px",lineHeight:1.2}}>MNU&apos;s Neer Locker</div>
+          <div style={{fontSize:10,color:"rgba(255,255,255,0.6)",marginTop:3,fontWeight:500,letterSpacing:"0.09em",textTransform:"uppercase"}}>Staff Portal</div>
+        </div>
+        <div style={{position:"absolute",bottom:0,left:0,right:0,height:80}}><Wave H={80}/></div>
+      </div>
 
-      {/* ── LOGIN ── */}
-      {phase===1&&(
-        <div className="ls-page" style={{display:"flex",flexDirection:"column",height:"100%",width:"100%"}}>
-          {/* Scarlet top — shorter strip */}
-          <div style={{background:"#C8102E",position:"relative",flexShrink:0,flex:"0 0 clamp(100px,20vh,200px)",display:"flex",flexDirection:"column"}}>
-            <div style={{position:"relative",height:70,flexShrink:0,marginTop:"auto"}}>
-              <Wave H={70} speedMult={1.1}/>
-            </div>
-          </div>
+      {/* ── WHITE BODY ── */}
+      <div style={{background:"#fff",flex:1,display:"flex",flexDirection:"column",overflowY:"auto"}}>
 
-          {/* White form — scrollable on small screens */}
-          <div style={{background:"#fff",flex:1,padding:"clamp(16px,3vw,28px) clamp(20px,6vw,48px) clamp(20px,4vw,40px)",display:"flex",flexDirection:"column",gap:"clamp(12px,2vh,18px)",overflowY:"auto"}}>
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",...anim(0)}}>
-              <div>
-                <div style={{fontSize:"clamp(22px,5vw,30px)",fontWeight:800,color:"#111",letterSpacing:"-0.5px"}}>Login</div>
-                <div style={{fontSize:12,color:"#aaa",marginTop:4}}>MidAmerica Nazarene University</div>
+        {/* ─── PIN PAD ─── */}
+        {showPin&&(
+          <div className="ls-in" style={{display:"flex",flexDirection:"column",flex:1,padding:"clamp(18px,4vh,32px) clamp(20px,6vw,44px) clamp(12px,2vh,20px)"}}>
+
+            {/* Who's signing in */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:"clamp(18px,4vh,30px)"}}>
+              <div style={{width:48,height:48,borderRadius:14,overflow:"hidden",flexShrink:0,background:"#C8102E15",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #C8102E20"}}>
+                {(()=>{const emp=emps?.find(e=>e.email.toLowerCase()===(emailIn||"").toLowerCase());return emp?.avatar_url?<img src={emp.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:18,fontWeight:800,color:"#C8102E"}}>{initials(emp?.name||emailIn)}</span>;})()}
               </div>
-              <button onClick={()=>setPhase(0)} style={{background:"none",border:"none",color:"#C8102E",cursor:"pointer",fontSize:13,fontFamily:"inherit",fontWeight:700,paddingTop:4,flexShrink:0}}>← Back</button>
-            </div>
-
-            {!showPin&&(
-              <div style={anim(80)}>
-                <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>MNU Email</div>
-                <input value={emailIn} onChange={e=>setEmailIn(e.target.value)}
-                  onKeyDown={e=>e.key==="Enter"&&doLogin()}
-                  placeholder="you@mnu.edu" type="email" autoComplete="email"
-                  style={{width:"100%",background:"#f7f7f7",border:`1.5px solid ${emailErr?"#ef4444":"#e8e8e8"}`,borderRadius:12,padding:"clamp(12px,2vh,15px) 16px",fontSize:"clamp(14px,2.5vw,16px)",fontFamily:"inherit",color:"#111",outline:"none",transition:"border-color .15s",display:"block"}}
-                  onFocus={e=>e.target.style.borderColor="#C8102E"}
-                  onBlur={e=>e.target.style.borderColor=emailErr?"#ef4444":"#e8e8e8"}
-                />
-                {emailErr&&<div style={{color:"#ef4444",fontSize:11,marginTop:6,fontWeight:500}}>{emailErr}</div>}
-              </div>
-            )}
-
-            {showPin&&(
-              <div style={anim(80)}>
-                <div style={{fontSize:10,fontWeight:700,color:"#aaa",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>PIN</div>
-                <input value={pinIn} onChange={e=>setPinIn(e.target.value.replace(/\D/g,"").slice(0,6))}
-                  onKeyDown={e=>e.key==="Enter"&&doPin()}
-                  placeholder="••••" type="password" inputMode="numeric" autoFocus
-                  style={{width:"100%",background:"#f7f7f7",border:"1.5px solid #e8e8e8",borderRadius:12,padding:"clamp(12px,2vh,15px) 16px",fontSize:22,fontFamily:"inherit",color:"#111",outline:"none",letterSpacing:"0.5em",transition:"border-color .15s",display:"block"}}
-                  onFocus={e=>e.target.style.borderColor="#C8102E"}
-                  onBlur={e=>e.target.style.borderColor="#e8e8e8"}
-                />
-              </div>
-            )}
-
-            {!showPin&&(
-              <div style={{display:"flex",alignItems:"center",gap:10,...anim(160)}}>
-                <div onClick={()=>setRememberMe(r=>!r)}
-                  style={{width:20,height:20,borderRadius:6,border:`2px solid ${rememberMe?"#C8102E":"#d1d5db"}`,background:rememberMe?"#C8102E":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all .15s",flexShrink:0}}>
-                  {rememberMe&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:700,fontSize:16,color:"#111",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {emps?.find(e=>e.email.toLowerCase()===(emailIn||"").toLowerCase())?.name||emailIn}
                 </div>
-                <span style={{fontSize:13,color:"#888",cursor:"pointer"}} onClick={()=>setRememberMe(r=>!r)}>Remember me</span>
+                <div style={{fontSize:12,color:"#bbb",marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{emailIn}</div>
               </div>
-            )}
-
-            <button onClick={showPin?doPin:doLogin}
-              style={{...anim(240),width:"100%",background:"#C8102E",border:"none",borderRadius:14,padding:"clamp(13px,2.5vh,16px)",fontSize:"clamp(14px,3vw,17px)",fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s",marginTop:4}}
-              onMouseEnter={e=>e.currentTarget.style.opacity="0.88"}
-              onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
-              {showPin?"Confirm PIN →":"Login →"}
-            </button>
-
-            {/* ── BIOMETRIC BUTTON ── only shown when passkey is registered */}
-            {passkeyAvailable&&!showPin&&(
-              <div style={{...anim(290)}}>
-                {/* Divider */}
-                <div style={{display:"flex",alignItems:"center",gap:10,margin:"2px 0"}}>
-                  <div style={{flex:1,height:1,background:"#e8e8e8"}}/>
-                  <span style={{fontSize:11,color:"#bbb",fontWeight:600,letterSpacing:"0.06em"}}>OR</span>
-                  <div style={{flex:1,height:1,background:"#e8e8e8"}}/>
-                </div>
-                <button onClick={doPasskeyLogin}
-                  style={{width:"100%",background:"#f7f7f7",border:"1.5px solid #e8e8e8",borderRadius:14,padding:"clamp(12px,2.5vh,15px) 20px",cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:12,transition:"all .18s",position:"relative",overflow:"hidden"}}
-                  onMouseEnter={e=>{e.currentTarget.style.background="#f0f0f0";e.currentTarget.style.borderColor="#C8102E55";}}
-                  onMouseLeave={e=>{e.currentTarget.style.background="#f7f7f7";e.currentTarget.style.borderColor="#e8e8e8";}}>
-                  {/* Fingerprint / Face ID SVG icon */}
-                  <div style={{width:36,height:36,borderRadius:10,background:"#C8102E0f",border:"1.5px solid #C8102E22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      {/* Fingerprint arcs */}
-                      <path d="M12 10c0-1.1.9-2 2-2"/>
-                      <path d="M12 10v4"/>
-                      <path d="M12 2C6.48 2 2 6.48 2 12"/>
-                      <path d="M12 2c5.52 0 10 4.48 10 10"/>
-                      <path d="M5 19.5C5.5 18 6 15 6 12c0-3.31 2.69-6 6-6s6 2.69 6 6c0 3-1 5.5-1 7"/>
-                      <path d="M9 21c.5-2.5 1-5 1-9 0-1.1.9-2 2-2s2 .9 2 2c0 4 .5 6.5 1 9"/>
-                    </svg>
-                  </div>
-                  <div style={{textAlign:"left"}}>
-                    <div style={{fontSize:"clamp(13px,2.5vw,15px)",fontWeight:700,color:"#111",lineHeight:1.2}}>
-                      Sign in with Biometrics
-                    </div>
-                    <div style={{fontSize:11,color:"#999",marginTop:2,fontWeight:500}}>
-                      Face ID · Touch ID · Fingerprint
-                    </div>
-                  </div>
-                  {/* Subtle shield badge */}
-                  <div style={{marginLeft:"auto",flexShrink:0}}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{opacity:0.5}}>
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    </svg>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            <div style={{textAlign:"center",marginTop:4,...anim(320)}}>
-              <button onClick={()=>setScreen("techLogin")}
-                style={{background:"none",border:"none",color:"#C8102E",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit"}}>
-                Technical Administrator Access
+              <button onClick={()=>{setShowPin(false);padRef.current="";setPadDigitsDisplay("");setPinIn("");setEmailErr("");submittingRef.current=false;}}
+                style={{background:"none",border:"1.5px solid #e8e8e8",borderRadius:10,padding:"6px 12px",color:"#888",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>
+                Switch
               </button>
             </div>
 
-            {notice&&(
-              <div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start"}}>
-                <span style={{fontSize:13,flexShrink:0}}>🚨</span>
-                <span style={{color:"#991b1b",fontWeight:600,fontSize:12,lineHeight:1.5}}>{notice}</span>
+            {/* PIN dots */}
+            <div style={{textAlign:"center",marginBottom:"clamp(18px,4vh,30px)"}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#bbb",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:18}}>Enter PIN</div>
+              <div className={shake?"ls-shake":""} style={{display:"flex",justifyContent:"center",gap:16}}>
+                {[0,1,2,3].map(i=>(
+                  <div key={i} style={{
+                    width:14,height:14,borderRadius:"50%",
+                    background:padDigitsDisplay.length>i?"#C8102E":"transparent",
+                    border:`2px solid ${padDigitsDisplay.length>i?"#C8102E":"#d1d5db"}`,
+                    transition:"background .12s,border-color .12s",
+                    boxShadow:padDigitsDisplay.length>i?"0 0 0 3px #C8102E22":"none",
+                  }}/>
+                ))}
               </div>
+              {emailErr&&<div style={{color:"#ef4444",fontSize:12,marginTop:12,fontWeight:600}}>{emailErr}</div>}
+            </div>
+
+            {/* Number pad */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,maxWidth:300,margin:"0 auto",width:"100%"}}>
+              {PAD.map((row,ri)=>row.map((k,ci)=>(
+                <button key={ri+"-"+ci} onClick={()=>k&&padPress(k)}
+                  style={{
+                    height:"clamp(54px,11vw,66px)",borderRadius:18,
+                    background:k===""?"transparent":k==="⌫"?"#f0f0f0":"#f7f7f7",
+                    border:`1.5px solid ${k===""?"transparent":"#eaeaea"}`,
+                    fontSize:k==="⌫"?22:24,fontWeight:k==="⌫"?400:500,
+                    color:k==="⌫"?"#444":"#111",
+                    cursor:k?"pointer":"default",
+                    fontFamily:"inherit",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    transition:"background .08s",
+                    WebkitTapHighlightColor:"transparent",
+                    userSelect:"none",
+                    boxShadow:k&&k!=="⌫"?"0 1px 3px rgba(0,0,0,0.06)":"none",
+                  }}
+                  onTouchStart={e=>{if(k)e.currentTarget.style.background=k==="⌫"?"#e4e4e4":"#ececec";}}
+                  onTouchEnd={e=>{if(k)e.currentTarget.style.background=k==="⌫"?"#f0f0f0":"#f7f7f7";}}
+                >{k}</button>
+              )))}
+            </div>
+
+            {/* Biometrics shortcut */}
+            {passkeyAvailable&&(
+              <button onClick={doPasskeyLogin}
+                style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:"none",border:"none",color:"#C8102E",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:600,marginTop:"clamp(10px,2vh,18px)"}}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="1.8" strokeLinecap="round"><path d="M12 10c0-1.1.9-2 2-2"/><path d="M12 10v4"/><path d="M12 2C6.48 2 2 6.48 2 12"/><path d="M12 2c5.52 0 10 4.48 10 10"/><path d="M5 19.5C5.5 18 6 15 6 12c0-3.31 2.69-6 6-6s6 2.69 6 6c0 3-1 5.5-1 7"/><path d="M9 21c.5-2.5 1-5 1-9 0-1.1.9-2 2-2s2 .9 2 2c0 4 .5 6.5 1 9"/></svg>
+                Use Biometrics Instead
+              </button>
             )}
             <div style={{height:"env(safe-area-inset-bottom,0px)"}}/>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ─── EMAIL / ACCOUNT PICKER ─── */}
+        {!showPin&&(
+          <div className="ls-in" style={{display:"flex",flexDirection:"column",flex:1,padding:"clamp(18px,4vh,32px) clamp(20px,6vw,44px) clamp(12px,2vh,20px)",gap:"clamp(10px,2vh,16px)"}}>
+
+            <div style={anim(0)}>
+              <div style={{fontSize:"clamp(22px,5vw,30px)",fontWeight:800,color:"#111",letterSpacing:"-0.5px"}}>
+                {rememberedUser?"Welcome back":"Sign in"}
+              </div>
+              <div style={{fontSize:12,color:"#bbb",marginTop:3}}>MidAmerica Nazarene University</div>
+            </div>
+
+            {siteOffline&&(
+              <div style={{...anim(30),background:"#fee2e2",borderRadius:12,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start"}}>
+                <svg width="8" height="8" viewBox="0 0 8 8" style={{marginTop:3,flexShrink:0}}><circle cx="4" cy="4" r="4" fill="#ef4444"/></svg>
+                <div>
+                  <div style={{color:"#991b1b",fontWeight:700,fontSize:13}}>System Offline</div>
+                  <div style={{color:"#b91c1c",fontSize:11,marginTop:2}}>Only administrators may sign in.</div>
+                </div>
+              </div>
+            )}
+
+            {/* ── REMEMBERED USER CARD ── */}
+            {rememberedUser&&(
+              <div style={anim(60)}>
+                <div style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>Continue as</div>
+                <button onClick={()=>doLogin()}
+                  style={{width:"100%",background:"#fafafa",border:"1.5px solid #e8e8e8",borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",fontFamily:"inherit",transition:"all .15s",textAlign:"left"}}
+                  onMouseEnter={e=>{e.currentTarget.style.background="#f3f3f3";e.currentTarget.style.borderColor="#C8102E44";}}
+                  onMouseLeave={e=>{e.currentTarget.style.background="#fafafa";e.currentTarget.style.borderColor="#e8e8e8";}}>
+                  <div style={{width:52,height:52,borderRadius:15,overflow:"hidden",flexShrink:0,background:"#C8102E15",display:"flex",alignItems:"center",justifyContent:"center",border:"2px solid #C8102E20"}}>
+                    {rememberedUser.avatar_url
+                      ?<img src={rememberedUser.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                      :<span style={{fontSize:20,fontWeight:800,color:"#C8102E"}}>{initials(rememberedUser.name)}</span>
+                    }
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:16,color:"#111"}}>{rememberedUser.name}</div>
+                    <div style={{fontSize:12,color:"#bbb",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{rememberedUser.email}</div>
+                    <div style={{fontSize:11,color:"#C8102E",fontWeight:600,marginTop:3}}>
+                      {rememberedUser.pin?"Tap to enter PIN →":"Tap to sign in →"}
+                    </div>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="2.5" strokeLinecap="round" style={{flexShrink:0,opacity:0.5}}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                </button>
+
+                {passkeyAvailable&&(
+                  <button onClick={doPasskeyLogin}
+                    style={{width:"100%",background:"#f7f7f7",border:"1.5px solid #e8e8e8",borderRadius:14,padding:"11px 16px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",fontFamily:"inherit",marginTop:10,transition:"all .15s"}}
+                    onMouseEnter={e=>e.currentTarget.style.background="#efefef"}
+                    onMouseLeave={e=>e.currentTarget.style.background="#f7f7f7"}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="1.8" strokeLinecap="round"><path d="M12 10c0-1.1.9-2 2-2"/><path d="M12 10v4"/><path d="M12 2C6.48 2 2 6.48 2 12"/><path d="M12 2c5.52 0 10 4.48 10 10"/><path d="M5 19.5C5.5 18 6 15 6 12c0-3.31 2.69-6 6-6s6 2.69 6 6c0 3-1 5.5-1 7"/><path d="M9 21c.5-2.5 1-5 1-9 0-1.1.9-2 2-2s2 .9 2 2c0 4 .5 6.5 1 9"/></svg>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:700,color:"#111"}}>Use Biometrics</div>
+                      <div style={{fontSize:11,color:"#aaa"}}>Face ID · Touch ID · Fingerprint</div>
+                    </div>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" strokeWidth="2" strokeLinecap="round" style={{marginLeft:"auto"}}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  </button>
+                )}
+
+                <div style={{display:"flex",alignItems:"center",gap:10,margin:"clamp(10px,2vh,16px) 0 2px"}}>
+                  <div style={{flex:1,height:1,background:"#eee"}}/>
+                  <span style={{fontSize:10,color:"#ccc",fontWeight:700,letterSpacing:"0.08em"}}>DIFFERENT ACCOUNT</span>
+                  <div style={{flex:1,height:1,background:"#eee"}}/>
+                </div>
+              </div>
+            )}
+
+            {/* ── EMAIL INPUT ── */}
+            <div style={anim(rememberedUser?100:60)}>
+              {!rememberedUser&&<div style={{fontSize:10,fontWeight:700,color:"#bbb",textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>MNU Email</div>}
+              <input value={emailIn} onChange={e=>{setEmailIn(e.target.value);setEmailErr("");}}
+                onKeyDown={e=>e.key==="Enter"&&doLogin()}
+                placeholder="you@mnu.edu" type="email" autoComplete="email"
+                style={{width:"100%",background:"#f7f7f7",border:`1.5px solid ${emailErr?"#ef4444":"#e8e8e8"}`,borderRadius:12,padding:"clamp(11px,2vh,14px) 16px",fontSize:"clamp(14px,2.5vw,16px)",fontFamily:"inherit",color:"#111",outline:"none",transition:"border-color .15s",display:"block"}}
+                onFocus={e=>e.target.style.borderColor="#C8102E"}
+                onBlur={e=>e.target.style.borderColor=emailErr?"#ef4444":"#e8e8e8"}
+              />
+              {emailErr&&<div style={{color:"#ef4444",fontSize:11,marginTop:6,fontWeight:500}}>{emailErr}</div>}
+            </div>
+
+            {/* Remember me */}
+            <div style={{display:"flex",alignItems:"center",gap:10,...anim(rememberedUser?140:100)}}>
+              <div onClick={()=>setRememberMe(r=>!r)}
+                style={{width:20,height:20,borderRadius:6,border:`2px solid ${rememberMe?"#C8102E":"#d1d5db"}`,background:rememberMe?"#C8102E":"transparent",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"all .15s",flexShrink:0}}>
+                {rememberMe&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </div>
+              <span style={{fontSize:13,color:"#888",cursor:"pointer"}} onClick={()=>setRememberMe(r=>!r)}>Remember me on this device</span>
+            </div>
+
+            <button onClick={doLogin}
+              style={{...anim(rememberedUser?180:140),width:"100%",background:"#C8102E",border:"none",borderRadius:14,padding:"clamp(13px,2.5vh,16px)",fontSize:"clamp(14px,3vw,17px)",fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",transition:"opacity .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.opacity="0.88"}
+              onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+              {rememberedUser?"Sign in as someone else →":"Sign In →"}
+            </button>
+
+            {notice&&(
+              <div style={{background:"#fee2e2",border:"1px solid #fca5a5",borderRadius:10,padding:"10px 14px",display:"flex",gap:8,alignItems:"flex-start"}}>
+                <span style={{display:"inline-flex",flexShrink:0,alignItems:"center"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="2" strokeLinecap="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
+                <span style={{color:"#991b1b",fontWeight:600,fontSize:12,lineHeight:1.5}}>{notice}</span>
+              </div>
+            )}
+
+            <div style={{marginTop:"auto",paddingTop:8,textAlign:"center"}}>
+              <button onClick={()=>setScreen("techLogin")}
+                style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:11,fontWeight:600,fontFamily:"inherit"}}>
+                Technical Administrator Access
+              </button>
+            </div>
+            <div style={{height:"env(safe-area-inset-bottom,0px)"}}/>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
-
 
 
 
@@ -4431,8 +4617,10 @@ const VIGIL = {
     return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("").slice(0,16);
   },
   verifyPIN: async(input,stored)=>{
-    if(!stored) return true;
-    if(stored.length<=6) return input===stored; // legacy plain text
+    if(!stored||stored==="") return true; // no PIN set — let them in
+    // Try plain-text match first (legacy / short PINs)
+    if(input===stored) return true;
+    // Try SHA-256 hash match (standard)
     const hashed=await VIGIL.hashPIN(input);
     return hashed===stored;
   },
@@ -4832,8 +5020,10 @@ export default function App() {
   const [ptrActive,setPtrActive]=useState(false);
   const [ptrY,setPtrY]=useState(0);
   const ptrRef=useRef(null);
-  const [swipeBacking,setSwipeBacking]=useState(false);
   const [prevPage,setPrevPage]=useState(null);
+  const [swipeNextPage,setSwipeNextPage]=useState(null);
+  const swipeRafRef=useRef(null);
+  const swipingRef=useRef(false);
   const [modal,setModal]=useState(null);
   const [nameSaved,setNameSaved]=useState(false);
   const [pinSaved,setPinSaved]=useState(false);
@@ -5336,46 +5526,32 @@ export default function App() {
     finishLogin(match);
   };
 
-  const doPin=async()=>{
+  const doPin=async(pinOverride)=>{
     if(!pending) return;
-    setPinIn("");
-    try {
-      // ── Vigil HyperCore: server-side PIN verification ─────────────────────
-      const result=await VIGIL.login(pending.email, pinIn, "");
-      if(!result.ok){
-        playSound("error"); haptic("error");
-        if(result.lockedUntil){
-          const mins=Math.ceil((new Date(result.lockedUntil)-new Date())/60000);
-          setEmailErr("Account locked — try again in "+mins+" min.");
-          VIGIL.logEvent("lockout_blocked",pending.email,pending.id);
-        } else {
-          setEmailErr(result.error||"Wrong PIN.");
-          VIGIL.logEvent("failed_pin",pending.email,pending.id);
-        }
-        return;
+    // Use override (from pad auto-submit) or current state value
+    const pin=pinOverride!==undefined?pinOverride:pinIn;
+    if(!pin) return;
+    setPinIn(""); // clear display immediately
+
+    // ── Client-side Supabase PIN verification (with SHA-256 fallback) ────────
+    const pinOk=await VIGIL.verifyPIN(pin, pending.pin);
+    if(!pinOk){
+      playSound("error"); haptic("error");
+      const attempts=VIGIL.recordAttempt(pending.email);
+      VIGIL.logEvent("failed_pin",pending.email,pending.id);
+      const left=VIGIL.MAX_ATTEMPTS-attempts;
+      if(left<=0){
+        setEmailErr("Account locked — try again in 15 min.");
+        VIGIL.logEvent("account_locked",pending.email,pending.id);
+      } else {
+        setEmailErr("Wrong PIN — "+left+" attempt"+(left!==1?"s":"")+" left");
       }
-      // Server login success — store JWT session token
-      if(result.sessionToken) sessionStorage.setItem("vigil-session",result.sessionToken);
-      if(result.anomalies&&result.anomalies.length>0){
-        if(result.anomalies.includes("unusual_hour")) toast("⚠️ Vigil: Login outside normal hours logged","warn");
-        if(result.anomalies.includes("new_device")) toast("🛡 Vigil: New device detected — logged","warn");
-      }
-      VIGIL.logEvent("login_success",pending.email,pending.id);
-      finishLogin(pending);setPending(null);setShowPin(false);
-    } catch(e){
-      // Server unavailable — fall back to client-side verification
-      console.warn("Vigil server unavailable, using client fallback:",e.message);
-      const pinOk=await VIGIL.verifyPIN(pinIn,pending.pin);
-      if(!pinOk){
-        const attempts=VIGIL.recordAttempt(pending.email);
-        VIGIL.logEvent("failed_pin",pending.email,pending.id);
-        const left=VIGIL.MAX_ATTEMPTS-attempts;
-        if(left<=0){ toast("Account locked for 15 min","err"); VIGIL.logEvent("account_locked",pending.email,pending.id); }
-        else { setEmailErr("Wrong PIN — "+left+" attempt"+(left!==1?"s":"")+" left"); }
-        return;
-      }
-      finishLogin(pending);setPending(null);setShowPin(false);
+      return;
     }
+    // PIN correct
+    VIGIL.clearAttempts(pending.email);
+    VIGIL.logEvent("login_success",pending.email,pending.id);
+    finishLogin(pending); setPending(null); setShowPin(false);
   };
 
   const finishLogin=(emp)=>{
@@ -5816,7 +5992,8 @@ export default function App() {
     // Vigil HyperCore: hash PIN with SHA-256 before saving
     const pinHash=await VIGIL.hashPIN(newPin);
     // Save hash to Supabase directly (bypasses saveEmps which saves plain pin field)
-    await SB.patch("employees",user?.id,{pin_hash:pinHash,pin:""});
+    // Write hash to both columns — app reads `pin:e.pin_hash||e.pin` so either works
+    await SB.patch("employees",user?.id,{pin_hash:pinHash,pin:pinHash});
     // Update local state with hash so verification works
     const next=emps.map(e=>e.id===user?.id?{...e,pin:pinHash}:e);
     setEmps(next);
@@ -5933,7 +6110,7 @@ export default function App() {
           showPin={showPin} setShowPin={setShowPin} pinIn={pinIn} setPinIn={setPinIn}
           doLogin={doLogin} doPin={doPin} notice={notice} setScreen={setScreen} siteOffline={siteOffline}
           passkeyAvailable={passkeyAvailable} passkeyEmail={passkeyEmail} doPasskeyLogin={doPasskeyLogin}
-          rememberMe={rememberMe} setRememberMe={setRememberMe}/>
+          rememberMe={rememberMe} setRememberMe={setRememberMe} emps={emps}/>
       )}
 
       {/* ═══ TECH LOGIN ════════════════════════════════════════════════════════ */}
@@ -5945,7 +6122,7 @@ export default function App() {
         <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
           <div style={{width:"100%",maxWidth:360}}>
             <div className="fu" style={{textAlign:"center",marginBottom:24}}>
-              <div style={{fontSize:40,marginBottom:10}}>🔧</div>
+              <div style={{display:"flex",justifyContent:"center",marginBottom:10}}><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="1.5" strokeLinecap="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
               <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt}}>Technical Administrator Access</div>
               <div style={{color:T.sub,fontSize:13,marginTop:4}}>Restricted — Authorized Personnel Only</div>
             </div>
@@ -6017,63 +6194,136 @@ export default function App() {
 
             {/* Page content */}
             <main
-              style={{flex:1,padding:T.compact?"12px 14px 60px":"18px 20px 80px",overflowY:"auto",overflowX:"hidden",position:"relative"}}
+              style={{flex:1,overflowY:"auto",overflowX:"hidden",position:"relative"}}
               ref={ptrRef}
               onTouchStart={e=>{
-                window._ptrStartY=e.touches[0].clientY;
+                const t=e.touches[0];
+                window._sx=t.clientX; window._sy=t.clientY;
+                window._ptrStartY=t.clientY;
                 window._ptrScrollTop=ptrRef.current?.scrollTop||0;
+                window._axis=null; // 'h' or 'v'
+                window._committed=false;
+                cancelAnimationFrame(swipeRafRef.current);
               }}
               onTouchMove={e=>{
-                if(window._ptrStartY===undefined) return;
-                if(window._ptrScrollTop>0){ window._ptrStartY=undefined; return; }
-                const dy=e.touches[0].clientY-window._ptrStartY;
-                if(dy>8) setPtrY(Math.min(dy*0.45,70));
-                else if(dy<0) { window._ptrStartY=undefined; setPtrY(0); }
+                const t=e.touches[0];
+                const dx=t.clientX-window._sx;
+                const dy=t.clientY-window._sy;
+                const adx=Math.abs(dx); const ady=Math.abs(dy);
+
+                // Decide axis once we have 6px
+                if(!window._axis&&(adx>6||ady>6)){
+                  window._axis=adx>ady*1.2?"h":"v";
+                }
+
+                // Vertical — pull-to-refresh only
+                if(window._axis==="v"){
+                  if(window._ptrScrollTop>0) return;
+                  const pdx=t.clientY-window._ptrStartY;
+                  if(pdx>8) setPtrY(Math.min(pdx*0.45,70));
+                  else if(pdx<0) setPtrY(0);
+                  return;
+                }
+
+                if(window._axis!=="h"||window._committed) return;
+                e.preventDefault();
+
+                const PAGE_ORDER=["home","tasks","inv","anns","dms","leaderboard","act","schedule","set"].filter(p=>
+                  p==="home"||p==="tasks"||p==="set"||can(user,p==="anns"?"ann":p==="act"?"act":p==="leaderboard"?"leaderboard":p)
+                );
+                const cur=PAGE_ORDER.indexOf(page);
+                const atStart=cur===0; const atEnd=cur===PAGE_ORDER.length-1;
+
+                // Rubber-band resistance at edges
+                const raw=atStart&&dx>0?dx*0.18:atEnd&&dx<0?dx*0.18:dx;
+                const W=window.innerWidth;
+
+                // Which adjacent page is peeking in
+                const peekPage=raw<0&&!atEnd?PAGE_ORDER[cur+1]:raw>0&&!atStart?PAGE_ORDER[cur-1]:null;
+                if(peekPage!==window._peekPage){
+                  window._peekPage=peekPage;
+                  setSwipeNextPage(peekPage);
+                }
+
+                // Move both panels with the finger — no setState, pure DOM
+                swipeRafRef.current=requestAnimationFrame(()=>{
+                  const cur_el=document.getElementById("swipe-cur");
+                  const nxt_el=document.getElementById("swipe-nxt");
+                  if(cur_el) cur_el.style.transform=`translateX(${raw}px)`;
+                  if(nxt_el){
+                    // Next page slides in from opposite side
+                    const nxtBase=raw<0?W:-W;
+                    nxt_el.style.transform=`translateX(${nxtBase+raw}px)`;
+                    nxt_el.style.opacity=String(Math.min(1,Math.abs(raw)/W*2));
+                  }
+                });
               }}
-              onTouchEnd={async()=>{
-                if(ptrY>50){
-                  setPtrActive(true);
-                  haptic("medium");
-                  await refreshData();
-                  setTimeout(()=>{setPtrActive(false);setPtrY(0);haptic("light");},800);
+              onTouchEnd={async e=>{
+                const dx=e.changedTouches[0].clientX-window._sx;
+                const dy=e.changedTouches[0].clientY-window._sy;
+                cancelAnimationFrame(swipeRafRef.current);
+
+                // Pull-to-refresh commit
+                if(window._axis==="v"||!window._axis){
+                  if(ptrY>50){
+                    setPtrActive(true); haptic("medium");
+                    await refreshData();
+                    setTimeout(()=>{setPtrActive(false);setPtrY(0);haptic("light");},800);
+                  } else setPtrY(0);
+                  return;
+                }
+                setPtrY(0);
+
+                const W=window.innerWidth;
+                const PAGE_ORDER=["home","tasks","inv","anns","dms","leaderboard","act","schedule","set"].filter(p=>
+                  p==="home"||p==="tasks"||p==="set"||can(user,p==="anns"?"ann":p==="act"?"act":p==="leaderboard"?"leaderboard":p)
+                );
+                const cur=PAGE_ORDER.indexOf(page);
+                const SPRING="transform .3s cubic-bezier(.25,1,.35,1)";
+
+                // Commit threshold: 38% of screen OR fast flick (>0.3px/ms implied by 40px min)
+                const commit=(Math.abs(dx)>W*0.38)||(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy));
+                const goDir=dx<0?"next":"prev";
+
+                const cur_el=document.getElementById("swipe-cur");
+                const nxt_el=document.getElementById("swipe-nxt");
+
+                if(commit&&goDir==="next"&&cur<PAGE_ORDER.length-1){
+                  window._committed=true;
+                  haptic("light"); playSound("click");
+                  // Spring both panels to committed position
+                  if(cur_el){cur_el.style.transition=SPRING;cur_el.style.transform=`translateX(${-W}px)`;}
+                  if(nxt_el){nxt_el.style.transition=SPRING;nxt_el.style.transform=`translateX(0px)`;nxt_el.style.opacity="1";}
+                  setTimeout(()=>{
+                    setSearch(""); setPrevPage(page); setPage(PAGE_ORDER[cur+1]);
+                    setSwipeNextPage(null);
+                    window._committed=false;
+                    if(cur_el){cur_el.style.transition="";cur_el.style.transform="";}
+                    if(nxt_el){nxt_el.style.transition="";nxt_el.style.transform="";nxt_el.style.opacity="";}
+                  },310);
+                } else if(commit&&goDir==="prev"&&cur>0){
+                  window._committed=true;
+                  haptic("light"); playSound("click");
+                  if(cur_el){cur_el.style.transition=SPRING;cur_el.style.transform=`translateX(${W}px)`;}
+                  if(nxt_el){nxt_el.style.transition=SPRING;nxt_el.style.transform=`translateX(0px)`;nxt_el.style.opacity="1";}
+                  setTimeout(()=>{
+                    setSearch(""); setPrevPage(page); setPage(PAGE_ORDER[cur-1]);
+                    setSwipeNextPage(null);
+                    window._committed=false;
+                    if(cur_el){cur_el.style.transition="";cur_el.style.transform="";}
+                    if(nxt_el){nxt_el.style.transition="";nxt_el.style.transform="";nxt_el.style.opacity="";}
+                  },310);
                 } else {
-                  setPtrY(0);
+                  // Snap back with spring
+                  const SNAP="transform .32s cubic-bezier(.25,1,.4,1)";
+                  if(cur_el){cur_el.style.transition=SNAP;cur_el.style.transform="translateX(0px)";}
+                  if(nxt_el){nxt_el.style.transition=SNAP;nxt_el.style.transform=`translateX(${dx<0?W:-W}px)`;nxt_el.style.opacity="0";}
+                  setTimeout(()=>{
+                    setSwipeNextPage(null);
+                    if(cur_el){cur_el.style.transition="";cur_el.style.transform="";}
+                    if(nxt_el){nxt_el.style.transition="";nxt_el.style.transform="";nxt_el.style.opacity="";}
+                  },340);
                 }
-                window._ptrStartY=undefined;
-                window._ptrScrollTop=0;
-              }}
-              onTouchStart={e=>{
-                if(document.documentElement.getAttribute("data-device")==="mobile"){
-                  window._swipeStartX=e.touches[0].clientX;
-                  window._swipeStartY=e.touches[0].clientY;
-                }
-              }}
-              onTouchMove={e=>{
-                if(document.documentElement.getAttribute("data-device")!=="mobile"||!window._swipeStartX)return;
-                const dx=e.touches[0].clientX-window._swipeStartX;
-                const dy=Math.abs(e.touches[0].clientY-window._swipeStartY);
-                // If mostly horizontal swipe from left edge, show live drag overlay
-                if(window._swipeStartX<40&&dx>0&&dx>dy*1.5&&page!=="home"){
-                  const pct=Math.min(dx/200,1);
-                  window._swipePct=pct;
-                  const el=document.getElementById("swipe-overlay");
-                  if(el)el.style.opacity=String(pct*0.35);
-                }
-              }}
-              onTouchEnd={e=>{
-                if(document.documentElement.getAttribute("data-device")!=="mobile")return;
-                const dx=e.changedTouches[0].clientX-(window._swipeStartX||0);
-                const dy=Math.abs(e.changedTouches[0].clientY-(window._swipeStartY||0));
-                const el=document.getElementById("swipe-overlay");
-                if(el)el.style.opacity="0";
-                // Only trigger if started within 40px of left edge, horizontal, swiped 80+px right
-                if(window._swipeStartX<40&&dx>80&&dy<120&&page!=="home"){
-                  setSwipeBacking(true);
-                  playSound("click");
-                  setPrevPage(page);
-                  setTimeout(()=>{setSearch("");setPage("home");setSwipeBacking(false);},320);
-                }
-                window._swipeStartX=0;window._swipeStartY=0;window._swipePct=0;
               }}
             >
               {/* Pull to refresh indicator */}
@@ -6085,25 +6335,21 @@ export default function App() {
                   </div>
                 </div>
               )}
-              {/* Drag-tracking swipe overlay (fades with finger) */}
-              <div id="swipe-overlay" style={{position:"fixed",inset:0,background:`linear-gradient(90deg,${T.scarlet}88,transparent)`,opacity:0,pointerEvents:"none",zIndex:800,transition:"opacity .06s ease"}}/>
-              {/* Swipe-back commit animation */}
-              {swipeBacking&&(
-                <div style={{position:"fixed",inset:0,zIndex:801,pointerEvents:"none",overflow:"hidden"}}>
-                  {/* Left panel slides in */}
-                  <div style={{position:"absolute",inset:0,width:"40%",background:`linear-gradient(90deg,${T.scarlet},${T.scarlet}88)`,animation:"swipeReveal .28s cubic-bezier(.23,1,.32,1) both",boxShadow:`8px 0 32px ${T.scarlet}55`}}/>
-                  {/* Full screen tint fades */}
-                  <div style={{position:"absolute",inset:0,background:`${T.scarlet}22`,animation:"swipeFade .32s ease both"}}/>
-                  {/* Home icon bounces in from left */}
-                  <div style={{position:"absolute",top:"50%",left:"18%",transform:"translate(-50%,-50%)",display:"flex",flexDirection:"column",alignItems:"center",gap:8,animation:"fadeUp .22s .05s ease both"}}>
-                    <div style={{width:56,height:56,borderRadius:"50%",background:"rgba(255,255,255,0.92)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,boxShadow:"0 4px 20px rgba(0,0,0,.18)",animation:"bounceIn .3s .06s cubic-bezier(.34,1.56,.64,1) both"}}>🏠</div>
-                    <div style={{fontSize:12,color:"#fff",fontWeight:800,letterSpacing:"0.04em",textShadow:"0 1px 4px rgba(0,0,0,.4)"}}>HOME</div>
-                  </div>
-                </div>
-              )}
+
+              {/* ── SWIPE PANELS ── current page + peeking next page ── */}
+              {/* Outer clip — keeps next page hidden until dragged */}
+              <div style={{position:"relative",width:"100%",height:"100%",overflow:"hidden"}}>
+
+                {/* Current page panel */}
+                <div id="swipe-cur" style={{
+                  position:"relative",
+                  width:"100%",
+                  willChange:"transform",
+                  padding:T.compact?"12px 14px 60px":"18px 20px 80px",
+                }}>
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} equippedBadges={equippedBadges} nameColorId={nameColorId}/>}
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} onAlerts={()=>{setShowNotifCenter(true);playSound("open");haptic("light");}} equippedBadges={equippedBadges} nameColorId={nameColorId} onNewTask={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}} onNewAnn={()=>{setForm({aLvl:"info"});setModal("ann");}}/> }
 
               {/* TASKS */}
               {page==="tasks"&&(
@@ -6113,7 +6359,7 @@ export default function App() {
                     {can(user,"assign")&&<Btn T={T} sm onClick={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}}>+ New Task</Btn>}
                   </div>
                   <SLabel T={T}>OPEN · {openT.length}</SLabel>
-                  {openT.length===0&&dataLoaded&&<Empty icon={E("🎉","")} msg="All caught up!" T={T}/>}
+                  {openT.length===0&&dataLoaded&&<Empty icon={<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={T.ok} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>} msg="All caught up!" sub="No open tasks — you're on top of it." T={T}/>}
                   {!dataLoaded&&[1,2,3].map(i=><SkeletonCard key={i} T={T}/>)}
                   <div style={{display:"grid",gap:T.compact?6:8,marginBottom:20}}>
                     {openT.map((t,i)=><TaskCard key={t.id} task={t} emps={emps} canManage={can(user,"assign")} onToggle={toggleTask} onDelete={deleteTask} T={T} delay={i*35}/>)}
@@ -6134,7 +6380,7 @@ export default function App() {
                     <div style={{fontSize:T.fs.md,color:T.sub}}>{inv.length} items · {inv.reduce((a,i)=>a+i.stock,0)} in stock</div>
                     <Btn T={T} sm onClick={()=>{setForm({});setModal("item");}}>+ Add Item</Btn>
                   </div>
-                  {inv.length===0?<Empty icon={E("📦","")} msg="No items yet" T={T}/>:(
+                  {inv.length===0?<Empty icon={<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>} msg="No items yet" sub="Add your first inventory item to start tracking stock." cta="+ Add Item" onCta={()=>{setForm({});setModal("item");}} T={T}/>:(
                     <div style={{display:"grid",gap:T.compact?6:8}}>
                       {inv.map((item,i)=>(
                         <div key={item.id} className="card" style={{background:T.card,border:`1px solid ${item.stock===0?T.accent+"55":T.bor}`,borderRadius:14,padding:T.compact?"10px 14px":"13px 16px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",animation:`fadeUp .25s ${i*30}ms ease both`}}>
@@ -6166,14 +6412,14 @@ export default function App() {
                     <div style={{fontSize:T.fs.md,color:T.sub}}>{myAnns.length} active</div>
                     {can(user,"assign")&&<Btn T={T} sm onClick={()=>{setForm({aLvl:"info"});setModal("ann");}}>+ Send Announcement</Btn>}
                   </div>
-                  {myAnns.length===0?<Empty icon={E("🔔","")} msg="No announcements" T={T}/>:(
+                  {myAnns.length===0?<Empty icon={<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="1.5" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>} msg="All quiet" sub="No announcements right now. Check back later." T={T}/>:(
                     <div style={{display:"grid",gap:10}}>
                       {myAnns.map((a,i)=>{
                         const lc={info:T.blue,warn:T.warn,danger:T.scarlet}[a.level]||T.blue;
                         return (
                           <div key={a.id} style={{background:T.card,border:`1px solid ${lc}33`,borderLeft:`3px solid ${lc}`,borderRadius:14,padding:"14px 16px",animation:`fadeUp .25s ${i*35}ms ease both`}}>
                             <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                              <span style={{fontSize:18}}>{({"info":"ℹ️","warn":"⚠️","danger":"🚨"})[a.level]||"ℹ️"}</span>
+                              <span style={{display:"inline-flex"}}>{a.level==="warn"?<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>:a.level==="danger"?<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="2" strokeLinecap="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e7fa8" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}</span>
                               <div style={{flex:1}}>
                                 <div style={{fontWeight:700,fontSize:13,color:T.txt,lineHeight:1.5,wordBreak:"break-word",overflowWrap:"anywhere"}}>{a.msg}</div>
                                 <div style={{fontSize:T.fs.xs+1,color:T.sub,marginTop:4}}>By {a.by} · {fmtDT(a.at)}</div>
@@ -6186,7 +6432,7 @@ export default function App() {
                                   onMouseEnter={e=>e.currentTarget.style.opacity="0.7"}
                                   onMouseLeave={e=>e.currentTarget.style.opacity="1"}
                                 >
-                                  <span>📋</span> v{a.patchVersion} {a.patchBuild} Release Notes
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> v{a.patchVersion} {a.patchBuild} Release Notes
                                 </summary>
                                 <div style={{marginTop:8,background:T.bg,borderRadius:10,padding:"10px 14px",display:"grid",gap:5}}>
                                   {a.patchNotes.map((note,ni)=>(
@@ -6215,7 +6461,7 @@ export default function App() {
                             const lc={info:T.blue,warn:T.warn,danger:T.scarlet}[a.level]||T.blue;
                             return (
                               <div key={a.id} style={{background:T.card,border:`1px solid ${T.bor}`,borderLeft:`3px solid ${lc}44`,borderRadius:12,padding:"10px 14px",display:"flex",gap:10,alignItems:"center"}}>
-                                <span style={{fontSize:16}}>{({info:"ℹ️",warn:"⚠️",danger:"🚨"})[a.level]||"ℹ️"}</span>
+                                <span style={{display:"inline-flex"}}>{a.level==="warn"?<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>:a.level==="danger"?<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="2" strokeLinecap="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e7fa8" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>}</span>
                                 <div style={{flex:1,fontSize:13,color:T.sub,lineHeight:1.5}}>{a.msg}</div>
                                 <button onClick={()=>{playSound("click");dismissAnn(a.id,true);}} title="Restore"
                                   style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,color:T.sub,cursor:"pointer",fontFamily:"inherit",flexShrink:0,whiteSpace:"nowrap"}}
@@ -6240,7 +6486,7 @@ export default function App() {
               {page==="schedule"&&(
                 <div className="fu" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",marginTop:48,padding:24}}>
                   <div style={{background:T.card,border:"1px solid "+T.bor,borderRadius:20,padding:32,maxWidth:380,width:"100%",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
-                    <div style={{fontSize:52}}>📅</div>
+                    <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
                     <div>
                       <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,marginBottom:8}}>Staff Schedule</div>
                       {scheduleUrl?(
@@ -6263,7 +6509,7 @@ export default function App() {
                           onMouseEnter={e=>e.currentTarget.style.background=T.surf}
                           onMouseLeave={e=>e.currentTarget.style.background=T.surfH}
                         >
-                          <span style={{fontSize:18}}>🌐</span> Open in This Browser
+                          <span style={{display:"inline-flex",alignItems:"center",gap:6}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Open in This Browser</span>
                         </button>
                         <div style={{fontSize:11,color:T.faint,marginTop:4}}>
                           Last updated by Tech Admin
@@ -6288,7 +6534,7 @@ export default function App() {
                     <div style={{display:"grid",gap:T.compact?5:8}}>
                       {filtAct.slice(0,80).map((entry,i)=>(
                         <div key={entry.id} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"11px 14px",display:"flex",gap:10,alignItems:"center",animation:`fadeUp .2s ${i*12}ms ease both`}}>
-                          <span style={{fontSize:15}}>{({"login":E("🟢","●"),"logout":E("🔴","●"),"task_done":E("✅","✓"),"task_created":E("📝","·"),"employee added":E("👤","·"),"employee removed":E("🗑️","·")})[entry.type]||"📋"}</span>
+                          <span style={{display:"inline-flex",flexShrink:0,alignItems:"center"}}>{entry.type==="login"?<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#22c55e"/></svg>:entry.type==="logout"?<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#ef4444"/></svg>:entry.type==="task_done"?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>:entry.type==="task_created"?<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1e7fa8" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>:<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#94a3b8"/></svg>}</span>
                           <div style={{flex:1}}>
                             <div style={{fontSize:T.fs.md,color:T.txt,fontWeight:600}}>{entry.msg}</div>
                             <div style={{fontSize:T.fs.xs+1,color:T.sub,marginTop:2}}>{fmtDT(entry.at)}</div>
@@ -6328,14 +6574,14 @@ export default function App() {
                         <div>
                           <Inp T={T} label="NICKNAME (only you can see this)" placeholder="Add a nickname…" value={form.pName??""} onChange={e=>{setNameSaved(false);setForm(p=>({...p,pName:e.target.value}));}}/>
                           <div style={{fontSize:11,color:T.sub,marginTop:4,lineHeight:1.5}}>
-                            🔒 Your nickname is stored on this device only and is never shown to other staff members. Your display name shown to others is set by your manager.
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{display:"inline",marginRight:4,verticalAlign:"middle"}}><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Your nickname is stored on this device only and is never shown to other staff members. Your display name shown to others is set by your manager.
                           </div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
                           <Btn T={T} sm onClick={saveName}>Save Nickname</Btn>
                           {nameSaved&&(
                             <div style={{display:"flex",alignItems:"center",gap:5,animation:"fadeUp .2s ease",color:T.ok,fontWeight:700,fontSize:13}}>
-                              <span style={{fontSize:16}}>✅</span> Nickname saved!
+                              <span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Nickname saved!</span>
                             </div>
                           )}
                         </div>
@@ -6410,7 +6656,7 @@ export default function App() {
                                           style={{display:"flex",alignItems:"center",gap:6,background:isEquipped?b.color+"22":T.bg,border:`1.5px solid ${isEquipped?b.color:T.bor}`,borderRadius:9999,padding:"5px 12px",cursor:"pointer",fontFamily:"inherit",transition:"all .15s",opacity:equippedBadges.length>=5&&!isEquipped?0.5:1}}>
                                           <span style={{fontSize:16}}>{b.icon}</span>
                                           <span style={{fontSize:12,fontWeight:700,color:isEquipped?b.color:T.txt}}>{b.name}</span>
-                                          {isEquipped&&<span style={{fontSize:10,color:b.color,fontWeight:800}}>✓</span>}
+                                          {isEquipped&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={b.color} strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
                                         </button>
                                       );
                                     })}
@@ -6434,7 +6680,7 @@ export default function App() {
                                       <button key={id} onClick={()=>{playSound("click");saveNameColor(id);}}
                                         style={{flex:1,background:nameColorId===id?T.accent+"18":T.bg,border:`1.5px solid ${nameColorId===id?T.accent:T.bor}`,borderRadius:9999,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:id==="name_color"?T.accent:T.txt,transition:"all .15s"}}>
                                         {id==="base"?"Default":E("✨","★")+" Accent Color"}
-                                        {nameColorId===id&&<span style={{marginLeft:4,fontSize:10,fontWeight:800,color:T.accent}}>✓</span>}
+                                        {nameColorId===id&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3.5" strokeLinecap="round" style={{marginLeft:4}}><polyline points="20 6 9 17 4 12"/></svg>}
                                       </button>
                                     ))}
                                   </div>
@@ -6456,7 +6702,7 @@ export default function App() {
                                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                                       <button onClick={()=>{playSound("click");saveEquippedFrame("");}}
                                         style={{background:!equippedFrame?T.accent+"18":T.bg,border:`1.5px solid ${!equippedFrame?T.accent:T.bor}`,borderRadius:9999,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:T.txt,transition:"all .15s"}}>
-                                        None {!equippedFrame&&<span style={{color:T.accent,marginLeft:4}}>✓</span>}
+                                        None {!equippedFrame&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3.5" strokeLinecap="round" style={{marginLeft:4}}><polyline points="20 6 9 17 4 12"/></svg>}
                                       </button>
                                       {unlockedFrames.map(id=>{
                                         const fi=frameInfo[id];if(!fi) return null;
@@ -6465,7 +6711,7 @@ export default function App() {
                                           <button key={id} onClick={()=>{playSound("click");saveEquippedFrame(id);}}
                                             style={{background:isEquipped?fi.color+"22":T.bg,border:`1.5px solid ${isEquipped?fi.color:T.bor}`,borderRadius:9999,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:12,fontWeight:700,color:isEquipped?fi.color:T.txt,transition:"all .15s",display:"flex",alignItems:"center",gap:6}}>
                                             <span style={{width:10,height:10,borderRadius:"50%",background:fi.color,boxShadow:`0 0 6px ${fi.color}`}}/>
-                                            {fi.label} {isEquipped&&<span>✓</span>}
+                                            {fi.label} {isEquipped&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
                                           </button>
                                         );
                                       })}
@@ -6506,7 +6752,7 @@ export default function App() {
                           {pinSaved&&(
                             <div style={{display:"flex",alignItems:"center",gap:10,background:`${T.ok}15`,border:`1px solid ${T.ok}55`,borderRadius:10,padding:"10px 14px",animation:"fadeUp .25s cubic-bezier(.23,1,.32,1)"}}>
                               <div style={{width:32,height:32,borderRadius:"50%",background:T.ok,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,animation:"bounceIn .4s cubic-bezier(.34,1.56,.64,1)"}}>
-                                <span style={{fontSize:16,color:"#fff"}}>✓</span>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                               </div>
                               <div>
                                 <div style={{fontWeight:800,fontSize:14,color:T.ok}}>PIN saved successfully!</div>
@@ -6517,7 +6763,7 @@ export default function App() {
                         </div>
                         {/* Biometric / Passkey registration */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
-                          <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>🔑 Face ID / Touch ID / Fingerprint</div>
+                          <div style={{display:"flex",alignItems:"center",gap:7,fontWeight:700,color:T.txt,marginBottom:4}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.txt} strokeWidth="1.8" strokeLinecap="round"><path d="M12 10c0-1.1.9-2 2-2"/><path d="M12 10v4"/><path d="M12 2C6.48 2 2 6.48 2 12"/><path d="M12 2c5.52 0 10 4.48 10 10"/><path d="M5 19.5C5.5 18 6 15 6 12c0-3.31 2.69-6 6-6s6 2.69 6 6c0 3-1 5.5-1 7"/><path d="M9 21c.5-2.5 1-5 1-9 0-1.1.9-2 2-2s2 .9 2 2c0 4 .5 6.5 1 9"/></svg> Face ID / Touch ID / Fingerprint</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:10,lineHeight:1.5}}>
                             {WA.supported()
                               ?"Register your device biometric to sign in without typing your email."
@@ -6526,9 +6772,9 @@ export default function App() {
                           {/* iOS/Android instructions */}
                           {WA.supported()&&!localStorage.getItem("nl3-passkey-cred-"+user?.id)&&(
                             <div style={{background:`${T.blue}12`,border:`1px solid ${T.blue}33`,borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:T.sub,lineHeight:1.7}}>
-                              <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>📱 Before you set this up:</div>
+                              <div style={{display:"flex",alignItems:"center",gap:7,fontWeight:700,color:T.txt,marginBottom:4}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.txt} strokeWidth="2" strokeLinecap="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg> Before you set this up:</div>
                               <div><strong>iPhone:</strong> You must have the app <strong>added to your home screen from Safari</strong> and be using it from there — Face ID / Touch ID will not work in a regular browser tab. <a href="https://support.apple.com/guide/iphone/bookmark-a-website-iph42ab2f3a7/ios" target="_blank" style={{color:T.accent}}>How to add to home screen →</a></div>
-                              <div style={{marginTop:4}}><strong>Android:</strong> Works great in Chrome — no extra steps needed. ✅</div>
+                              <div style={{marginTop:4}}><strong>Android:</strong> Works great in Chrome — no extra steps needed. <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
                             </div>
                           )}
                           {WA.supported()&&(
@@ -6561,14 +6807,14 @@ export default function App() {
                             </div>
                           )}
                           {localStorage.getItem("nl3-passkey-cred-"+user?.id)&&(
-                            <div style={{marginTop:8,fontSize:11,color:T.ok,fontWeight:600}}>✓ Biometric login is active on this device</div>
+                            <div style={{display:"flex",alignItems:"center",gap:5,marginTop:8,fontSize:11,color:T.ok,fontWeight:600}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.ok} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Biometric login is active on this device</div>
                           )}
                         </div>
 
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:14}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:8}}>Security Info</div>
                           {["Rate limiting — 5 attempts → 5 min lockout","Input sanitization on all fields","Session cleared on sign-out","Auto-save on logout","Auto logout after 30 min inactivity"].map(f=>(
-                            <div key={f} style={{fontSize:T.fs.sm,color:T.sub,padding:"3px 0",display:"flex",gap:8}}><span style={{color:T.ok}}>✓</span>{f}</div>
+                            <div key={f} style={{fontSize:T.fs.sm,color:T.sub,padding:"3px 0",display:"flex",gap:8}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.ok} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>{f}</div>
                           ))}
                         </div>
                       </div>
@@ -6600,15 +6846,57 @@ export default function App() {
                       <div style={{display:"grid",gap:16}}>
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>Display & Sound</div>
 
+                        {/* ── ACCENT COLOR ── all purchased colors + default scarlet */}
+                        {(()=>{
+                          const unlockedColors=JSON.parse(localStorage.getItem("nl3-unlocked-colors")||"[]");
+                          const COLOR_OPTIONS=[
+                            {id:"default",  label:"MNU Scarlet",  color:"#C8102E"},
+                            {id:"color_teal",     label:"Teal",        color:"#0d9488"},
+                            {id:"color_indigo",   label:"Indigo",      color:"#4f46e5"},
+                            {id:"color_rose",     label:"Rose",        color:"#e11d48"},
+                            {id:"color_amber",    label:"Amber",       color:"#d97706"},
+                            {id:"color_emerald",  label:"Emerald",     color:"#059669"},
+                            {id:"color_violet",   label:"Violet",      color:"#9333ea"},
+                            {id:"color_slate",    label:"Slate",       color:"#475569"},
+                            {id:"color_cyan",     label:"Cyan",        color:"#0891b2"},
+                            {id:"color_lime",     label:"Lime",        color:"#65a30d"},
+                            {id:"color_fuchsia",  label:"Fuchsia",     color:"#c026d3"},
+                            {id:"color_midnight", label:"Midnight",    color:"#1e1b4b"},
+                            {id:"color_gold",     label:"Gold",        color:"#b45309"},
+                          ];
+                          const available=COLOR_OPTIONS.filter(c=>c.id==="default"||unlockedColors.includes(c.id));
+                          if(available.length<=1) return null;
+                          return (
+                            <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
+                              <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Accent Color</div>
+                              <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Your purchased colors. Tap to apply across the whole app.</div>
+                              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                                {available.map(c=>{
+                                  const isActive=accent===c.color||(c.id==="default"&&(!accent||accent==="#C8102E"));
+                                  return (
+                                    <button key={c.id} onClick={()=>{playSound("click");applyTheme(dark,compact,c.id==="default"?"#C8102E":c.color);}}
+                                      title={c.label}
+                                      style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",padding:"4px",borderRadius:10,transition:"transform .15s",transform:isActive?"scale(1.1)":"scale(1)"}}>
+                                      <div style={{width:34,height:34,borderRadius:"50%",background:c.id==="default"?"#C8102E":c.color,boxShadow:isActive?`0 0 0 3px ${T.bg}, 0 0 0 5px ${c.id==="default"?"#C8102E":c.color}`:"0 2px 6px rgba(0,0,0,0.15)",transition:"box-shadow .2s"}}/>
+                                      <span style={{fontSize:9,color:isActive?T.txt:T.sub,fontWeight:isActive?700:500,whiteSpace:"nowrap"}}>{c.label}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <div style={{marginTop:10,fontSize:11,color:T.sub}}>Unlock more colors in the <button onClick={()=>setShowShop(true)} style={{background:"none",border:"none",color:T.accent,cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,padding:0}}>XP Shop →</button></div>
+                            </div>
+                          );
+                        })()}
+
                         {/* Dark mode — system/light/dark */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
                           <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Appearance</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Choose your theme or follow your device setting.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                             {[
-                              {key:"system",label:"System",icon:"🌓",desc:"Follows your device"},
-                              {key:"light", label:"Light",  icon:"☀️", desc:"Always light"},
-                              {key:"dark",  label:"Dark",   icon:"🌙", desc:"Always dark"},
+                              {key:"system",label:"System",icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,desc:"Follows your device"},
+                              {key:"light",label:"Light",icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,desc:"Always light"},
+                              {key:"dark",label:"Dark",icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,desc:"Always dark"},
                             ].map(opt=>{
                               const current=LS.get('nl3-dark')===null?"system":dark?"dark":"light";
                               const active=current===opt.key;
@@ -6626,7 +6914,7 @@ export default function App() {
                                   <div style={{fontSize:20,marginBottom:4}}>{opt.icon}</div>
                                   <div style={{fontWeight:700,color:active?T.accent:T.txt,fontSize:13}}>{opt.label}</div>
                                   <div style={{fontSize:10,color:T.sub,marginTop:2}}>{opt.desc}</div>
-                                  {active&&<div style={{fontSize:10,color:T.accent,fontWeight:800,marginTop:4}}>✓ Active</div>}
+                                  {active&&<div style={{display:"flex",alignItems:"center",gap:3,fontSize:10,color:T.accent,fontWeight:800,marginTop:4}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Active</div>}
                                 </button>
                               );
                             })}
@@ -6638,7 +6926,7 @@ export default function App() {
                           <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Layout Density</div>
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>How much information is shown on screen at once.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                            {[{k:false,label:"Comfortable",icon:"🛋️",desc:"More spacing, easier to read"},{k:true,label:"Compact",icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),desc:"More data, tighter layout"}].map(opt=>(
+                            {[{k:false,label:"Comfortable",icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"/><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H6v-2a2 2 0 0 0-4 0z"/><line x1="6" y1="18" x2="6" y2="22"/><line x1="18" y1="18" x2="18" y2="22"/></svg>,desc:"More spacing, easier to read"},{k:true,label:"Compact",icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>),desc:"More data, tighter layout"}].map(opt=>(
                               <button key={String(opt.k)} onClick={()=>{playSound("click");applyTheme(dark,opt.k);}} style={{background:compact===opt.k?T.accent+"18":"none",border:`2px solid ${compact===opt.k?T.scarlet:T.bor}`,borderRadius:12,padding:"12px",cursor:"pointer",textAlign:"left",fontFamily:"inherit",transition:"all .2s"}}>
                                 <div style={{fontSize:20,marginBottom:4}}>{opt.icon}</div>
                                 <div style={{fontWeight:700,color:compact===opt.k?T.scarlet:T.txt,fontSize:13}}>{opt.label}</div>
@@ -6654,10 +6942,10 @@ export default function App() {
                           <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12,lineHeight:1.5}}>Choose how the app scales to your device. This adjusts font sizes and tap target sizes across the whole app.</div>
                           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
                             {[
-                              {mode:"auto",   icon:"🔄", label:"Auto",    desc:"Detects your screen size automatically"},
-                              {mode:"mobile", icon:"📱", label:"Mobile",  desc:"Larger text & buttons, optimized for touch"},
-                              {mode:"tablet", icon:"📟", label:"Tablet",  desc:"Medium size, great for iPad & tablet web app"},
-                              {mode:"desktop",icon:"🖥️", label:"Desktop", desc:"Compact, more information visible at once"},
+                              {mode:"auto",icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,label:"Auto",desc:"Detects your screen size automatically"},
+                              {mode:"mobile",icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,label:"Mobile",desc:"Larger text & buttons, optimized for touch"},
+                              {mode:"tablet",icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>,label:"Tablet",desc:"Medium size, great for iPad & tablet web app"},
+                              {mode:"desktop",icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,label:"Desktop",desc:"Compact, more information visible at once"},
                             ].map(opt=>{
                               const active=deviceMode===opt.mode;
                               return (
@@ -6666,7 +6954,7 @@ export default function App() {
                                   <div style={{fontSize:22,marginBottom:4}}>{opt.icon}</div>
                                   <div style={{fontWeight:700,color:active?T.accent:T.txt,fontSize:13}}>{opt.label}</div>
                                   <div style={{fontSize:10,color:T.sub,marginTop:3,lineHeight:1.4}}>{opt.desc}</div>
-                                  {active&&<div style={{marginTop:6,fontSize:10,color:T.accent,fontWeight:800}}>✓ Active</div>}
+                                  {active&&<div style={{display:"flex",alignItems:"center",gap:3,marginTop:6,fontSize:10,color:T.accent,fontWeight:800}}><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={T.accent} strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Active</div>}
                                 </button>
                               );
                             })}
@@ -6714,7 +7002,7 @@ export default function App() {
                         {/* Haptics toggle */}
                         <div style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                           <div>
-                            <div style={{fontWeight:700,color:T.txt}}>📳 Haptic Feedback</div>
+                            <div style={{display:"flex",alignItems:"center",gap:7,fontWeight:700,color:T.txt}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.txt} strokeWidth="2" strokeLinecap="round"><path d="M2 8v8"/><path d="M6 5v14"/><rect x="10" y="2" width="8" height="20" rx="2"/><path d="M18 5v14"/><path d="M22 8v8"/></svg> Haptic Feedback</div>
                             <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>Android only — iOS does not support web vibration</div>
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -6734,7 +7022,7 @@ export default function App() {
                           </div>
                         </div>
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16,display:"grid",gap:12}}>
-                          <div style={{fontWeight:700,color:T.txt,marginBottom:2}}>🔊 Sound & Audio</div>
+                          <div style={{display:"flex",alignItems:"center",gap:7,fontWeight:700,color:T.txt,marginBottom:2}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.txt} strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Sound & Audio</div>
                           {/* On/Off */}
                           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                             <div>
@@ -6750,13 +7038,13 @@ export default function App() {
                             <div>
                               <div style={{fontWeight:600,fontSize:T.fs.md,color:T.txt,marginBottom:6}}>Volume</div>
                               <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                                <span style={{fontSize:16}}>🔈</span>
+                                <span style={{display:"inline-flex"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
                                 <input type="range" min="0.04" max="0.5" step="0.02" value={soundVol}
                                   onChange={e=>{const v=parseFloat(e.target.value);applySoundSettings(true,v);}}
                                   onMouseUp={()=>playSound("click")}
                                   style={{flex:1,accentColor:T.scarlet,cursor:"pointer"}}
                                 />
-                                <span style={{fontSize:16}}>🔊</span>
+                                <span style={{display:"inline-flex"}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
                                 <span style={{fontSize:12,color:T.sub,fontWeight:700,minWidth:36}}>{Math.round(soundVol*200)}%</span>
                               </div>
                               <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
@@ -6775,7 +7063,7 @@ export default function App() {
                     {setTab2==="boss_dms"&&can(user,"boss")&&(
                       <div style={{display:"grid",gap:14}}>
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>All Messages</div>
-                        <div style={{fontSize:12,color:T.warn,fontWeight:600,background:`${T.warn}12`,border:`1px solid ${T.warn}33`,borderRadius:8,padding:"8px 12px"}}>⚠️ Viewing as supervisor — staff are notified messages may be reviewed.</div>
+                        <div style={{fontSize:12,color:T.warn,fontWeight:600,background:`${T.warn}12`,border:`1px solid ${T.warn}33`,borderRadius:8,padding:"8px 12px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.warn} strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Viewing as supervisor — staff are notified messages may be reviewed.</span></div>
                         <div style={{display:"grid",gap:6,maxHeight:400,overflowY:"auto"}}>
                           {[...dms].filter(d=>!d.feedback&&!d.system).sort((a,b)=>b.at-a.at).map(msg=>{
                             const sender=emps.find(e=>e.id===msg.from);
@@ -6803,8 +7091,8 @@ export default function App() {
                       <div style={{display:"grid",gap:16}}>
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>Technical Testing & Management</div>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}} className="two-col">
-                          <Btn T={T} variant="ghost" onClick={createBackup}>💾 Manual Backup</Btn>
-                          <Btn T={T} variant="danger" onClick={clearDemo}>🗑️ Clear Demo Data</Btn>
+                          <Btn T={T} variant="ghost" onClick={createBackup}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Manual Backup</span></Btn>
+                          <Btn T={T} variant="danger" onClick={clearDemo}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Clear Demo Data</span></Btn>
                         </div>
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16,display:"grid",gap:10}}>
                           <div style={{fontWeight:700,color:T.txt}}>Site Notice</div>
@@ -6833,6 +7121,35 @@ export default function App() {
                   </div>
                 </div>
               )}
+
+                </div>{/* end swipe-cur */}
+
+                {/* Next page panel — peeking in from the side, rendered only when dragging */}
+                {swipeNextPage&&(
+                  <div id="swipe-nxt" style={{
+                    position:"absolute",
+                    top:0,left:0,
+                    width:"100%",height:"100%",
+                    willChange:"transform",
+                    opacity:0,
+                    padding:T.compact?"12px 14px 60px":"18px 20px 80px",
+                    overflowY:"hidden",overflowX:"hidden",
+                    pointerEvents:"none",
+                  }}>
+                    {/* Lightweight preview of the adjacent page */}
+                    <div style={{paddingTop:40,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,minHeight:200,opacity:0.85}}>
+                      <div style={{fontSize:36}}>
+                        {{"home":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>,"tasks":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>,"inv":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,"anns":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,"dms":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,"leaderboard":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>,"act":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,"schedule":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,"set":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}[swipeNextPage]||<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>}
+                      </div>
+                      <div style={{fontSize:18,fontWeight:800,color:T.txt,fontFamily:"'Clash Display',sans-serif",letterSpacing:"-0.3px"}}>
+                        {{"home":"Home","tasks":"Tasks","inv":"Inventory","anns":"Announcements","dms":"Messages","leaderboard":"Leaderboard","act":"Activity","schedule":"Schedule","set":"Settings"}[swipeNextPage]||swipeNextPage}
+                      </div>
+                      <div style={{fontSize:12,color:T.sub}}>Swipe to navigate</div>
+                    </div>
+                  </div>
+                )}
+
+              </div>{/* end swipe outer clip */}
             </main>
           </div>
 
@@ -6865,8 +7182,8 @@ export default function App() {
   </svg>
   <span style={{fontSize:9,fontWeight:800,color:"#1e7fa8",letterSpacing:"0.06em",lineHeight:1}}>FINN</span>
 </span>;
-                    return tl&&isUrgent?<div style={{fontSize:11,color:"#C8102E",fontWeight:600,marginTop:3,display:"flex",alignItems:"center"}}>{"💡 Auto-setting to High priority"}{finnBadge}</div>
-                      :tl&&isLow?<div style={{fontSize:11,color:T.sub,fontWeight:600,marginTop:3,display:"flex",alignItems:"center"}}>{"💡 Auto-setting to Low priority"}{finnBadge}</div>
+                    return tl&&isUrgent?<div style={{fontSize:11,color:"#C8102E",fontWeight:600,marginTop:3,display:"flex",alignItems:"center"}}>{"⬆ Auto-setting to High priority"}{finnBadge}</div>
+                      :tl&&isLow?<div style={{fontSize:11,color:T.sub,fontWeight:600,marginTop:3,display:"flex",alignItems:"center"}}>{"⬇ Auto-setting to Low priority"}{finnBadge}</div>
                       :null;
                   })()}
                 </div>
@@ -6880,11 +7197,51 @@ export default function App() {
                     {emps.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}
                   </Sel>
                 </div>
-                <Inp T={T} label="DUE DATE (optional)" type="date" value={form.tDue||""} onChange={e=>setForm(p=>({...p,tDue:e.target.value}))}/>
+                {(()=>{
+  const today=new Date(); today.setHours(0,0,0,0);
+  const fmt=(d)=>{const n=new Date(d);n.setHours(0,0,0,0);return n.toISOString().slice(0,10);};
+  const tom=new Date(today); tom.setDate(tom.getDate()+1);
+  const fri=new Date(today); fri.setDate(fri.getDate()+((5-fri.getDay()+7)%7||7));
+  const mon=new Date(today); mon.setDate(mon.getDate()+((8-mon.getDay())%7||7));
+  const chips=[
+    {label:"Today",     val:fmt(today)},
+    {label:"Tomorrow",  val:fmt(tom)},
+    {label:"This Fri",  val:fmt(fri)},
+    {label:"Next Mon",  val:fmt(mon)},
+  ];
+  return (
+    <div>
+      <div style={{fontSize:10,fontWeight:700,color:T.sub,textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:8}}>DUE DATE (optional)</div>
+      <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+        {chips.map(c=>{
+          const active=(form.tDue||"")===c.val;
+          return (
+            <button key={c.label} type="button"
+              onClick={()=>setForm(p=>({...p,tDue:active?"":c.val}))}
+              style={{padding:"5px 12px",borderRadius:8,border:`1.5px solid ${active?T.scarlet:T.bor}`,background:active?T.scarlet:"transparent",color:active?"#fff":T.sub,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .12s",whiteSpace:"nowrap"}}>
+              {c.label}
+            </button>
+          );
+        })}
+        {form.tDue&&!chips.find(c=>c.val===form.tDue)&&(
+          <button type="button" onClick={()=>setForm(p=>({...p,tDue:""}))}
+            style={{padding:"5px 10px",borderRadius:8,border:`1.5px solid ${T.bor}`,background:"transparent",color:T.sub,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+            ✕ Clear
+          </button>
+        )}
+      </div>
+      <input type="date" value={form.tDue||""} onChange={e=>setForm(p=>({...p,tDue:e.target.value}))}
+        style={{width:"100%",background:T.bg,border:`1.5px solid ${T.bor}`,borderRadius:10,padding:"10px 14px",fontSize:14,fontFamily:"inherit",color:T.txt,outline:"none",display:"block"}}
+        onFocus={e=>e.target.style.borderColor=T.scarlet}
+        onBlur={e=>e.target.style.borderColor=T.bor}
+      />
+    </div>
+  );
+})()}
                 <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:10,padding:"10px 14px"}}>
                   <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:form.tRepeat||form.tRepeatDays?.length>0?10:0}}>
                     <input type="checkbox" id="repeat-chk" checked={form.tRepeat||false} onChange={e=>setForm(p=>({...p,tRepeat:e.target.checked}))} style={{width:16,height:16,cursor:"pointer"}}/>
-                    <label htmlFor="repeat-chk" style={{fontSize:T.fs.md,color:T.txt,fontWeight:600,cursor:"pointer"}}>🔁 Repeat after completion</label>
+                    <label htmlFor="repeat-chk" style={{display:"flex",alignItems:"center",gap:5,fontSize:T.fs.md,color:T.txt,fontWeight:600,cursor:"pointer"}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> Repeat after completion</label>
                   </div>
                   {/* Repeat on specific days */}
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
@@ -6967,7 +7324,7 @@ export default function App() {
           {/* Offline banner */}
           {isOffline&&(
             <div style={{position:"fixed",bottom:44,left:"50%",transform:"translateX(-50%)",zIndex:9996,background:"#92400e",borderRadius:20,padding:"8px 20px",display:"flex",alignItems:"center",gap:8,fontSize:12,fontWeight:700,color:"#fff",animation:"fadeUp .2s ease",boxShadow:"0 4px 16px rgba(0,0,0,.3)",whiteSpace:"nowrap"}}>
-              <span>📡</span>
+              <span style={{display:"inline-flex",alignItems:"center"}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg></span>
               <span>You&apos;re offline — syncing when reconnected</span>
             </div>
           )}
@@ -7119,17 +7476,17 @@ export default function App() {
 
           
 
-          <HelpModal T={T} bottom={52} navOpen={navOpen} externalOpen={showHelp} onExternalClose={()=>setShowHelp(false)}/>
+          <HelpModal T={T} bottom={110} navOpen={navOpen} externalOpen={showHelp} onExternalClose={()=>setShowHelp(false)}/>
           {/* Feedback modal */}
           {showFeedback&&(
             <Modal T={T} title={`${E("💡","i")} Send Feedback`} onClose={()=>{setShowFeedback(false);setFeedbackForm({type:"feature",msg:""});}}>
               <div style={{display:"grid",gap:14}}>
                 <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>Have a feature idea or found a bug? Your message goes directly to the Technical Administrator.</div>
                 <Sel T={T} label="TYPE" value={feedbackForm.type} onChange={e=>setFeedbackForm(p=>({...p,type:e.target.value}))}>
-                  <option value="feature">💡 Feature Request</option>
-                  <option value="bug">🐛 Bug Report</option>
-                  <option value="improvement">✨ Improvement Idea</option>
-                  <option value="other">📝 Other</option>
+                  <option value="feature">Feature Request</option>
+                  <option value="bug">Bug Report</option>
+                  <option value="improvement">Improvement Idea</option>
+                  <option value="other">Other</option>
                 </Sel>
                 <Textarea T={T} label="YOUR MESSAGE *" placeholder="Describe your idea or the issue you found…" rows={4} value={feedbackForm.msg} onChange={e=>setFeedbackForm(p=>({...p,msg:e.target.value}))}/>
               </div>
@@ -7138,7 +7495,7 @@ export default function App() {
                 <Btn T={T} flex={2} sound="success" onClick={()=>{
                   const msg=String(feedbackForm.msg||"").trim();
                   if(!msg){toast("Please describe your feedback","err");return;}
-                  const icons={feature:"💡",bug:"🐛",improvement:"✨",other:"📝"};
+                  const icons={feature:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="2" x2="12" y2="6"/><path d="M12 6a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3 5.5V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.5C7.5 16.5 6 14.5 6 12a6 6 0 0 1 6-6z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>,bug:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 2l1.5 1.5"/><path d="M14.5 3.5L16 2"/><path d="M9 9h6"/><path d="M5 8l-2-2"/><path d="M19 8l2-2"/><path d="M12 2a4 4 0 0 1 4 4v10a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/></svg>,improvement:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,other:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>};
                   const labels={feature:"Feature Request",bug:"Bug Report",improvement:"Improvement",other:"Other"};
                   const dmText=`${icons[feedbackForm.type]} [${labels[feedbackForm.type]}] from ${user?.name} (${user?.role}): ${msg}`;
                   const newDm={id:uid(),from:user?.id||"",to:"TECH",text:san(dmText),at:Date.now(),read:false,system:false,feedback:true};
@@ -7160,73 +7517,83 @@ export default function App() {
       {/* ═══ TECH DASHBOARD ════════════════════════════════════════════════════ */}
       {screen==="tech"&&(
         <div style={{minHeight:"100vh",background:T.bg}}>
-          <header style={{background:T.surf,borderBottom:`1px solid ${T.bor}`,padding:"10px 16px",position:"sticky",top:0,zIndex:100}}>
-            <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:`linear-gradient(90deg,${T.warn},${T.scarlet})`}}/>
-            {/* Top row: icon + compact title + exit */}
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:16}}>🔧</span>
-              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:13,fontWeight:800,color:T.txt,flex:1}}>Technical Administrator Dashboard</div>
+          {/* ── TECH HEADER ── */}
+          <header style={{background:T.surf,borderBottom:`1px solid ${T.bor}`,padding:"0",position:"sticky",top:0,zIndex:100,boxShadow:`0 1px 0 ${T.bor}`}}>
+            {/* Scarlet accent bar */}
+            <div style={{height:3,background:`linear-gradient(90deg,${T.warn} 0%,${T.scarlet} 60%,#C8102E 100%)`}}/>
+            <div style={{padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+              {/* Icon + wordmark */}
+              <div style={{width:34,height:34,borderRadius:10,background:`${T.warn}18`,border:`1.5px solid ${T.warn}44`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.warn} strokeWidth="2" strokeLinecap="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              </div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:15,fontWeight:800,color:T.txt,lineHeight:1.1}}>Tech Admin</div>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
+                  <span style={{fontSize:10,fontWeight:700,color:T.warn,letterSpacing:"0.06em",textTransform:"uppercase"}}>Administrator</span>
+                  <span style={{fontSize:10,color:T.sub}}>·</span>
+                  <LiveClock T={T}/>
+                </div>
+              </div>
               <button onClick={()=>{if(techExiting)return;setTechExiting(true);playSound("logout");setTimeout(()=>{setTechExiting(false);setTEmail("");setTPin("");setTErr("");setScreen("login");},2500);}}
-                style={{background:"#fee2e2",border:"1px solid #fca5a5",color:"#991b1b",borderRadius:10,padding:"7px 18px",fontWeight:800,fontSize:14,cursor:"pointer",fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap"}}
-                onMouseEnter={e=>{e.currentTarget.style.background="#fca5a5";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="#fee2e2";}}
-              >← Exit</button>
-            </div>
-            {/* Second row: badge + clock */}
-            <div style={{display:"flex",alignItems:"center",gap:10,marginTop:6}}>
-              <Tag label="TECHNICAL ADMINISTRATOR" color={T.warn}/>
-              <LiveClock T={T}/>
+                style={{background:T.surfH,border:`1.5px solid ${T.bor}`,color:T.txt,borderRadius:10,padding:"7px 14px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"all .15s",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:6}}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor=T.scarlet;e.currentTarget.style.color=T.scarlet;}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=T.bor;e.currentTarget.style.color=T.txt;}}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                Exit
+              </button>
             </div>
           </header>
 
-          <div style={{display:"flex",minHeight:"calc(100vh - 82px)"}}>
-            {/* ── COLLAPSIBLE SIDEBAR ─────────────────────────────── */}
-            <nav className="tech-sidebar" style={{
-              width:techSidebarOpen?220:56,flexShrink:0,
+          <div style={{display:"flex",minHeight:"calc(100vh - 59px)"}}>
+            {/* ── SIDEBAR ── */}
+            <nav style={{
+              width:techSidebarOpen?200:52,flexShrink:0,
               borderRight:`1px solid ${T.bor}`,
               background:T.surf,
-              position:"sticky",top:82,height:"calc(100vh - 82px)",
+              position:"sticky",top:59,height:"calc(100vh - 59px)",
               display:"flex",flexDirection:"column",
-              overflow:"hidden",transition:"width .25s cubic-bezier(.4,0,.2,1)",
+              overflow:"hidden",transition:"width .22s cubic-bezier(.4,0,.2,1)",
             }}>
-              {/* Sidebar items */}
-              <div style={{flex:1,overflowY:"auto",padding:"10px 6px",display:"flex",flexDirection:"column",gap:2}}>
+              <div style={{flex:1,overflowY:"auto",padding:"8px 6px",display:"flex",flexDirection:"column",gap:1}}>
                 {[
-                  {key:"overview", icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>), label:"Overview"},
-                  {key:"staff",    icon:"👥", label:"Staff & Access"},
-                  {key:"xp",      icon:"⭐", label:"XP & Badges"},
-                  {key:"content",  icon:(<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>), label:"Content"},
-                  {key:"messages", icon:"💬", label:"Messages"},
-                  {key:"system",   icon:"🛡️", label:"System"},
-                  {key:"ratings",  icon:"⭐", label:"Ratings"},
-                ].map(s=>(
-                  <button key={s.key} onClick={()=>{
-                      setTechSection(s.key);playSound("click");
-                      const el=document.getElementById("tech-section-"+s.key);
-                      if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
-                    }}
-                    className={`tech-sidebar-item${techSection===s.key?" active":""}`}
-                    style={{
-                      display:"flex",alignItems:"center",gap:10,
-                      padding:"10px 10px",borderRadius:8,
-                      border:`1px solid transparent`,
-                      borderLeft:techSection===s.key?`2px solid ${T.warn}`:"2px solid transparent",
-                      background:techSection===s.key?T.warn+"14":"transparent",
-                      color:techSection===s.key?T.warn:T.sub,
-                      cursor:"pointer",fontFamily:"inherit",fontWeight:techSection===s.key?700:500,
-                      fontSize:13,textAlign:"left",width:"100%",flexShrink:0,
-                      whiteSpace:"nowrap",
-                    }}>
-                    <span style={{fontSize:16,flexShrink:0,width:22,textAlign:"center"}}>{s.icon}</span>
-                    {techSidebarOpen&&<span style={{transition:"opacity .2s",opacity:techSidebarOpen?1:0}}>{s.label}</span>}
-                  </button>
-                ))}
+                  {key:"overview",icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>,label:"Overview"},
+                  {key:"staff",   icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,label:"Staff & Access"},
+                  {key:"xp",      icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,label:"XP & Badges"},
+                  {key:"content", icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,label:"Content"},
+                  {key:"messages",icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,label:"Messages"},
+                  {key:"system",  icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,label:"System"},
+                  {key:"ratings", icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>,label:"Ratings"},
+                ].map(s=>{
+                  const active=techSection===s.key;
+                  return (
+                    <button key={s.key} onClick={()=>{
+                        setTechSection(s.key);playSound("click");
+                        const el=document.getElementById("tech-section-"+s.key);
+                        if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+                      }}
+                      style={{
+                        display:"flex",alignItems:"center",gap:10,
+                        padding:"9px 10px",borderRadius:10,border:"none",
+                        background:active?`${T.warn}18`:"transparent",
+                        color:active?T.warn:T.sub,
+                        cursor:"pointer",fontFamily:"inherit",fontWeight:active?700:500,
+                        fontSize:13,textAlign:"left",width:"100%",flexShrink:0,
+                        whiteSpace:"nowrap",transition:"all .12s",
+                      }}>
+                      <span style={{flexShrink:0,width:20,display:"flex",alignItems:"center",justifyContent:"center",
+                        color:active?T.warn:T.sub}}>{s.icon}</span>
+                      {techSidebarOpen&&<span style={{transition:"opacity .15s",opacity:techSidebarOpen?1:0}}>{s.label}</span>}
+                    </button>
+                  );
+                })}
               </div>
-              {/* Toggle collapse button */}
               <button onClick={()=>setTechSidebarOpen(o=>!o)}
-                style={{padding:"14px 10px",borderTop:`1px solid ${T.bor}`,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10,color:T.sub,fontFamily:"inherit",fontSize:12,width:"100%"}}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                  style={{flexShrink:0,transform:techSidebarOpen?"rotate(180deg)":"none",transition:"transform .25s"}}>
+                style={{padding:"12px 10px",borderTop:`1px solid ${T.bor}`,background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:10,color:T.faint,fontFamily:"inherit",fontSize:11,width:"100%",transition:"color .12s"}}
+                onMouseEnter={e=>e.currentTarget.style.color=T.sub}
+                onMouseLeave={e=>e.currentTarget.style.color=T.faint}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                  style={{flexShrink:0,transform:techSidebarOpen?"rotate(180deg)":"none",transition:"transform .22s"}}>
                   <polyline points="15 18 9 12 15 6"/>
                 </svg>
                 {techSidebarOpen&&<span>Collapse</span>}
@@ -7234,46 +7601,60 @@ export default function App() {
             </nav>
 
             {/* ── MAIN CONTENT ────────────────────────────────────── */}
-            <div style={{flex:1,overflowY:"auto",padding:"22px 20px 80px",minWidth:0}}>
+            <div style={{flex:1,overflowY:"auto",padding:"20px 18px 80px",minWidth:0}}>
             <div id="tech-section-overview" style={{scrollMarginTop:90}}/>
             {/* Metrics */}
             <TechMetrics T={T}/>
 
             {/* Stats */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:18}}>
-              {[["👥","Employees",emps.length],["📦","Items",inv.length],["✅","Tasks",tasks.length],["🔔","Announcements",anns.length],["📋","Activity",act.length],["💬","Messages",dms.length]].map(([icon,label,val])=>(
-                <div key={label} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"12px 14px"}}>
-                  <div style={{fontSize:18}}>{icon}</div>
-                  <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,marginTop:3}}>{val}</div>
-                  <div style={{fontSize:11,color:T.sub,fontWeight:600}}>{label}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:16}}>
+              {[
+                {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.warn} strokeWidth="2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,label:"Staff",val:emps.length},
+                {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.blue} strokeWidth="2" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,label:"Items",val:inv.length},
+                {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.ok} strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>,label:"Tasks",val:tasks.length},
+                {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,label:"Anns",val:anns.length},
+                {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>,label:"Activity",val:act.length},
+                {icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.blue} strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,label:"DMs",val:dms.length},
+              ].map(s=>(
+                <div key={s.label} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"12px 14px",display:"flex",flexDirection:"column",gap:6}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    {s.icon}
+                    <span style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt}}>{s.val}</span>
+                  </div>
+                  <div style={{fontSize:11,color:T.sub,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em"}}>{s.label}</div>
                 </div>
               ))}
             </div>
 
             {/* Site Offline Toggle — prominent at top */}
-            <div style={{background:siteOffline?"#fee2e2":"#dcfce7",border:`2px solid ${siteOffline?"#fca5a5":"#86efac"}`,borderRadius:14,padding:"14px 18px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-              <div>
-                <div style={{fontWeight:800,fontSize:15,color:siteOffline?"#991b1b":"#15803d"}}>
-                  {siteOffline?"🔴 Site is OFFLINE":"🟢 Site is ONLINE"}
+            <div style={{background:T.card,border:`1.5px solid ${siteOffline?"#fca5a5":T.ok+"44"}`,borderRadius:14,padding:"14px 16px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:36,height:36,borderRadius:10,background:siteOffline?"#fee2e2":"#dcfce7",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <svg width="16" height="16" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill={siteOffline?"#ef4444":"#22c55e"}/></svg>
                 </div>
-                <div style={{fontSize:12,color:siteOffline?"#b91c1c":"#166534",marginTop:3}}>
-                  {siteOffline?"Only you (Tech Admin) can log in right now.":"All staff can log in normally."}
+                <div>
+                  <div style={{fontWeight:800,fontSize:14,color:siteOffline?"#991b1b":"#15803d"}}>
+                    {siteOffline?"Site is OFFLINE":"Site is ONLINE"}
+                  </div>
+                  <div style={{fontSize:11,color:T.sub,marginTop:2}}>
+                    {siteOffline?"Only Tech Admin can log in right now.":"All staff can log in normally."}
+                  </div>
                 </div>
               </div>
               <button onClick={toggleOffline}
-                style={{background:siteOffline?"#15803d":"#dc2626",color:"#fff",border:"none",borderRadius:10,padding:"10px 20px",fontWeight:800,fontSize:13,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",transition:"all .2s",boxShadow:"0 2px 8px rgba(0,0,0,.15)"}}
+                style={{background:siteOffline?"#15803d":"#C8102E",color:"#fff",border:"none",borderRadius:10,padding:"8px 16px",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",transition:"opacity .15s",flexShrink:0}}
                 onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
                 onMouseLeave={e=>e.currentTarget.style.opacity="1"}
               >
-                {siteOffline?"Bring Back Online":"Take Offline"}
+                {siteOffline?"Bring Online":"Take Offline"}
               </button>
             </div>
 
             {/* Actions */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:8}} className="two-col">
-              <Btn T={T} onClick={()=>{playSound("click");createBackup();}}>💾 Backup</Btn>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8,marginBottom:12}} className="two-col">
+              <Btn T={T} onClick={()=>{playSound("click");createBackup();}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Backup</span></Btn>
               <Btn T={T} variant="ghost" onClick={()=>{playSound("click");if(bkps.length>0)restoreBkp(bkps[0]);else toast("No backups yet","warn");}}>↩ Restore Latest</Btn>
-              <Btn T={T} variant="danger" onClick={()=>{playSound("click");clearDemo();}}>🗑️ Clear Demo</Btn>
+              <Btn T={T} variant="danger" onClick={()=>{playSound("click");clearDemo();}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Clear Demo</span></Btn>
               <Btn T={T} variant="ghost" onClick={async()=>{await fetch(`${SUPABASE_URL}/rest/v1/activity?id=neq.none`,{method:"DELETE",headers:SB.headers});setAct([]);setTechAction("✅ Activity log cleared.");setTimeout(()=>setTechAction(""),2500);playSound("notify");}}>🧹 Clear Activity</Btn>
               <Btn T={T} variant="danger" onClick={async()=>{
                 if(!window.confirm("Reset ALL staff XP to zero? This cannot be undone.")) return;
@@ -7283,14 +7664,20 @@ export default function App() {
                 setTimeout(()=>setTechAction(""),4000);
                 playSound("delete");
                 toast("All XP reset","warn");
-              }}>🔄 Reset All XP</Btn>
+              }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Reset All XP</span></Btn>
             </div>
 
             {/* ── XP GRANT PANEL ─────────────────────────────────────────── */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
 <div id="tech-section-xp" style={{scrollMarginTop:90}}/>
-              <div style={{fontWeight:700,color:T.txt,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:18}}>⭐</span> Grant XP to Staff
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+                <div style={{width:28,height:28,borderRadius:8,background:`${T.warn}18`,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.warn} strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </div>
+                <div>
+                  <div style={{fontWeight:800,fontSize:14,color:T.txt}}>Grant XP to Staff</div>
+                  <div style={{fontSize:11,color:T.sub}}>Reward staff with experience points</div>
+                </div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}} className="two-col">
                 {/* Target selector */}
@@ -7360,7 +7747,7 @@ export default function App() {
             {/* ── BADGE GRANT PANEL ─────────────────────────────────────── */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
               <div style={{fontWeight:700,color:T.txt,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:18}}>🏅</span> Grant Special Badge
+                <span style={{display:"inline-flex",alignItems:"center",gap:6}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="6"/><path d="M6 14l-2 8h16l-2-8"/></svg> Grant Special Badge</span>
               </div>
               <div style={{fontSize:12,color:T.sub,marginBottom:10,lineHeight:1.6,background:T.bg,borderRadius:8,padding:"8px 12px"}}>
                 Grant Employee of the Month or other exclusive badges. EOTM badges are permanent and show the month + year they were earned.
@@ -7447,10 +7834,11 @@ export default function App() {
                 } else {
                   toast(`${emp.name} already has this badge!`,"warn");
                 }
-              }}>🏅 Grant Badge</Btn>
+              }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="6"/><path d="M6 14l-2 8h16l-2-8"/></svg> Grant Badge</span></Btn>
             </div>
             {techAction&&(
-              <div style={{display:"flex",alignItems:"center",gap:8,background:"#dcfce7",border:"1px solid #86efac",borderRadius:10,padding:"9px 14px",marginBottom:14,animation:"fadeUp .2s ease",fontSize:13,fontWeight:700,color:"#15803d"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,background:T.ok+"18",border:`1px solid ${T.ok}33`,borderRadius:12,padding:"10px 14px",marginBottom:12,animation:"fadeUp .2s ease",fontSize:13,fontWeight:600,color:T.ok}}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.ok} strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                 {techAction}
               </div>
             )}
@@ -7458,7 +7846,7 @@ export default function App() {
             {/* Schedule URL */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
 <div id="tech-section-staff" style={{scrollMarginTop:90}}/>
-              <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>📅 Staff Schedule Link</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:4}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Staff Schedule Link</div>
               <div style={{fontSize:12,color:T.sub,marginBottom:10,lineHeight:1.6}}>
                 Paste any schedule URL here — Google Sheets, OneDrive, SharePoint, or any link. All staff will see it instantly in the Schedule tab.
               </div>
@@ -7486,7 +7874,7 @@ export default function App() {
               </div>
               {scheduleUrl&&(
                 <div style={{fontSize:12,color:T.ok,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
-                  <span>✓ Active:</span>
+                  <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Active:</span>
                   <a href={scheduleUrl} target="_blank" rel="noopener" style={{color:T.blue,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:300}}>{scheduleUrl}</a>
                 </div>
               )}
@@ -7494,21 +7882,21 @@ export default function App() {
 
             {/* Site notice */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
-              <div style={{fontWeight:700,color:T.txt,marginBottom:8}}>📢 Site Notice / Maintenance Alert</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:8}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 11l18-5v12L3 13"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> Site Notice / Maintenance Alert</div>
               <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                 <input placeholder="e.g. Site down for maintenance until 3pm…" value={form.nMsg||""} onChange={e=>setForm(p=>({...p,nMsg:e.target.value}))}
                   style={{flex:1,minWidth:200,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 14px",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
                 <Btn T={T} sm onClick={sendNotice}>Send</Btn>
                 {notice&&<Btn T={T} sm variant="ghost" onClick={clearNotice}>Clear Active</Btn>}
               </div>
-              {notice&&<div style={{marginTop:8,fontSize:12,color:T.warn,fontWeight:600}}>🟡 Active: &quot;{notice}&quot;</div>}
+              {notice&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:8,fontSize:12,color:T.warn,fontWeight:600}}><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#f59e0b"/></svg> Active: &quot;{notice}&quot;</div>}
             </div>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}} className="two-col">
               {/* System Logs */}
               <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:6}}>
-                  <div style={{fontWeight:700,color:T.txt}}>🛡️ System Logs ({errs.length})</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> System Logs ({errs.length})</div>
                   <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                     {["all","info","warn","error"].map(f=>(
                       <button key={f} onClick={()=>setLogF(f)} style={{background:logF===f?T.scarlet:T.surfH,color:logF===f?"#fff":T.sub,border:`1px solid ${T.bor}`,borderRadius:5,padding:"2px 10px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{f}</button>
@@ -7521,7 +7909,7 @@ export default function App() {
                     ?<div style={{color:T.sub,fontSize:12}}>No entries</div>
                     :errs.filter(e=>logF==="all"||e.level===logF).map(e=>(
                       <div key={e.id} style={{background:T.bg,borderRadius:8,padding:"7px 10px",display:"flex",gap:7,alignItems:"flex-start"}}>
-                        <span style={{fontSize:12}}>{({"info":"ℹ️","warn":"⚠️","error":"🔴"})[e.level]||"📋"}</span>
+                        <span style={{display:"inline-flex"}}>{e.level==="warn"?<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>:e.level==="error"?<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#ef4444"/></svg>:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>}</span>
                         <div>
                           <div style={{fontSize:12,color:T.txt}}>{e.msg}</div>
                           <div style={{fontSize:10,color:T.sub}}>{fmtDT(e.at)}</div>
@@ -7534,7 +7922,7 @@ export default function App() {
 
               {/* Most active users */}
               <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16}}>
-                <div style={{fontWeight:700,color:T.txt,marginBottom:10}}>🏆 Most Active Users</div>
+                <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:10}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M6 9H4a2 2 0 0 0-2 2v0a6 6 0 0 0 6 6h0"/><path d="M18 9h2a2 2 0 0 1 2 2v0a6 6 0 0 1-6 6h0"/><path d="M6 2h12v10a6 6 0 0 1-12 0V2z"/></svg> Most Active Users</div>
                 <div style={{display:"grid",gap:8}}>
                   {userActivity.map((e,i)=>(
                     <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,background:T.bg,borderRadius:10,padding:"8px 12px"}}>
@@ -7554,11 +7942,11 @@ export default function App() {
 
             {/* Activity log */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
-              <div style={{fontWeight:700,color:T.txt,marginBottom:10}}>📊 Activity Log ({act.length})</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:10}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg> Activity Log ({act.length})</div>
               <div style={{maxHeight:220,overflowY:"auto",display:"grid",gap:5}}>
                 {act.length===0?<div style={{color:T.sub,fontSize:12}}>No activity</div>:act.slice(0,80).map(entry=>(
                   <div key={entry.id} style={{background:T.bg,borderRadius:8,padding:"7px 10px",display:"flex",gap:8,alignItems:"center"}}>
-                    <span style={{fontSize:13}}>{({"login":"🟢","logout":"🔴","task_done":"✅","task_created":"📝","employee added":"👤","employee removed":"🗑️"})[entry.type]||"📋"}</span>
+                    <span style={{display:"inline-flex",flexShrink:0,alignItems:"center"}}>{({"login":<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#22c55e"/></svg>,"logout":<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#ef4444"/></svg>,"task_done":<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>,"task_created":<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1e7fa8" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,"employee added":<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1e7fa8" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>,"employee removed":<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>})[entry.type]||<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#94a3b8"/></svg>}</span>
                     <div style={{flex:1}}><div style={{fontSize:12,color:T.txt}}>{entry.msg}</div><div style={{fontSize:10,color:T.sub}}>{fmtDT(entry.at)}</div></div>
                   </div>
                 ))}
@@ -7567,7 +7955,7 @@ export default function App() {
 
             {/* Employee PIN viewer (gated) */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
-              <div style={{fontWeight:700,color:T.txt,marginBottom:8}}>🔐 Employee Emails & PINs</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:8}}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={T.txt} strokeWidth="2" strokeLinecap="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> Employee Emails & PINs</div>
               {!pinRevealed?(
                 <div style={{display:"grid",gap:10}}>
                   <div style={{fontSize:13,color:T.sub}}>Enter the infrastructure PIN to view sensitive employee data.</div>
@@ -7583,7 +7971,7 @@ export default function App() {
               ):(
                 <div>
                   <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
-                    <Btn T={T} xs variant="danger" onClick={()=>{setPinRevealed(false);setTechPinInput("");}}>🔒 Lock</Btn>
+                    <Btn T={T} xs variant="danger" onClick={()=>{setPinRevealed(false);setTechPinInput("");}}>  <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Lock</span></Btn>
                   </div>
                   <div style={{display:"grid",gap:6}}>
                     {emps.map(e=>(
@@ -7608,11 +7996,11 @@ export default function App() {
             {/* All DMs viewer */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
 <div id="tech-section-messages" style={{scrollMarginTop:90}}/>
-              <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>💬 All Direct Messages ({dms.length})</div>
-              <div style={{fontSize:12,color:T.warn,fontWeight:600,marginBottom:10}}>⚠️ Viewing as Technical Administrator — staff are notified messages may be reviewed.</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:4}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> All Direct Messages ({dms.length})</div>
+              <div style={{display:"flex",alignItems:"center",gap:5,fontSize:12,color:T.warn,fontWeight:600,marginBottom:10}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Viewing as Technical Administrator — staff are notified messages may be reviewed.</div>
               {/* Warning sender */}
               <div style={{background:`${T.warn}12`,border:`1px solid ${T.warn}44`,borderRadius:10,padding:12,marginBottom:12}}>
-                <div style={{fontWeight:700,color:T.txt,fontSize:12,marginBottom:8}}>⚠️ Send Warning to Conversation</div>
+                <div style={{display:"flex",alignItems:"center",gap:5,fontWeight:700,color:T.txt,fontSize:12,marginBottom:8}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Send Warning to Conversation</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
                   <div>
                     <div style={{fontSize:11,color:T.sub,marginBottom:4,fontWeight:700}}>SELECT RECIPIENT</div>
@@ -7677,7 +8065,7 @@ export default function App() {
                   playSound("warn");
                   toast(`Warning sent into ${chatPartners.length||1} conversation(s)!`,"warn");
                   setForm(p=>({...p,warnMsg:"",warnTo:""}));
-                }}>⚠️ Send Warning to All Involved</Btn>
+                }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Send Warning to All Involved</span></Btn>
               </div>
               {dms.length===0?<div style={{color:T.sub,fontSize:12}}>No messages yet.</div>:(
                 <div style={{maxHeight:320,overflowY:"auto",display:"grid",gap:5}}>
@@ -7728,13 +8116,13 @@ export default function App() {
                             onMouseEnter={e=>e.currentTarget.style.background="#fca5a5"}
                             onMouseLeave={e=>e.currentTarget.style.background="#fee2e2"}
                             title="Delete silently — user not notified"
-                          >🗑️ Silent</button>
+                          ><span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Silent</span></button>
                           <button onClick={()=>deleteMsg(true)}
                             style={{background:"#fef3c7",border:"1px solid #fcd34d",color:"#92400e",borderRadius:7,padding:"4px 8px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",transition:"all .15s"}}
                             onMouseEnter={e=>e.currentTarget.style.background="#fcd34d"}
                             onMouseLeave={e=>e.currentTarget.style.background="#fef3c7"}
                             title="Delete and notify both users"
-                          >📢 Notify</button>
+                          ><span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 11l18-5v12L3 13"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> Notify</span></button>
                         </div>
                       </div>
                     );
@@ -7747,7 +8135,7 @@ export default function App() {
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
 <div id="tech-section-content" style={{scrollMarginTop:90}}/>
-                <div style={{fontWeight:700,color:T.txt}}>✅ Task Manager ({tasks.length} tasks)</div>
+                <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg> Task Manager ({tasks.length} tasks)</div>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   {selectedTasks.size>0&&(
                     <Btn T={T} sm variant="danger" onClick={async()=>{
@@ -7759,7 +8147,7 @@ export default function App() {
                       setSelectedTasks(new Set());
                       playSound("delete");
                       toast(`${selectedTasks.size} task(s) deleted`,"warn");
-                    }}>🗑️ Delete Selected ({selectedTasks.size})</Btn>
+                    }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg> Delete Selected ({selectedTasks.size})</span></Btn>
                   )}
                   <Btn T={T} sm variant="ghost" onClick={()=>setSelectedTasks(new Set())}>Clear</Btn>
                 </div>
@@ -7773,11 +8161,11 @@ export default function App() {
                       <div key={t.id} onClick={()=>{setSelectedTasks(prev=>{const n=new Set(prev);checked?n.delete(t.id):n.add(t.id);return n;});}}
                         style={{display:"flex",alignItems:"center",gap:10,background:checked?T.accent+"18":T.bg,border:`1px solid ${checked?T.accent+"66":T.bor}`,borderRadius:10,padding:"8px 12px",cursor:"pointer",transition:"all .15s"}}>
                         <div style={{width:18,height:18,borderRadius:5,border:`2px solid ${checked?T.scarlet:T.bor}`,background:checked?(T.scarlet):"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                          {checked&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
+                          {checked&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
                         </div>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontSize:13,fontWeight:700,color:t.done?T.mut:T.txt,textDecoration:t.done?"line-through":"none",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                          <div style={{fontSize:11,color:T.sub,marginTop:1}}>👤 {assignee} · {t.priority} · {t.done?"Done":"Open"}</div>
+                          <div style={{display:"flex",alignItems:"center",gap:3,fontSize:11,color:T.sub,marginTop:1}}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> {assignee} · {t.priority} · {t.done?"Done":"Open"}</div>
                         </div>
                       </div>
                     );
@@ -7790,7 +8178,7 @@ export default function App() {
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:8}}>
-                  <div style={{fontWeight:700,color:T.txt}}>📋 App Patch Notes — v{VERSION}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg> App Patch Notes — v{VERSION}</div>
                   <div style={{display:"flex",gap:6,alignItems:"center"}}>
                     <button onClick={()=>setSelPatchNotes(new Set((PATCH_NOTES[VERSION]||[]).map((_,i)=>i)))} style={{background:T.surfH,color:T.sub,border:`1px solid ${T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>All</button>
                     <button onClick={()=>setSelPatchNotes(new Set())} style={{background:T.surfH,color:T.sub,border:`1px solid ${T.bor}`,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>None</button>
@@ -7801,7 +8189,7 @@ export default function App() {
                       const ann={id:uid(),msg:`📋 v${VERSION} ${BUILD_TAG} — MNU Neer Locker Update`,level:"info",by:"System",at:Date.now(),dismissed:[],patchNotes:sel,patchVersion:VERSION,patchBuild:BUILD_TAG};
                       saveAnns([ann,...anns]);
                       toast(`Announced ${sel.length} note${sel.length!==1?"s":""}! ✅`);
-                    }}>📢 Announce ({selPatchNotes.size})</Btn>
+                    }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 11l18-5v12L3 13"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> Announce ({selPatchNotes.size})</span></Btn>
                   </div>
                 </div>
                 {/* Selectable notes list */}
@@ -7810,7 +8198,7 @@ export default function App() {
                     <div key={i} onClick={()=>{setSelPatchNotes(prev=>{const n=new Set(prev);n.has(i)?n.delete(i):n.add(i);return n;});}}
                       style={{display:"flex",alignItems:"flex-start",gap:8,padding:"5px 10px",cursor:"pointer",borderRadius:8,background:selPatchNotes.has(i)?T.accent+"14":"transparent",transition:"background .12s"}}>
                       <div style={{width:15,height:15,borderRadius:4,border:`2px solid ${selPatchNotes.has(i)?T.accent:T.bor}`,background:selPatchNotes.has(i)?T.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2}}>
-                        {selPatchNotes.has(i)&&<span style={{color:"#fff",fontSize:9,fontWeight:900}}>✓</span>}
+                        {selPatchNotes.has(i)&&<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
                       </div>
                       <span style={{fontSize:12,color:selPatchNotes.has(i)?T.txt:T.sub,lineHeight:1.5}}>{note}</span>
                     </div>
@@ -7824,14 +8212,14 @@ export default function App() {
                     onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}
                   >
-                    <span style={{fontSize:16}}>{ver===VERSION?"🆕":"📦"}</span>
+                    {ver===VERSION?<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>}
                     <span>v{ver} {ver===VERSION?BUILD_TAG:""}</span>
                     {ver===VERSION&&<span style={{background:T.scarlet,color:"#fff",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:800}}>CURRENT</span>}
                   </summary>
                   <div style={{padding:"6px 14px 12px",borderTop:`1px solid ${T.bor}`}}>
                     {notes.map((note,i)=>(
                       <div key={i} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:i<notes.length-1?`1px solid ${T.bor}33`:"none",alignItems:"flex-start"}}>
-                        <span style={{color:T.ok,fontWeight:800,fontSize:12,flexShrink:0,marginTop:1}}>✓</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.ok} strokeWidth="2.5" strokeLinecap="round" style={{flexShrink:0,marginTop:1}}><polyline points="20 6 9 17 4 12"/></svg>
                         <span style={{fontSize:12,color:T.sub,lineHeight:1.5}}>{note}</span>
                       </div>
                     ))}
@@ -7861,7 +8249,7 @@ export default function App() {
                   await SB.upsert("announcements",{id:ann.id,msg:ann.msg,level:ann.level,by_name:ann.by,at:ann.at,dismissed:[],patch_notes:ann.patchNotes,patch_version:ann.patchVersion,patch_build:ann.patchBuild});
                   setAnns(prev=>[ann,...prev]);
                   toast("Finn update announced to all staff! ✅");
-                }}>📢 Announce Finn Update</Btn>
+                }}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 11l18-5v12L3 13"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> Announce Finn Update</span></Btn>
               </div>
               {/* Compose new Finn update */}
               <div style={{background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,padding:14,marginBottom:12}}>
@@ -7904,14 +8292,14 @@ export default function App() {
                     onMouseEnter={e=>e.currentTarget.style.background=T.surfH}
                     onMouseLeave={e=>e.currentTarget.style.background="transparent"}
                   >
-                    <span style={{fontSize:16}}>{ver===FINN_VERSION?"🤖":"📦"}</span>
+                    {ver===FINN_VERSION?<svg width="16" height="16" viewBox="0 0 22 22" fill="none" stroke="#1e7fa8" strokeWidth="1.6"><polygon points="11,2 20,7 20,17 11,22 2,17 2,7"/><circle cx="11" cy="11" r="3"/></svg>:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>}
                     <span>Finn v{ver}</span>
                     {ver===FINN_VERSION&&<span style={{background:"#1e7fa8",color:"#fff",borderRadius:4,padding:"1px 7px",fontSize:10,fontWeight:800}}>CURRENT</span>}
                   </summary>
                   <div style={{padding:"6px 14px 12px",borderTop:`1px solid ${T.bor}`}}>
                     {notes.map((note,i)=>(
                       <div key={i} style={{display:"flex",gap:8,padding:"5px 0",borderBottom:i<notes.length-1?`1px solid ${T.bor}33`:"none",alignItems:"flex-start"}}>
-                        <span style={{color:"#1e7fa8",fontWeight:800,fontSize:12,flexShrink:0,marginTop:1}}>✓</span>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1e7fa8" strokeWidth="2.5" strokeLinecap="round" style={{flexShrink:0,marginTop:1}}><polyline points="20 6 9 17 4 12"/></svg>
                         <span style={{fontSize:12,color:T.sub,lineHeight:1.5}}>{note}</span>
                       </div>
                     ))}
@@ -7930,7 +8318,7 @@ export default function App() {
             {/* Vigil Security Dashboard */}
             <div style={{background:T.card,border:"2px solid #16a34a44",borderRadius:14,padding:16,marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                <div style={{width:32,height:32,borderRadius:8,background:"#16a34a22",border:"1px solid #16a34a44",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🛡</div>
+                <div style={{width:32,height:32,borderRadius:8,background:"#16a34a22",border:"1px solid #16a34a44",display:"flex",alignItems:"center",justifyContent:"center"}}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
                 <div>
   <div id="tech-section-system" style={{scrollMarginTop:90}}/>
                 <div style={{fontWeight:800,color:T.txt,fontSize:15}}>Vigil HyperCore</div>
@@ -7952,12 +8340,12 @@ export default function App() {
                 return (
                   <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
                     {[
-                      {label:"Logins",val:logins,icon:"✅",color:"#16a34a"},
-                      {label:"Failed PINs",val:failed,icon:"🔐",color:failed>0?T.warn:"#16a34a"},
-                      {label:"Lockouts",val:locked,icon:"🔒",color:locked>0?T.err:"#16a34a"},
-                      {label:"Anomalies",val:anomalies,icon:"⚠️",color:anomalies>0?T.warn:"#16a34a"},
-                      {label:"Injections",val:injections,icon:"🚨",color:injections>0?T.err:"#16a34a"},
-                      {label:"Log entries",val:log.length,icon:"📋",color:T.sub},
+                      {label:"Logins",val:logins,icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,color:"#16a34a"},
+                      {label:"Failed PINs",val:failed,icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={failed>0?T.warn:"#16a34a"} strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,color:failed>0?T.warn:"#16a34a"},
+                      {label:"Lockouts",val:locked,icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={locked>0?T.err:"#16a34a"} strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,color:locked>0?T.err:"#16a34a"},
+                      {label:"Anomalies",val:anomalies,icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={anomalies>0?T.warn:"#16a34a"} strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,color:anomalies>0?T.warn:"#16a34a"},
+                      {label:"Injections",val:injections,icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={injections>0?T.err:"#16a34a"} strokeWidth="2" strokeLinecap="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,color:injections>0?T.err:"#16a34a"},
+                      {label:"Log entries",val:log.length,icon:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>,color:T.sub},
                     ].map(s=>(
                       <div key={s.label} style={{background:T.bg,borderRadius:10,padding:"10px 8px",textAlign:"center",border:"1px solid "+T.bor}}>
                         <div style={{fontSize:18}}>{s.icon}</div>
@@ -7973,10 +8361,10 @@ export default function App() {
               <div style={{maxHeight:200,overflowY:"auto",display:"grid",gap:4}}>
                 {VIGIL.getLog().slice(0,20).map((e,i)=>{
                   const colors={login_success:"#16a34a",failed_pin:T.warn,account_locked:T.err,anomaly:T.warn,prompt_injection:T.err,session_timeout:T.sub,lockout_blocked:T.err};
-                  const icons={login_success:"✅",failed_pin:"🔐",account_locked:"🔒",anomaly:"⚠️",prompt_injection:"🚨",session_timeout:"⏱",lockout_blocked:"🚫"};
+                  const icons={login_success:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,failed_pin:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,account_locked:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,anomaly:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,prompt_injection:<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C8102E" strokeWidth="2" strokeLinecap="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,session_timeout:"⏱",lockout_blocked:"🚫"};
                   return (
                     <div key={i} style={{background:T.surfH,borderRadius:8,padding:"7px 10px",display:"flex",alignItems:"center",gap:8,border:"1px solid "+T.bor}}>
-                      <span style={{fontSize:14,flexShrink:0}}>{icons[e.type]||"📋"}</span>
+                      <span style={{display:"inline-flex",flexShrink:0,alignItems:"center"}}> {icons[e.type]||<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>} </span>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:11,fontWeight:700,color:colors[e.type]||T.txt}}>{e.type.replace(/_/g," ").toUpperCase()}</div>
                         <div style={{fontSize:10,color:T.sub,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.detail}</div>
@@ -7992,7 +8380,7 @@ export default function App() {
             {/* Backups */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div style={{fontWeight:700,color:T.txt}}>💾 Backups ({bkps.length}/10)</div>
+                <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Backups ({bkps.length}/10)</div>
                 <Btn T={T} sm onClick={createBackup}>+ New</Btn>
               </div>
               {bkps.length===0?<div style={{color:T.sub,fontSize:12}}>No backups yet.</div>:(
@@ -8011,7 +8399,7 @@ export default function App() {
             </div>
             </div>
           </div>
-          <ClaudeTag T={T}/><VersionBadge T={T}/>
+          <div style={{marginTop:24,padding:"12px 0",borderTop:`1px solid ${T.bor}`,display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,color:T.faint}}><span>Neer Locker Staff Portal · v{VERSION}</span><span>Vigil HyperCore v{VIGIL_VERSION}</span></div><ClaudeTag T={T}/><VersionBadge T={T}/>
         </div>
       )}
     </div>
@@ -8562,7 +8950,7 @@ function HelpModal({T,bottom,navOpen,externalOpen,onExternalClose}) {
   ];
   return (
     <>
-      <button onClick={()=>{playSound("open");setOpen(true);}} className="float-action-btn" style={{position:"fixed",bottom:bottom??360,right:14,zIndex:9998,background:T.scarlet,color:"#fff",border:"none",borderRadius:"50%",width:40,height:40,fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.22)",transition:"transform .15s,filter .15s,bottom .25s",touchAction:"manipulation",opacity:navOpen?0:1,pointerEvents:navOpen?"none":"auto",transform:navOpen?"translateX(80px)":"translateX(0)"}}
+      <button onClick={()=>{playSound("open");setOpen(true);}} className="float-action-btn" style={{position:"fixed",bottom:bottom??110,right:14,zIndex:9998,background:T.scarlet,color:"#fff",border:"none",borderRadius:"50%",width:40,height:40,fontSize:17,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 14px rgba(0,0,0,.22)",transition:"transform .15s,filter .15s,bottom .25s",touchAction:"manipulation",opacity:navOpen?0:1,pointerEvents:navOpen?"none":"auto",transform:navOpen?"translateX(80px)":"translateX(0)"}}
         onMouseEnter={e=>{e.currentTarget.style.transform="scale(1.12)";e.currentTarget.style.filter="brightness(1.1)";}}
         onMouseLeave={e=>{e.currentTarget.style.transform="scale(1)";e.currentTarget.style.filter="none";}}
         title="Help" data-tour="help-button"
@@ -8601,7 +8989,7 @@ function HelpModal({T,bottom,navOpen,externalOpen,onExternalClose}) {
                 ))}
               </div>
               <div style={{marginTop:16,background:`${T.blue}12`,border:`1px solid ${T.blue}33`,borderRadius:10,padding:"10px 14px",fontSize:12,color:T.sub,lineHeight:1.6}}>
-                Have an idea or found a bug? Tap the <strong style={{color:"#b45309"}}>💡 Ideas button</strong> (bottom-right, above the ?) to send feedback to the Tech Admin.<br/>
+                Have an idea or found a bug? Tap the <strong style={{color:"#b45309",display:"inline-flex",alignItems:"center",gap:3}}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="2" x2="12" y2="6"/><path d="M12 6a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3 5.5V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.5C7.5 16.5 6 14.5 6 12a6 6 0 0 1 6-6z"/><line x1="9" y1="21" x2="15" y2="21"/></svg> Ideas button</strong> (bottom-right, above the ?) to send feedback to the Tech Admin.<br/>
                 Your name, email, and status can be changed in <strong>Settings → Profile</strong>.
               </div>
             </div>
@@ -8721,15 +9109,15 @@ function FeedbackPanel({T,toast}) {
     await fetch(`${SUPABASE_URL}/rest/v1/direct_messages?feedback=eq.true`,{method:"DELETE",headers:SB.headers});
     setItems([]);toast("Feedback cleared","warn");
   };
-  const icons={feature:"💡",bug:"🐛",improvement:"✨",other:"📝"};
+  const icons={feature:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="2" x2="12" y2="6"/><path d="M12 6a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3 5.5V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.5C7.5 16.5 6 14.5 6 12a6 6 0 0 1 6-6z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>,bug:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 2l1.5 1.5"/><path d="M14.5 3.5L16 2"/><path d="M9 9h6"/><path d="M5 8l-2-2"/><path d="M19 8l2-2"/><path d="M12 2a4 4 0 0 1 4 4v10a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/></svg>,improvement:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,other:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>};
   return (
     <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-        <div style={{fontWeight:700,color:T.txt}}>💡 Staff Feedback ({items.length})</div>
+        <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="2" x2="12" y2="6"/><path d="M12 6a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3 5.5V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.5C7.5 16.5 6 14.5 6 12a6 6 0 0 1 6-6z"/><line x1="9" y1="21" x2="15" y2="21"/></svg> Staff Feedback ({items.length})</div>
         {items.length>0&&<button onClick={clear} style={{background:"none",border:"none",color:T.sub,fontSize:12,cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>Clear All</button>}
       </div>
       {!loaded?<div style={{color:T.sub,fontSize:12}}>Loading…</div>
-        :items.length===0?<div style={{color:T.sub,fontSize:12}}>No feedback yet. Staff can submit using the 💡 button.</div>
+        :items.length===0?<div style={{color:T.sub,fontSize:12}}>No feedback yet. Staff can submit using the Ideas button.</div>
         :(
           <div style={{display:"grid",gap:8,maxHeight:300,overflowY:"auto"}}>
             {items.map(f=>(
