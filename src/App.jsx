@@ -460,20 +460,11 @@ const LS = {
 };
 
 // ─── SEED DATA ────────────────────────────────────────────────────────────────
+// Only the tech admin account is bootstrapped in code.
+// All other employees (including Prof. Sinclair and staff) live in Supabase only.
 const SEED = [
-  {id:"e1", email:"tlsinclair@mnu.edu",  name:"Professor Sinclair", role:"boss",      pin:"",status:"offline",createdAt:1700000000000},
-  {id:"e2", email:"nrsmith2@mnu.edu",    name:"Nate Smith",         role:"manager",   pin:"",status:"offline",createdAt:1700000000001},
-  {id:"e3", email:"emburnett@mnu.edu",   name:"Ella Burnett",       role:"manager",   pin:"",status:"offline",createdAt:1700000000002},
-  {id:"e4", email:"afmccarthy@mnu.edu",  name:"Alexis McCarthy",    role:"assistant", pin:"",status:"offline",createdAt:1700000000003},
-  {id:"e5", email:"zwerth@mnu.edu",      name:"Zaylee Werth",       role:"employee",  pin:"",status:"offline",createdAt:1700000000004},
-  {id:"e6", email:"tlmiller3@mnu.edu",   name:"Trysta Miller",      role:"employee",  pin:"",status:"offline",createdAt:1700000000005},
-  {id:"e7", email:"bdgould@mnu.edu",     name:"Bethany Gould",      role:"employee",  pin:"",status:"offline",createdAt:1700000000006},
-  {id:"e8", email:"mrmanthe@mnu.edu",    name:"Mackenzie Manthe",   role:"employee",  pin:"",status:"offline",createdAt:1700000000007},
-  {id:"e9", email:"llvarney@mnu.edu",    name:"Lauren Varney",      role:"employee",  pin:"",status:"offline",createdAt:1700000000008},
-  {id:"e10",email:"bllittle@mnu.edu",     name:"Brylee Little",      role:"employee",  pin:"",status:"offline",createdAt:1700000000009},
-  {id:"e11",email:"wrlaymon@mnu.edu",      name:"Werke Laymon",        role:"employee",  pin:"",status:"offline",createdAt:1700000000010},
-];
-const ROLES = {
+  {id:"e2", email:"nrsmith2@mnu.edu", name:"Nate Smith", role:"manager", pin:"",status:"offline",createdAt:1700000000001},
+];const ROLES = {
   boss:      {label:"Boss",        color:"#C8102E", p:["home","tasks","inv","ann","act","emp","assign","settings","boss","dms","online","leaderboard"]},
   manager:   {label:"Manager",     color:"#1e7fa8", p:["home","tasks","inv","ann","act","emp","assign","settings","dms","online","leaderboard"]},
   assistant: {label:"Asst. Mgr",  color:"#7c3aed", p:["home","tasks","inv","ann","assign","settings","emp","dms","leaderboard"]},
@@ -970,7 +961,7 @@ function WelcomeAnim({name,role,T,onDone}) {
         <div style={{color:T.sub,fontSize:12,marginTop:8}}>{rc.label} &middot; MNU&apos;s Neer Locker</div>
       </div>
 
-      <ClaudeTag T={T}/>
+
     </div>
   );
 }
@@ -2129,6 +2120,7 @@ const NOTIF = {
   // Broadcast to all users (no userId filter)
   async broadcast(title, body, tag="neer-locker") {
     if(!NOTIF._canFire("broadcast|"+tag+"|"+title)) return;
+    if(NOTIF.permission()!=="granted") return; // guard broadcast too
     try {
       await fetch("https://neer-locker.vercel.app/api/send-push", {
         method: "POST",
@@ -3861,20 +3853,9 @@ function XPShopModal({T,user,progress,open,onClose,onPurchase,onSpendXP}) {
 
   // Shop catalog
   const items=[
-    // ── ACCENT COLORS ──────────────────────────────────────────────────────────
-    {id:"color_teal",     cat:"colors", name:"Teal",          desc:"Cool ocean accent",           cost:400,  icon:"●", color:"#0d9488", type:"color"},
-    {id:"color_indigo",   cat:"colors", name:"Indigo",        desc:"Deep focus vibes",             cost:400,  icon:"●", color:"#4f46e5", type:"color"},
-    {id:"color_rose",     cat:"colors", name:"Rose",          desc:"Soft and modern",              cost:400,  icon:"●", color:"#e11d48", type:"color"},
-    {id:"color_amber",    cat:"colors", name:"Amber",         desc:"Warm energy",                  cost:400,  icon:"●", color:"#d97706", type:"color"},
-    {id:"color_emerald",  cat:"colors", name:"Emerald",       desc:"Fresh and vibrant",            cost:500,  icon:"●", color:"#059669", type:"color"},
-    {id:"color_violet",   cat:"colors", name:"Violet",        desc:"Creative and bold",            cost:500,  icon:"●", color:"#9333ea", type:"color"},
-    {id:"color_slate",    cat:"colors", name:"Slate",         desc:"Minimalist classic",           cost:300,  icon:"●", color:"#475569", type:"color"},
-    {id:"color_cyan",     cat:"colors", name:"Cyan",          desc:"Electric and crisp",           cost:400,  icon:"●", color:"#0891b2", type:"color"},
-    {id:"color_lime",     cat:"colors", name:"Lime",          desc:"Bright and fresh",             cost:400,  icon:"●", color:"#65a30d", type:"color"},
-    {id:"color_fuchsia",  cat:"colors", name:"Fuchsia",       desc:"Bold and electric",            cost:450,  icon:"●", color:"#c026d3", type:"color"},
-    {id:"color_midnight", cat:"colors", name:"Midnight",      desc:"Dark and mysterious",          cost:450,  icon:"●", color:"#1e1b4b", type:"color"},
-    {id:"color_gold",     cat:"colors", name:"Gold",          desc:"Premium and prestigious",      cost:800,  icon:"●", color:"#b45309", type:"color"},
-    {id:"color_rainbow",  cat:"colors", name:"Rainbow",       desc:"Animated cycling rainbow",  cost:2500, icon:"◈", color:"linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#3b82f6,#a855f7)", type:"rainbow"},
+    // ── ACCENT COLORS — MNU brand only ────────────────────────────────────────
+    {id:"color_scarlet",  cat:"colors", name:"MNU Scarlet",   desc:"Official MNU scarlet — the original", cost:0,    icon:"●", color:"#C8102E", type:"color", free:true},
+    {id:"color_blue",     cat:"colors", name:"Neer Blue",     desc:"Portal blue — clean and sharp",       cost:0,    icon:"●", color:"#1e7fa8", type:"color", free:true},
 
     // ── POWER-UPS ──────────────────────────────────────────────────────────────
     {id:"streak_saver",   cat:"powerups", name:"Streak Saver",      desc:"Restore your lost login streak",          cost:300,  icon:E("🔥","·"),  color:"#ea580c", type:"streak_save",  consumable:true},
@@ -5003,7 +4984,7 @@ export default function App() {
   const [techPinErr,setTechPinErr]=useState("");
   const [pinRevealed,setPinRevealed]=useState(false);
 
-  const [emps,setEmps]=useState(SEED);
+  const [emps,setEmps]=useState([]); // loaded from Supabase — no local default
   const [dataLoaded,setDataLoaded]=useState(false);
   const [tasks,setTasks]=useState([]);
   const [inv,setInv]=useState([]);
@@ -5020,6 +5001,8 @@ export default function App() {
   const [ptrActive,setPtrActive]=useState(false);
   const [ptrY,setPtrY]=useState(0);
   const ptrRef=useRef(null);
+  const empsRef=useRef(emps);
+  useEffect(()=>{empsRef.current=emps;},[emps]);
   const [prevPage,setPrevPage]=useState(null);
   const [swipeNextPage,setSwipeNextPage]=useState(null);
   const swipeRafRef=useRef(null);
@@ -5059,19 +5042,20 @@ export default function App() {
         DB.get("nl3-notice"),Promise.resolve(LS.get("nl3-dark")),Promise.resolve(LS.get("nl3-compact")),Promise.resolve(LS.get("nl3-accent")),DB.get("nl3-offline"),
       ]);
       if(!alive) return;
-      // Map Supabase rows back to app format
-      const mappedEmps=empRows?.length>0
-        ?empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",equipped_frame:e.equipped_frame||"",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at}))
-        :SEED;
-      setEmps(mappedEmps);
-      // Seed initial employees if none exist
-      if(!empRows?.length){for(const s of SEED)await SB.upsert("employees",{id:s.id,email:s.email,name:s.name,role:s.role,status:"offline",created_at:s.createdAt||Date.now()});}
-      // Force-upsert any SEED employees missing from Supabase (e.g. new additions)
-      const existingEmails=new Set((empRows||[]).map(e=>e.email));
-      for(const s of SEED){
-        if(!existingEmails.has(s.email)){
-          await SB.upsert("employees",{id:s.id,email:s.email,name:s.name,role:s.role,pin:s.pin||"",status:"offline",created_at:s.createdAt||Date.now()});
-        }
+      // Map Supabase rows → app format
+      // All employees live in Supabase — no local seed fallback except tech admin bootstrap
+      const mapEmp=e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",equipped_frame:e.equipped_frame||"",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at});
+      if(empRows?.length>0){
+        setEmps(empRows.map(mapEmp));
+      } else {
+        // No employees in Supabase yet — bootstrap just the tech admin account
+        const techAdmin=SEED[0];
+        await fetch(`${SUPABASE_URL}/rest/v1/employees`,{
+          method:"POST",
+          headers:{...SB.headers,"Prefer":"return=representation"},
+          body:JSON.stringify({id:techAdmin.id,email:techAdmin.email,name:techAdmin.name,role:techAdmin.role,pin:"",pin_hash:"",status:"offline",created_at:techAdmin.createdAt})
+        }).catch(()=>{});
+        setEmps([techAdmin]);
       }
 
       setTasks((taskRows||[]).map(t=>({id:t.id,title:t.title,description:t.description||"",priority:t.priority,assignedTo:t.assigned_to,createdBy:t.created_by||"",dueDate:t.due_date,done:t.done,repeat:t.repeat,repeatDays:typeof t.repeat_days==="string"?JSON.parse(t.repeat_days||"[]"):t.repeat_days||[],createdAt:t.created_at})));
@@ -5141,7 +5125,7 @@ export default function App() {
               const taskNotifKey="nl3-notif-task-"+t.id;
               if(!localStorage.getItem(taskNotifKey)){
                 localStorage.setItem(taskNotifKey,"1");
-                setTimeout(()=>localStorage.removeItem(taskNotifKey),300000);
+                setTimeout(()=>localStorage.removeItem(taskNotifKey),86400000); // 24h dedup
                 NOTIF.send(userRef.current.id,"New Task 📋",`${t.title} — assigned to you`,"task");
               }
             }
@@ -5163,7 +5147,7 @@ export default function App() {
               const annNotifKey="nl3-notif-ann-"+a.id;
               if(!localStorage.getItem(annNotifKey)){
                 localStorage.setItem(annNotifKey,"1");
-                setTimeout(()=>localStorage.removeItem(annNotifKey),300000); // 5 min
+                setTimeout(()=>localStorage.removeItem(annNotifKey),86400000); // 24h dedup
                 NOTIF.broadcast("New Announcement 📢",a.msg.slice(0,80),"announcement");
               }
             }
@@ -5180,12 +5164,12 @@ export default function App() {
         if(notifEnabledRef.current&&userRef.current){
           newDms.filter(d=>d.to===userRef.current.id&&!d.read&&!d.system).forEach(d=>{
             if(!prev.find(p=>p.id===d.id)){
-              const sender=emps.find(e=>e.id===d.from);
+              const sender=empsRef.current.find(e=>e.id===d.from);
               // Dedup: only notify once per message id
           const notifKey="nl3-notif-"+d.id;
           if(!localStorage.getItem(notifKey)){
             localStorage.setItem(notifKey,"1");
-            setTimeout(()=>localStorage.removeItem(notifKey),60000);
+            setTimeout(()=>localStorage.removeItem(notifKey),300000); // 5 min dedup
             NOTIF.send(userRef.current.id,`Message from ${sender?.name||"Someone"} 💬`,d.text.slice(0,80),"dm");
           }
             }
@@ -5480,7 +5464,7 @@ export default function App() {
   const doLogin=()=>{
     const email=String(emailIn||"").trim().toLowerCase();
     if(!email){setEmailErr("Please enter your MNU email.");return;}
-    if(!okEmail(email)){setEmailErr("Invalid email. Check your spelling or ask Professor Sinclair to add you.");return;}
+    if(!okEmail(email)){setEmailErr("Invalid email address. Check your spelling and try again.");return;}
     // Block login when site is offline — only tech admin email can still log in
     if(siteOffline && email!==TECH_EMAIL){
       setEmailErr("The system is currently offline for maintenance. Please check back later.");
@@ -5510,7 +5494,7 @@ export default function App() {
         addErr("warn","Failed login attempt ("+a+"/"+MAX_TRIES+") for "+email);
       }
       playSound("error");
-      setEmailErr("Email not found. Check your spelling or ask your manager to add you.");
+      setEmailErr("Email not found. Ask Professor Sinclair or your manager to add you to the portal.");
       return;
     }
     // Vigil: check if this account is locked
@@ -5821,21 +5805,47 @@ export default function App() {
     const email=String(form.eEmail||"").trim().toLowerCase();
     if(!name||!email){toast("Name and email required","err");return;}
     if(!okEmail(email)){toast("Invalid email","err");return;}
-    if(emps.find(e=>e.email===email)){toast("Email already exists","err");return;}
+    if(emps.find(e=>e.email.toLowerCase()===email)){toast("An employee with that email already exists","err");return;}
     const empId=uid();
-    const emp={id:empId,name:san(name),email,role:form.eRole||"employee",pin:"",status:"offline",createdAt:Date.now()};
-    // Save directly to Supabase first
-    await SB.upsert("employees",{id:emp.id,email:emp.email,name:emp.name,role:emp.role,pin:"",status:"offline",created_at:emp.createdAt});
+    const now=Date.now();
+    const emp={id:empId,name:san(name),email,role:form.eRole||"employee",pin:"",status:"offline",createdAt:now,avatar_url:"",equipped_badges:"[]",badge_grants:"[]",name_color:"base",equipped_frame:"",max_xp:0};
+    // INSERT directly via fetch — more reliable than upsert for new records
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/employees`,{
+      method:"POST",
+      headers:{...SB.headers,"Prefer":"return=representation"},
+      body:JSON.stringify({id:emp.id,email:emp.email,name:emp.name,role:emp.role,pin:"",pin_hash:"",status:"offline",created_at:now})
+    });
+    if(!res.ok){
+      const err=await res.text().catch(()=>"");
+      toast("Failed to add employee — "+((()=>{try{return JSON.parse(err)?.message||err;}catch{return err;}})()),"err");
+      return;
+    }
     setEmps(prev=>[...prev,emp]);
     addAct("employee added",`${user?.name} added: ${emp.name}`,user?.id);
-    toast(`${emp.name} added! ✅`);setModal(null);setForm({});
+    toast(`${emp.name} added!`);
+    setModal(null);setForm({});
   };
   const removeEmp=async id=>{
     if(id===user?.id){toast("Can't remove yourself","err");return;}
-    const emp=emps.find(e=>e.id===id);
-    await saveEmps(emps.filter(e=>e.id!==id));
-    addAct("employee removed",`${user?.name} removed: ${emp?.name}`,user?.id);
-    toast("Employee removed","warn");
+    const target=emps.find(e=>e.id===id);
+    if(!target){toast("Employee not found","err");return;}
+    // Confirm before removing
+    if(!window.confirm(`Remove ${target.name}? This will delete their account from the portal.`)) return;
+    // 1. Delete from Supabase directly
+    await fetch(`${SUPABASE_URL}/rest/v1/employees?id=eq.${id}`,{
+      method:"DELETE", headers:SB.headers
+    });
+    // 2. Clean up their related data
+    await fetch(`${SUPABASE_URL}/rest/v1/user_progress?user_id=eq.${id}`,{
+      method:"DELETE", headers:SB.headers
+    }).catch(()=>{});
+    await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?user_id=eq.${id}`,{
+      method:"DELETE", headers:SB.headers
+    }).catch(()=>{});
+    // 3. Update local state
+    setEmps(prev=>prev.filter(e=>e.id!==id));
+    addAct("employee removed",`${user?.name} removed: ${target.name}`,user?.id);
+    toast(`${target.name} removed`,"warn");
   };
 
   // SETTINGS
@@ -6037,8 +6047,8 @@ export default function App() {
     await fetch(`${SUPABASE_URL}/rest/v1/direct_messages?id=neq.none`,{method:"DELETE",headers:SB.headers});
     await fetch(`${SUPABASE_URL}/rest/v1/backups?id=neq.none`,{method:"DELETE",headers:SB.headers});
     setTasks([]);setInv([]);setAnns([]);setAct([]);setErrs([]);setDms([]);setBkps([]);
-    await saveEmps(SEED);
-    setTechAction("✅ Demo cleared: employees, tasks, inventory, announcements, DMs, activity logs, and backups all reset.");
+    // Employees are NOT wiped on demo clear — they live in Supabase only
+    setTechAction("✅ Demo data cleared — tasks, inventory, announcements, DMs, activity, and backups wiped.");
     setTimeout(()=>setTechAction(""),4000);
     playSound("notify");
   };
@@ -6846,47 +6856,24 @@ export default function App() {
                       <div style={{display:"grid",gap:16}}>
                         <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:T.fs.xl,fontWeight:800,color:T.txt}}>Display & Sound</div>
 
-                        {/* ── ACCENT COLOR ── all purchased colors + default scarlet */}
-                        {(()=>{
-                          const unlockedColors=JSON.parse(localStorage.getItem("nl3-unlocked-colors")||"[]");
-                          const COLOR_OPTIONS=[
-                            {id:"default",  label:"MNU Scarlet",  color:"#C8102E"},
-                            {id:"color_teal",     label:"Teal",        color:"#0d9488"},
-                            {id:"color_indigo",   label:"Indigo",      color:"#4f46e5"},
-                            {id:"color_rose",     label:"Rose",        color:"#e11d48"},
-                            {id:"color_amber",    label:"Amber",       color:"#d97706"},
-                            {id:"color_emerald",  label:"Emerald",     color:"#059669"},
-                            {id:"color_violet",   label:"Violet",      color:"#9333ea"},
-                            {id:"color_slate",    label:"Slate",       color:"#475569"},
-                            {id:"color_cyan",     label:"Cyan",        color:"#0891b2"},
-                            {id:"color_lime",     label:"Lime",        color:"#65a30d"},
-                            {id:"color_fuchsia",  label:"Fuchsia",     color:"#c026d3"},
-                            {id:"color_midnight", label:"Midnight",    color:"#1e1b4b"},
-                            {id:"color_gold",     label:"Gold",        color:"#b45309"},
-                          ];
-                          const available=COLOR_OPTIONS.filter(c=>c.id==="default"||unlockedColors.includes(c.id));
-                          if(available.length<=1) return null;
-                          return (
-                            <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
-                              <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Accent Color</div>
-                              <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Your purchased colors. Tap to apply across the whole app.</div>
-                              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                                {available.map(c=>{
-                                  const isActive=accent===c.color||(c.id==="default"&&(!accent||accent==="#C8102E"));
-                                  return (
-                                    <button key={c.id} onClick={()=>{playSound("click");applyTheme(dark,compact,c.id==="default"?"#C8102E":c.color);}}
-                                      title={c.label}
-                                      style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4,background:"none",border:"none",cursor:"pointer",padding:"4px",borderRadius:10,transition:"transform .15s",transform:isActive?"scale(1.1)":"scale(1)"}}>
-                                      <div style={{width:34,height:34,borderRadius:"50%",background:c.id==="default"?"#C8102E":c.color,boxShadow:isActive?`0 0 0 3px ${T.bg}, 0 0 0 5px ${c.id==="default"?"#C8102E":c.color}`:"0 2px 6px rgba(0,0,0,0.15)",transition:"box-shadow .2s"}}/>
-                                      <span style={{fontSize:9,color:isActive?T.txt:T.sub,fontWeight:isActive?700:500,whiteSpace:"nowrap"}}>{c.label}</span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                              <div style={{marginTop:10,fontSize:11,color:T.sub}}>Unlock more colors in the <button onClick={()=>setShowShop(true)} style={{background:"none",border:"none",color:T.accent,cursor:"pointer",fontFamily:"inherit",fontSize:11,fontWeight:700,padding:0}}>XP Shop →</button></div>
-                            </div>
-                          );
-                        })()}
+                        {/* ── ACCENT COLOR — MNU brand only ── */}
+                        <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
+                          <div style={{fontWeight:700,color:T.txt,marginBottom:4}}>Accent Color</div>
+                          <div style={{fontSize:T.fs.sm,color:T.sub,marginBottom:12}}>Choose between MNU&apos;s official brand colors.</div>
+                          <div style={{display:"flex",gap:10}}>
+                            {[{label:"MNU Scarlet",color:"#C8102E"},{label:"Neer Blue",color:"#1e7fa8"}].map(c=>{
+                              const isActive=(!accent||accent==="#C8102E")?c.color==="#C8102E":accent===c.color;
+                              return (
+                                <button key={c.color} onClick={()=>{playSound("click");applyTheme(dark,compact,c.color);}}
+                                  style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,background:isActive?c.color+"14":"none",border:`1.5px solid ${isActive?c.color:T.bor}`,cursor:"pointer",padding:"12px 0",borderRadius:12,transition:"all .15s",flex:1}}>
+                                  <div style={{width:28,height:28,borderRadius:"50%",background:c.color,boxShadow:isActive?`0 0 0 3px ${T.bg},0 0 0 5px ${c.color}`:"0 2px 6px rgba(0,0,0,.15)"}}/>
+                                  <span style={{fontSize:11,color:isActive?c.color:T.sub,fontWeight:isActive?700:500}}>{c.label}</span>
+                                  {isActive&&<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={c.color} strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
 
                         {/* Dark mode — system/light/dark */}
                         <div style={{background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:16}}>
@@ -7510,7 +7497,7 @@ export default function App() {
           )}
 
           {loggingOut&&<LogoutAnim T={T}/>}
-          <ClaudeTag T={T}/><VersionBadge T={T} hide={showFinn} navOpen={navOpen}/>
+          <VersionBadge T={T} hide={showFinn} navOpen={navOpen}/>
         </div>
       )}
 
@@ -8399,7 +8386,7 @@ export default function App() {
             </div>
             </div>
           </div>
-          <div style={{marginTop:24,padding:"12px 0",borderTop:`1px solid ${T.bor}`,display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,color:T.faint}}><span>Neer Locker Staff Portal · v{VERSION}</span><span>Vigil HyperCore v{VIGIL_VERSION}</span></div><ClaudeTag T={T}/><VersionBadge T={T}/>
+          <div style={{marginTop:24,padding:"12px 0",borderTop:`1px solid ${T.bor}`,display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,color:T.faint}}><span>Neer Locker Staff Portal · v{VERSION}</span><span>Vigil HyperCore v{VIGIL_VERSION}</span></div><VersionBadge T={T}/>
         </div>
       )}
     </div>
