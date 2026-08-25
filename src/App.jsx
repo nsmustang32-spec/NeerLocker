@@ -4308,7 +4308,7 @@ function LoginScreen({T,emailIn,setEmailIn,emailErr,setEmailErr,showPin,setShowP
   const rememberedUser=emps?.find(e=>e.email.toLowerCase()===(emailIn||"").toLowerCase())||null;
   // Use a ref for the live pin value — zero render-cycle lag between taps
   const padRef=useRef("");
-  const [padDigits,setPadDigitsDisplay]=useState(""); // display only
+  const [padDigitsDisplay,setPadDigitsDisplay]=useState(""); // display only
   const [shake,setShake]=useState(false);
   const submittingRef=useRef(false);
 
