@@ -1,11 +1,6 @@
 {
   "buildCommand": "react-scripts build",
   "outputDirectory": "build",
-  "functions": {
-    "api/finn.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
   "headers": [
     {
       "source": "/api/(.*)",
