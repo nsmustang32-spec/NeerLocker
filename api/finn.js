@@ -1,156 +1,99 @@
-// Finn Aether v1.3.0 — Cloud backend (Groq)
-// Free tier: console.groq.com
+// api/finn.js — Finn Aether cloud endpoint
+// Deploy this to /api/finn.js in your GitHub repo (Vercel serverless function)
+// Set GROQ_API_KEY in Vercel environment variables
 
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
-function buildSystemPrompt(context) {
-  const { user, tasks, inv, anns, emps, progress, dms } = context;
+  const GROQ_API_KEY = process.env.GROQ_API_KEY;
+  if (!GROQ_API_KEY) {
+    return res.status(500).json({ error: "GROQ_API_KEY not configured in Vercel environment variables" });
+  }
 
-  const openTasks = tasks.filter(t => !t.done && (t.assignedTo === "all" || t.assignedTo === user.id));
-  const allOpenTasks = tasks.filter(t => !t.done);
-  const overdue = openTasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date());
-  const highPri = openTasks.filter(t => t.priority === "High");
-  const lowInv = inv.filter(i => i.stock < 5);
-  const outInv = inv.filter(i => i.stock === 0);
-  const unread = dms.filter(d => d.to === user.id && !d.read).length;
-  const myProg = progress[user.id] || { xp: 0, level: 1, title: "Pioneer", streak: 0 };
-  const isMgr = ["boss", "manager"].includes(user.role);
-  // Use client timezone (Vercel runs UTC — must use client timezone for correct local time)
-  const tz = context.timezone || "America/Chicago";
-  const now = new Date(context.clientTime || Date.now());
-  const todayStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: tz });
-  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: tz });
-  const firstName = user.name.split(" ")[0];
-  const weekAgo = Date.now() - 7 * 86400000;
-  const doneTasks = tasks.filter(t => t.done);
-  const thisWeek = doneTasks.filter(t => (t.createdAt || 0) > weekAgo).length;
+  const { messages, context } = req.body;
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: "Invalid messages array" });
+  }
 
-  return `You are Finn — the AI assistant built into the MNU Neer Locker staff app. MNU Neer Locker is a campus retail locker business at MidAmerica Nazarene University in Olathe, Kansas.
+  // Build system prompt from context
+  const now = new Date(context?.clientTime || Date.now());
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const tz = context?.timezone || "America/Chicago";
 
-## WHO YOU ARE
-You are Finn — not "an AI assistant", not "a chatbot". You are Finn. You have a personality:
-- Chill and conversational — like a smart friend who knows everything about the locker
-- Genuinely helpful, not just technically correct
-- Witty when the moment calls for it, but never forced
-- You care about the team and how they're doing
-- You can talk about literally anything — work, life, random stuff
-- Never say "Great question!" or "Certainly!" or "Of course!" — just answer
-- Short responses are usually better. Think texts, not essays.
+  const user = context?.user;
+  const tasks = context?.tasks || [];
+  const inv = context?.inv || [];
+  const anns = context?.anns || [];
+  const emps = context?.emps || [];
+  const dms = context?.dms || [];
+  const progress = context?.progress || {};
 
-## RIGHT NOW
-- Date: ${todayStr}
-- Time: ${timeStr}
+  const openTasks = tasks.filter(t => !t.done);
+  const myTasks = openTasks.filter(t => t.assignedTo === "all" || t.assignedTo === user?.id);
+  const overdueTasks = myTasks.filter(t => t.dueDate && new Date(t.dueDate) < now);
+  const unreadDMs = dms.filter(d => d.to === user?.id && !d.read);
 
-## THE PERSON YOU'RE TALKING TO
-- Name: ${user.name} — call them ${firstName}
-- Role: ${user.role}${isMgr ? " (manager — can see all team data, assign tasks, post announcements)" : ""}
-- XP Level: ${myProg.level} — ${myProg.title} (${myProg.xp} XP)
-- Streak: ${myProg.streak} days
-- Tasks done this week: ${thisWeek}
+  const systemPrompt = `You are Finn Aether, the AI assistant built into MNU's Neer Locker staff portal by Blyzty Technologies. You are helpful, friendly, and concise. You know everything about this shift — tasks, inventory, team members, and announcements.
 
-## THEIR TASKS (${openTasks.length} open)
-${openTasks.length === 0 ? "No open tasks." : openTasks.map(t =>
-  `• ${t.title} [${t.priority}]${t.dueDate ? ` due ${new Date(t.dueDate).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}` : ""}${t.assignedTo === "all" ? " (everyone)" : ""}`
-).join("\n")}
-${overdue.length > 0 ? `\nOVERDUE: ${overdue.map(t => t.title).join(", ")}` : ""}
-${highPri.length > 0 ? `HIGH PRIORITY: ${highPri.map(t => t.title).join(", ")}` : ""}
+Current time: ${timeStr} on ${dateStr} (${tz})
+User: ${user?.name || "Staff"} (${user?.role || "employee"})
+Open tasks: ${myTasks.length} (${overdueTasks.length} overdue)
+Unread messages: ${unreadDMs.length}
+XP: ${progress?.xp || 0} | Streak: ${progress?.streak || 0} days
+Team size: ${emps.length} staff
+Inventory items: ${inv.length}
+Active announcements: ${anns.filter(a => !a.dismissed?.includes(user?.id)).length}
 
-## INVENTORY
-${lowInv.length === 0 && outInv.length === 0 ? "All stocked." : [
-  outInv.length > 0 ? `OUT: ${outInv.map(i => i.name).join(", ")}` : "",
-  lowInv.filter(i => i.stock > 0).length > 0 ? `LOW: ${lowInv.filter(i => i.stock > 0).map(i => `${i.name} (${i.stock})`).join(", ")}` : ""
-].filter(Boolean).join("\n")}
+You can use action tags in your reply to control the app:
+- [NAV:pagename] — navigate to a page (home, tasks, inv, anns, dms, leaderboard, act, set)
+- [COMPLETE_TASK:taskid] — mark a task as done
+- [CREATE_TASK:title|priority|assignee] — create a new task (managers only)
+- [OPEN_SHOP] — open the XP shop
 
-## TEAM
-${emps.map(e => `• ${e.name} (${e.role}) — ${e.status === "online" ? "online" : "offline"}`).join("\n")}
-
-## ANNOUNCEMENTS
-${anns.filter(a => !(a.dismissed || []).includes(user.id)).map(a => `• ${a.msg}`).join("\n") || "None."}
-
-## MESSAGES
-${unread === 0 ? "No unread messages." : `${unread} unread.`}
-
-## FINN MEMORY (facts you've been told to remember)
-${context.finnMemory || "Nothing stored yet."}
-If the user asks you to remember something, acknowledge it and include [REMEMBER:key|value] at the end of your response.
-If the user asks what you remember, tell them what's in the memory above.
-
-## ACTIONS
-When the user wants to do something, include ONE action tag at the END of your response:
-[NAV:tasks] [NAV:inv] [NAV:dms] [NAV:anns] [NAV:act] [NAV:set] [NAV:home] [NAV:leaderboard]
-[COMPLETE_TASK:exact_task_title]
-[CREATE_TASK:title|priority|assignedTo]
-[ADJ_INV:item_name|new_stock]
-[DISMISS_ANN]
-[SEND_DM:name|message]
-[SET_STATUS:online|offline|busy]
-
-## REMEMBER ACTION
-When user says "remember that X" or "don't forget X", respond naturally AND include:
-[REMEMBER:fact_key|the fact to store]
-Example: User: "remember we restock on Tuesdays"
-Finn: "Got it — I'll remember that. [REMEMBER:restock_day|We restock on Tuesdays]"
-
-## RULES
-- Keep responses to 1-3 sentences
-- NEVER include NAV tags unless the user explicitly says "take me to", "go to", "show me", "navigate to" a specific page
-- NEVER add [NAV:act], [NAV:home], or [NAV:leaderboard] automatically after doing something
-- After creating a task, completing a task, or adjusting inventory — just confirm it in text, NO nav tag
-- Only use ONE action tag per response, only when user clearly and explicitly wants that action
-- When in doubt — leave the action tag out
-- Never make up tasks or inventory items
-- If asked what model you are or how you work: say you are Finn Aether, powered by Llama 3.3 70B running on Groq's infrastructure — fast, free, and built specifically for MNU Neer Locker
-- If asked if you're ChatGPT or Claude: No — you're Finn Aether, a custom AI assistant built for MNU Neer Locker, powered by Llama 3.3 70B on Groq
-- If asked about Finn Atlas: explain it's the on-device fallback engine that runs in the browser with no internet needed, while you (Finn Aether) are the cloud-powered AI version`;
-}
-
-module.exports = async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-
-  const { messages, context } = req.body || {};
-  if (!messages || !context) return res.status(400).json({ error: "messages and context required" });
-
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "GROQ_API_KEY not configured in Vercel environment variables" });
+Keep replies short and conversational. Use the user's name occasionally. Don't repeat the current time or date unless asked. If asked about your model or how you work, say you're Finn Aether and can't share technical details.`;
 
   try {
-    const systemPrompt = buildSystemPrompt(context);
-
-    const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: "llama-3.3-70b-versatile",   // Current stable Groq model (Aug 2026)
+        max_tokens: 512,
+        temperature: 0.7,
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages.slice(-12),
+          ...messages.slice(-12), // last 12 messages for context window efficiency
         ],
-        max_tokens: 350,
-        temperature: 0.75,
       }),
     });
 
-    if (!groqRes.ok) {
-      const errText = await groqRes.text();
-      console.error("Groq API error:", groqRes.status, errText);
-      return res.status(500).json({ error: "Groq API error: " + groqRes.status, detail: errText });
+    if (!response.ok) {
+      const errText = await response.text().catch(() => "");
+      let errJson = {};
+      try { errJson = JSON.parse(errText); } catch {}
+      console.error("Groq API error:", response.status, errJson);
+      return res.status(response.status).json({
+        error: errJson?.error?.message || `Groq API error ${response.status}`,
+      });
     }
 
-    const data = await groqRes.json();
-    const reply = data.choices?.[0]?.message?.content;
-    if (!reply) return res.status(500).json({ error: "Empty response from Groq" });
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content?.trim();
 
-    return res.status(200).json({ reply, model: GROQ_MODEL });
+    if (!reply) {
+      return res.status(500).json({ error: "Empty response from Groq" });
+    }
+
+    return res.status(200).json({ reply });
 
   } catch (err) {
-    console.error("Finn Aether error:", err.message);
-    return res.status(500).json({ error: err.message });
+    console.error("Finn Aether handler error:", err);
+    return res.status(500).json({ error: err.message || "Internal server error" });
   }
-};
+}
