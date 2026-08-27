@@ -2351,17 +2351,41 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const [useGroq,setUseGroq]=useState(LS.get("nl3-finn-mode")==="atlas"?false:true);
 
   const callGroqFinn=async(userMsg,history)=>{
-    const context={user,tasks,inv,anns,emps,progress,dms,clientTime:Date.now(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,finnMemory:finnMemory.all()};
-    const messages=[...history.filter(m=>m.role!=="assistant"||history.indexOf(m)>history.length-8).map(m=>({role:m.role,content:m.content})),{role:"user",content:userMsg}];
-    const r=await fetch("/api/finn",{
+    const GROQ_KEY=process.env.REACT_APP_GROQ_KEY||"";
+    const now=new Date();
+    const timeStr=now.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit"});
+    const dateStr=now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+    const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user?.id));
+    const overdue=myTasks.filter(t=>t.dueDate&&new Date(t.dueDate)<now);
+    const unread=dms.filter(d=>d.to===user?.id&&!d.read);
+    const systemPrompt=`You are Finn Aether, the AI assistant built into MNU's Neer Locker staff portal by Blyzty Technologies. Be helpful, friendly, and concise.
+Time: ${timeStr} on ${dateStr}
+User: ${user?.name||"Staff"} (${user?.role||"employee"})
+Open tasks: ${myTasks.length} (${overdue.length} overdue) | Unread DMs: ${unread.length}
+XP: ${progress?.xp||0} | Streak: ${progress?.streak||0} days
+Team: ${emps.length} staff | Inventory: ${inv.length} items
+Announcements: ${anns.filter(a=>!a.dismissed?.includes(user?.id)).length} active
+Action tags you can use: [NAV:page] [COMPLETE_TASK:id] [CREATE_TASK:title|priority|assignee] [OPEN_SHOP]
+Keep replies short and conversational.`;
+    const r=await fetch("https://api.groq.com/openai/v1/chat/completions",{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({messages,context})
+      headers:{"Authorization":`Bearer ${GROQ_KEY}`,"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"llama-3.3-70b-versatile",
+        max_tokens:512,
+        temperature:0.7,
+        messages:[
+          {role:"system",content:systemPrompt},
+          ...history.slice(-12).map(m=>({role:m.role,content:m.content})),
+          {role:"user",content:userMsg}
+        ],
+      })
     });
     if(!r.ok) throw new Error("api_error_"+r.status);
     const d=await r.json();
-    if(!d.reply) throw new Error("no_response");
-    return d.reply;
+    const reply=d.choices?.[0]?.message?.content?.trim();
+    if(!reply) throw new Error("no_response");
+    return reply;
   };
 
   const parseAndExecuteActions=async(reply)=>{
