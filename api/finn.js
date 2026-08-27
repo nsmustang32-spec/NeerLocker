@@ -3,6 +3,22 @@
 // Set GROQ_API_KEY in Vercel environment variables
 
 export default async function handler(req, res) {
+  // ── CORS — allow both the custom domain and Vercel preview URLs ──────────────
+  const allowedOrigins = [
+    "https://neerlocker.online",
+    "https://www.neerlocker.online",
+    "https://neer-locker.vercel.app",
+  ];
+  const origin = req.headers.origin || "";
+  const isAllowed = allowedOrigins.includes(origin) || origin.endsWith(".vercel.app");
+  res.setHeader("Access-Control-Allow-Origin", isAllowed ? origin : allowedOrigins[0]);
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Max-Age", "86400");
+
+  // Handle preflight
+  if (req.method === "OPTIONS") return res.status(200).end();
+
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
