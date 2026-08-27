@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 const VERSION   = "1.10.0";
-const FINN_VERSION = "1.4.0";
+const FINN_VERSION = "1.5.0";
 const VIGIL_VERSION = "2.1.0";
 const FINN_PATCH_NOTES = {
   "1.4.0": [
@@ -34,7 +34,7 @@ const FINN_PATCH_NOTES = {
     "Voice mode: Male voice prioritized (Aaron, Daniel, Alex)",
   ],
   "1.3.0": [
-    "Finn Aether: Cloud-powered Finn by Llama 3.1 via Groq — understands anything naturally",
+    "Finn Aether: Cloud-powered AI assistant — understands anything naturally",
     "Action tags: Finn can complete tasks, adjust inventory, navigate, send DMs through AI",
     "Finn Atlas: On-device fallback — always works, no internet needed",
     "Full conversation context sent to AI — Finn remembers the thread",
@@ -742,11 +742,6 @@ function VersionBadge({T,hide,navOpen}) {
   );
 }
 
-function ClaudeTag({T}) {
-  // Removed from fixed overlay — now rendered inline in HomePage under Quick Actions
-  return null;
-}
-
 // ─── CLOCK ────────────────────────────────────────────────────────────────────
 function LiveClock({T}) {
   const [time,setTime]=useState(new Date());
@@ -1091,8 +1086,6 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn,onShop,onHelp,onFeed
       icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>},
     {key:"act",         label:"Activity",     perm:"act",
       icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>},
-    {key:"schedule",    label:"Schedule",     perm:null,
-      icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>},
     {key:"finn",        label:"Finn",         perm:null, special:"finn",
       icon:<svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.6"><polygon points="11,2 20,7 20,17 11,22 2,17 2,7"/><circle cx="11" cy="11" r="3"/></svg>},
     {key:"shop",        label:"XP Shop",      perm:null, special:"shop",
@@ -1327,7 +1320,7 @@ function HeroBanner({user,T,onProfileClick,onSearch,onAlerts,equippedBadges=[],n
 }
 
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,scheduleUrl,onShop,onFinn,onSearch,onAlerts,equippedBadges,nameColorId,onNewTask,onNewAnn}) {
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,onShop,onFinn,onSearch,onAlerts,equippedBadges,nameColorId,onNewTask,onNewAnn}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
   const doneTasks=tasks.filter(t=>t.done&&(t.assignedTo===user.id||t.assignedTo==="all"));
   const online=emps.filter(e=>e.id!==user.id&&e.status==="online");
@@ -1550,7 +1543,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
         {/* ── INLINE CREDIT FOOTER ── */}
         <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5,padding:"18px 0 4px",borderTop:`1px solid ${T.dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"}`,marginTop:4}}>
           <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",justifyContent:"center"}}>
-            <span style={{fontSize:10,color:T.faint,fontWeight:500}}>Built using Claude</span>
+
             <span style={{color:T.dark?"rgba(255,255,255,0.1)":"rgba(0,0,0,0.12)",fontSize:10}}>·</span>
             <span style={{fontSize:10,color:T.faint,fontWeight:500}}>Created by Nate Smith</span>
           </div>
@@ -3433,8 +3426,8 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
       // ── ABOUT ─────────────────────────────────────────────────────────────
       } else if(has("who are you","what are you","about finn","what is finn","introduce yourself")){
         reply="Finn Atlas — on-device, no internet needed. I run directly on your device and handle everything: tasks, inventory, XP, messages, and navigation. Switch to ☁️ Aether for full AI.";
-      } else if(has("what model","which model","what ai","what engine","how do you work","what powers you","are you ai","are you gpt","are you claude","are you chatgpt","what are you running")){
-        reply="Finn Atlas — built-in, always available, zero internet required. I run on-device, not in the cloud. For Llama 3.3 70B AI, tap ☁️ Aether.";
+      } else if(has("what model","which model","what ai","what engine","how do you work","what powers you","are you ai","are you gpt","are you claude","are you chatgpt","what are you running","what version")){
+        reply="Finn Atlas — built-in, always available, zero internet required. I run on-device, not in the cloud. For cloud AI, tap ☁️ Aether.";
       } else if(has("who am i","my name","my role","about me","my account")){
         reply="You're "+user?.name+", "+ROLES[user?.role]?.label+" at MNU Neer Locker."+(isXP?" Level "+myProg.level+" ("+myProg.title+"), "+myProg.xp+" XP.":"");
 
@@ -3482,7 +3475,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
         <div style={{flex:1,position:"relative",zIndex:1,minWidth:0}}>
           <div style={{fontFamily:"'Clash Display',sans-serif",fontWeight:800,fontSize:16,color:"#fff",letterSpacing:"-0.3px"}}>Finn</div>
           <div style={{fontSize:10,color:"#1e7fa8",fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",display:"flex",alignItems:"center",gap:3}}>
-              {useGroq?(<><svg width="11" height="9" viewBox="0 0 20 14" fill="#1e7fa8"><path d="M16.5 6.5a3.5 3.5 0 0 0-3.4-3.5A5 5 0 0 0 4 6a3 3 0 0 0 .5 5.9h11.5a3 3 0 0 0 .5-5.4z"/></svg><span>Finn Aether · Llama 3.3 70B</span></>):(<><svg width="11" height="11" viewBox="0 0 16 16" fill="#1e7fa8"><rect x="4" y="4" width="8" height="8" rx="1.5"/><rect x="6.5" y="1" width="1.5" height="3"/><rect x="9" y="1" width="1.5" height="3"/><rect x="6.5" y="12" width="1.5" height="3"/><rect x="9" y="12" width="1.5" height="3"/><rect x="1" y="6.5" width="3" height="1.5"/><rect x="1" y="9" width="3" height="1.5"/><rect x="12" y="6.5" width="3" height="1.5"/><rect x="12" y="9" width="3" height="1.5"/></svg><span>Finn Atlas · On-Device</span></>)}
+              {useGroq?(<><svg width="11" height="9" viewBox="0 0 20 14" fill="#1e7fa8"><path d="M16.5 6.5a3.5 3.5 0 0 0-3.4-3.5A5 5 0 0 0 4 6a3 3 0 0 0 .5 5.9h11.5a3 3 0 0 0 .5-5.4z"/></svg><span>Finn Aether · Claude Sonnet</span></>):(<><svg width="11" height="11" viewBox="0 0 16 16" fill="#1e7fa8"><rect x="4" y="4" width="8" height="8" rx="1.5"/><rect x="6.5" y="1" width="1.5" height="3"/><rect x="9" y="1" width="1.5" height="3"/><rect x="6.5" y="12" width="1.5" height="3"/><rect x="9" y="12" width="1.5" height="3"/><rect x="1" y="6.5" width="3" height="1.5"/><rect x="1" y="9" width="3" height="1.5"/><rect x="12" y="6.5" width="3" height="1.5"/><rect x="12" y="9" width="3" height="1.5"/></svg><span>Finn Atlas · On-Device</span></>)}
             </div>
         </div>
         {/* Mode toggle */}
@@ -4994,7 +4987,6 @@ export default function App() {
   const [bkps,setBkps]=useState([]);
   const [dms,setDms]=useState([]);
   const [notice,setNotice]=useState("");
-  const [scheduleUrl,setScheduleUrl]=useState("");
   const [siteOffline,setSiteOffline]=useState(false);
 
   const [page,setPage]=useState("home");
@@ -5066,8 +5058,6 @@ export default function App() {
       setBkps((bkpRows||[]).map(b=>({id:b.id,at:b.at,...(b.data||{})})));
       setDms((dmRows||[]).map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback})));
       if(sn) setNotice(sn);
-      const schedUrl=await DB.get('nl3-schedule-url');
-      if(schedUrl) setScheduleUrl(schedUrl);
       const d=dk??false; const c=cp??false; const av=accentVal||"";
       setDk(d); setCompact(c); setAccent(av); setT(mkTheme(d,c,av));
       if(offlineVal) setSiteOffline(offlineVal);
@@ -6238,7 +6228,7 @@ export default function App() {
                 if(window._axis!=="h"||window._committed) return;
                 e.preventDefault();
 
-                const PAGE_ORDER=["home","tasks","inv","anns","dms","leaderboard","act","schedule","set"].filter(p=>
+                const PAGE_ORDER=["home","tasks","inv","anns","dms","leaderboard","act","set"].filter(p=>
                   p==="home"||p==="tasks"||p==="set"||can(user,p==="anns"?"ann":p==="act"?"act":p==="leaderboard"?"leaderboard":p)
                 );
                 const cur=PAGE_ORDER.indexOf(page);
@@ -6285,7 +6275,7 @@ export default function App() {
                 setPtrY(0);
 
                 const W=window.innerWidth;
-                const PAGE_ORDER=["home","tasks","inv","anns","dms","leaderboard","act","schedule","set"].filter(p=>
+                const PAGE_ORDER=["home","tasks","inv","anns","dms","leaderboard","act","set"].filter(p=>
                   p==="home"||p==="tasks"||p==="set"||can(user,p==="anns"?"ann":p==="act"?"act":p==="leaderboard"?"leaderboard":p)
                 );
                 const cur=PAGE_ORDER.indexOf(page);
@@ -6359,7 +6349,7 @@ export default function App() {
                 }}>
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} scheduleUrl={scheduleUrl} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} onAlerts={()=>{setShowNotifCenter(true);playSound("open");haptic("light");}} equippedBadges={equippedBadges} nameColorId={nameColorId} onNewTask={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}} onNewAnn={()=>{setForm({aLvl:"info"});setModal("ann");}}/> }
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} onAlerts={()=>{setShowNotifCenter(true);playSound("open");haptic("light");}} equippedBadges={equippedBadges} nameColorId={nameColorId} onNewTask={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}} onNewAnn={()=>{setForm({aLvl:"info"});setModal("ann");}}/> }
 
               {/* TASKS */}
               {page==="tasks"&&(
@@ -6491,44 +6481,6 @@ export default function App() {
 
               {/* LEADERBOARD */}
               {page==="leaderboard"&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T} onShop={()=>setShowShop(true)} onViewProfile={e=>setViewingProfile(e)}/>}
-
-              {/* SCHEDULE */}
-              {page==="schedule"&&(
-                <div className="fu" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",marginTop:48,padding:24}}>
-                  <div style={{background:T.card,border:"1px solid "+T.bor,borderRadius:20,padding:32,maxWidth:380,width:"100%",textAlign:"center",display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
-                    <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-                    <div>
-                      <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:22,fontWeight:800,color:T.txt,marginBottom:8}}>Staff Schedule</div>
-                      {scheduleUrl?(
-                        <div style={{fontSize:14,color:T.sub,lineHeight:1.6}}>Your schedule is ready. Choose how you'd like to open it.</div>
-                      ):(
-                        <div style={{fontSize:14,color:T.sub,lineHeight:1.6}}>No schedule has been set yet. Ask your Technical Administrator to add the schedule link.</div>
-                      )}
-                    </div>
-                    {scheduleUrl&&(
-                      <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%"}}>
-                        <a href={scheduleUrl} target="_blank" rel="noopener"
-                          style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:T.scarlet,color:"#fff",borderRadius:12,padding:"14px 20px",fontWeight:800,fontSize:15,fontFamily:"inherit",textDecoration:"none",transition:"opacity .15s"}}
-                          onMouseEnter={e=>e.currentTarget.style.opacity="0.85"}
-                          onMouseLeave={e=>e.currentTarget.style.opacity="1"}
-                        >
-                          <span style={{fontSize:18}}>↗</span> Open in New Tab
-                        </a>
-                        <button onClick={()=>window.location.href=scheduleUrl}
-                          style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,background:T.surfH,color:T.txt,border:"1px solid "+T.bor,borderRadius:12,padding:"14px 20px",fontWeight:700,fontSize:15,fontFamily:"inherit",cursor:"pointer",transition:"all .15s"}}
-                          onMouseEnter={e=>e.currentTarget.style.background=T.surf}
-                          onMouseLeave={e=>e.currentTarget.style.background=T.surfH}
-                        >
-                          <span style={{display:"inline-flex",alignItems:"center",gap:6}}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Open in This Browser</span>
-                        </button>
-                        <div style={{fontSize:11,color:T.faint,marginTop:4}}>
-                          Last updated by Tech Admin
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* ACTIVITY */}
               {page==="act"&&can(user,"act")&&(
@@ -7126,10 +7078,10 @@ export default function App() {
                     {/* Lightweight preview of the adjacent page */}
                     <div style={{paddingTop:40,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,minHeight:200,opacity:0.85}}>
                       <div style={{fontSize:36}}>
-                        {{"home":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>,"tasks":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>,"inv":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,"anns":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,"dms":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,"leaderboard":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>,"act":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,"schedule":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,"set":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}[swipeNextPage]||<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>}
+                        {{"home":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>,"tasks":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>,"inv":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,"anns":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,"dms":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,"leaderboard":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>,"act":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,"set":<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>}[swipeNextPage]||<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={T.scarlet} strokeWidth="1.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>}
                       </div>
                       <div style={{fontSize:18,fontWeight:800,color:T.txt,fontFamily:"'Clash Display',sans-serif",letterSpacing:"-0.3px"}}>
-                        {{"home":"Home","tasks":"Tasks","inv":"Inventory","anns":"Announcements","dms":"Messages","leaderboard":"Leaderboard","act":"Activity","schedule":"Schedule","set":"Settings"}[swipeNextPage]||swipeNextPage}
+                        {{"home":"Home","tasks":"Tasks","inv":"Inventory","anns":"Announcements","dms":"Messages","leaderboard":"Leaderboard","act":"Activity","set":"Settings"}[swipeNextPage]||swipeNextPage}
                       </div>
                       <div style={{fontSize:12,color:T.sub}}>Swipe to navigate</div>
                     </div>
@@ -7830,56 +7782,8 @@ export default function App() {
               </div>
             )}
 
-            {/* Schedule URL */}
-            <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
-<div id="tech-section-staff" style={{scrollMarginTop:90}}/>
-              <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:4}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Staff Schedule Link</div>
-              <div style={{fontSize:12,color:T.sub,marginBottom:10,lineHeight:1.6}}>
-                Paste any schedule URL here — Google Sheets, OneDrive, SharePoint, or any link. All staff will see it instantly in the Schedule tab.
-              </div>
-              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:8}}>
-                <input
-                  placeholder="https://docs.google.com/spreadsheets/... or any schedule URL"
-                  value={form.schedUrl??scheduleUrl}
-                  onChange={e=>setForm(p=>({...p,schedUrl:e.target.value}))}
-                  style={{flex:1,minWidth:200,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 14px",fontSize:13,fontFamily:"inherit",outline:"none"}}
-                />
-                <Btn T={T} sm onClick={async()=>{
-                  const url=String(form.schedUrl||"").trim();
-                  if(!url){toast("Paste a URL first","err");return;}
-                  await DB.set("nl3-schedule-url",url);
-                  setScheduleUrl(url);
-                  setForm(p=>({...p,schedUrl:""}));
-                  toast("Schedule link saved! Staff can now see it in the Schedule tab ✅");
-                  playSound("success");
-                }}>Save Link</Btn>
-                {scheduleUrl&&<Btn T={T} sm variant="danger" onClick={async()=>{
-                  await DB.set("nl3-schedule-url","");
-                  setScheduleUrl("");
-                  toast("Schedule link cleared","warn");
-                }}>Clear</Btn>}
-              </div>
-              {scheduleUrl&&(
-                <div style={{fontSize:12,color:T.ok,fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{display:"inline-flex",alignItems:"center",gap:4}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Active:</span>
-                  <a href={scheduleUrl} target="_blank" rel="noopener" style={{color:T.blue,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:300}}>{scheduleUrl}</a>
-                </div>
-              )}
-            </div>
 
-            {/* Site notice */}
-            <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
-              <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:8}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 11l18-5v12L3 13"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> Site Notice / Maintenance Alert</div>
-              <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                <input placeholder="e.g. Site down for maintenance until 3pm…" value={form.nMsg||""} onChange={e=>setForm(p=>({...p,nMsg:e.target.value}))}
-                  style={{flex:1,minWidth:200,background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"9px 14px",fontSize:13,fontFamily:"inherit",outline:"none"}}/>
-                <Btn T={T} sm onClick={sendNotice}>Send</Btn>
-                {notice&&<Btn T={T} sm variant="ghost" onClick={clearNotice}>Clear Active</Btn>}
-              </div>
-              {notice&&<div style={{display:"flex",alignItems:"center",gap:5,marginTop:8,fontSize:12,color:T.warn,fontWeight:600}}><svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="#f59e0b"/></svg> Active: &quot;{notice}&quot;</div>}
-            </div>
-
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}} className="two-col">
+            
               {/* System Logs */}
               <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,flexWrap:"wrap",gap:6}}>
@@ -8383,7 +8287,6 @@ export default function App() {
                   ))}
                 </div>
               )}
-            </div>
             </div>
           </div>
           <div style={{marginTop:24,padding:"12px 0",borderTop:`1px solid ${T.bor}`,display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,color:T.faint}}><span>Neer Locker Staff Portal · v{VERSION}</span><span>Vigil HyperCore v{VIGIL_VERSION}</span></div><VersionBadge T={T}/>
@@ -8929,7 +8832,7 @@ function HelpModal({T,bottom,navOpen,externalOpen,onExternalClose}) {
     {icon:E("💬","≡"),title:"Messages",desc:"One-on-one DMs or group chat with the whole team. Messages may be reviewed by management."},
     {icon:E("🏆","◆"),title:"Leaderboard & XP",desc:"Earn XP by completing tasks. High priority = 50 XP, Medium/Low = 25. Climb the leaderboard and unlock ranks."},
     {icon:E("📊","▦"),title:"Activity",desc:"Full log of logins, task completions, and team changes. Visible to managers and above."},
-    {icon:E("📅","◷"),title:"Schedule",desc:"Tech Admin can paste a OneDrive/SharePoint schedule URL to show the team's shift schedule."},
+    
     {icon:E("⚙️","◎"),title:"Settings",desc:"Profile, display mode (including Minimal Mode), sound preferences, device scaling, PIN, and notifications."},
     {icon:E("✦","✦"),title:"Minimal Mode",desc:"Settings → Display & Sound → Minimal Mode. Clean Google-inspired look with pill buttons, flat cards, and optional emoji hiding. Accent color fully customizable."},
     {icon:E("📲","↗"),title:"Add to Home Screen",desc:"iPhone (Safari): Share → Add to Home Screen. Android (Chrome): ⋮ menu → Add to Home Screen. Works like a real app."},
