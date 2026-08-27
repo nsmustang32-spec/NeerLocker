@@ -2353,7 +2353,7 @@ function FinnChat({T,user,tasks,inv,anns,dms,emps,progress,act,onClose,setPage,t
   const callGroqFinn=async(userMsg,history)=>{
     const context={user,tasks,inv,anns,emps,progress,dms,clientTime:Date.now(),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,finnMemory:finnMemory.all()};
     const messages=[...history.filter(m=>m.role!=="assistant"||history.indexOf(m)>history.length-8).map(m=>({role:m.role,content:m.content})),{role:"user",content:userMsg}];
-    const r=await fetch("https://neer-locker.vercel.app/api/finn",{
+    const r=await fetch("/api/finn",{
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body:JSON.stringify({messages,context})
