@@ -430,6 +430,34 @@ const SB = {
     } catch {}
   },
 
+  // ── Key/value settings store — backs the DB.get/DB.set shim ──────────────────
+  // Table: app_settings (key text primary key, value jsonb)
+  async setting(key) {
+    try {
+      const r = await fetch(SB.url("app_settings", `?key=eq.${encodeURIComponent(key)}&select=value`), {headers: SB.headers});
+      if(!r.ok){ console.error("SB.setting failed:",key,r.status); return null; }
+      const rows = await r.json();
+      if(!rows || rows.length===0) return null;
+      return rows[0].value;
+    } catch(e) { console.error("SB.setting error:",key,e.message); return null; }
+  },
+
+  async setSetting(key, value) {
+    try {
+      const r = await fetch(SB.url("app_settings"), {
+        method: "POST",
+        headers: {...SB.headers, "Prefer": "resolution=merge-duplicates,return=representation"},
+        body: JSON.stringify({key, value})
+      });
+      if(!r.ok){
+        const err=await r.text().catch(()=>"unknown");
+        console.error("SB.setSetting failed:",key,"status:",r.status,"body:",err);
+        return null;
+      }
+      return await r.json();
+    } catch(e) { console.error("SB.setSetting error:",key,e.message); return null; }
+  },
+
   async setting(key) {
     try {
       const r = await SB.select("app_settings", `?key=eq.${key}`);
@@ -446,8 +474,8 @@ const SB = {
 
 // DB shim — keeps all existing DB.get/DB.set calls working via app_settings table
 const DB = {
-  get: async k => { try { return await SB.setting(k); } catch { return null; } },
-  set: async (k,v) => { try { await SB.setSetting(k,v); } catch {} },
+  get: async k => { try { return await SB.setting(k); } catch(e) { console.error("DB.get failed:",k,e.message); return null; } },
+  set: async (k,v) => { try { const r=await SB.setSetting(k,v); if(!r) console.error("DB.set returned null — check app_settings table exists with (key text primary key, value jsonb)"); return r; } catch(e) { console.error("DB.set failed:",k,e.message); } },
 };
 
 // LS — localStorage for per-device display preferences (never shared)
@@ -469,9 +497,19 @@ const SEED = [
   manager:   {label:"Manager",     color:"#1e7fa8", p:["home","tasks","inv","ann","act","emp","assign","settings","dms","online","leaderboard"]},
   assistant: {label:"Asst. Mgr",  color:"#7c3aed", p:["home","tasks","inv","ann","assign","settings","emp","dms","leaderboard"]},
   employee:  {label:"Employee",   color:"#6b7280", p:["home","tasks","inv","ann","dms","leaderboard"]},
+  enactus:   {label:"Enactus Member", color:"#059669", p:["home","tasks","inv","ann","dms"]},
   superadmin:{label:"Technical Administrator", color:"#f59e0b", p:["*"]},
 };
 const can = (u,p) => { if(!u) return false; const ps=ROLES[u.role]?.p||[]; return ps.includes("*")||ps.includes(p); };
+
+// ── Laundry status thresholds ───────────────────────────────────────────────
+// 0 baskets = nothing | 1-3 = not much | 4-5 = needs done | 6+ = needs done STAT
+const getLaundryLevel = (baskets) => {
+  if(baskets<=0) return {key:"nothing",         label:"Nothing",         color:"#22c55e", idx:0};
+  if(baskets<=3) return {key:"not_much",        label:"Not Much",        color:"#84cc16", idx:1};
+  if(baskets<=5) return {key:"needs_done",      label:"Needs Done",      color:"#f59e0b", idx:2};
+  return               {key:"needs_done_stat",  label:"Needs Done STAT", color:"#ef4444", idx:3};
+};
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const buildCSS = T => `
@@ -1082,18 +1120,18 @@ function NavMenu({user,page,setPage,tasks,anns,dms,T,onFinn,onShop,onHelp,onFeed
       icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>},
     {key:"anns",        label:"Alerts",       perm:"ann",          badge:myAnns,
       icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>},
-    {key:"leaderboard", label:"Ranks",        perm:"leaderboard",
+    {key:"leaderboard", label:"Ranks",        perm:"leaderboard", xpOnly:true,
       icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>},
     {key:"act",         label:"Activity",     perm:"act",
       icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>},
     {key:"finn",        label:"Finn",         perm:null, special:"finn",
       icon:<svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.6"><polygon points="11,2 20,7 20,17 11,22 2,17 2,7"/><circle cx="11" cy="11" r="3"/></svg>},
-    {key:"shop",        label:"XP Shop",      perm:null, special:"shop",
+    {key:"shop",        label:"XP Shop",      perm:null, special:"shop", xpOnly:true,
       icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>},
 
     {key:"feedback",    label:"Ideas",        perm:null, special:"feedback",
       icon:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:18,height:18}}><line x1="12" y1="2" x2="12" y2="6"/><path d="M12 6a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3 5.5V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.5C7.5 16.5 6 14.5 6 12a6 6 0 0 1 6-6z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>},
-  ].filter(i=>hasP(i.perm));
+  ].filter(i=>hasP(i.perm)&&(!i.xpOnly||XP_ELIGIBLE_ROLES.includes(user?.role)));
 
   const moreBadge=moreItems.reduce((s,i)=>s+(i.badge||0),0);
 
@@ -1320,7 +1358,19 @@ function HeroBanner({user,T,onProfileClick,onSearch,onAlerts,equippedBadges=[],n
 }
 
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,onShop,onFinn,onSearch,onAlerts,equippedBadges,nameColorId,onNewTask,onNewAnn}) {
+// ── Card — reusable elevated container, used across Home and Inventory ────────
+function Card({children,style={},onClick,T,...rest}) {
+  return (
+    <div onClick={onClick} {...rest} style={{background:T.dark?"#1a2535":"#fff",borderRadius:16,padding:14,boxShadow:T.dark?"0 2px 12px rgba(0,0,0,0.3)":"0 2px 12px rgba(0,0,0,0.06)",border:`1px solid ${T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.05)"}`,transition:"transform .15s,box-shadow .15s",...style}}
+      onMouseEnter={onClick?e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=T.dark?"0 6px 20px rgba(0,0,0,0.4)":"0 6px 20px rgba(0,0,0,0.1)";}:undefined}
+      onMouseLeave={onClick?e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=T.dark?"0 2px 12px rgba(0,0,0,0.3)":"0 2px 12px rgba(0,0,0,0.06)";}:undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,onShop,onFinn,onSearch,onAlerts,equippedBadges,nameColorId,onNewTask,onNewAnn,laundryBaskets}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
   const doneTasks=tasks.filter(t=>t.done&&(t.assignedTo===user.id||t.assignedTo==="all"));
   const online=emps.filter(e=>e.id!==user.id&&e.status==="online");
@@ -1332,15 +1382,6 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
   const rc=ROLES[user.role];
   const scarlet="#C8102E";
   const urgentTasks=myTasks.filter(t=>t.due&&new Date(t.due)<=new Date(Date.now()+86400000));
-
-  const Card=({children,style={},onClick,...rest})=>(
-    <div onClick={onClick} {...rest} style={{background:T.dark?"#1a2535":"#fff",borderRadius:16,padding:14,boxShadow:T.dark?"0 2px 12px rgba(0,0,0,0.3)":"0 2px 12px rgba(0,0,0,0.06)",border:`1px solid ${T.dark?"rgba(255,255,255,0.06)":"rgba(0,0,0,0.05)"}`,transition:"transform .15s,box-shadow .15s",...style}}
-      onMouseEnter={onClick?e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow=T.dark?"0 6px 20px rgba(0,0,0,0.4)":"0 6px 20px rgba(0,0,0,0.1)";}:undefined}
-      onMouseLeave={onClick?e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow=T.dark?"0 2px 12px rgba(0,0,0,0.3)":"0 2px 12px rgba(0,0,0,0.06)";}:undefined}
-    >
-      {children}
-    </div>
-  );
 
   const SecHeader=({label,link,onLink})=>(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
@@ -1365,7 +1406,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
         {/* ── STAT CARDS ── */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {/* Tasks */}
-          <Card style={{cursor:"pointer"}} onClick={()=>setPage("tasks")}>
+          <Card T={T} style={{cursor:"pointer"}} onClick={()=>setPage("tasks")}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:36,height:36,borderRadius:10,background:"rgba(200,16,46,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg>
@@ -1379,7 +1420,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           </Card>
 
           {/* Ask Finn */}
-          <Card style={{cursor:"pointer",background:`linear-gradient(135deg,${T.dark?"#1a2535":"#fff"} 0%,${T.dark?"#1e2d42":"#f8f9ff"} 100%)`}} onClick={()=>{playSound("open");onFinn&&onFinn();}}>
+          <Card T={T} style={{cursor:"pointer",background:`linear-gradient(135deg,${T.dark?"#1a2535":"#fff"} 0%,${T.dark?"#1e2d42":"#f8f9ff"} 100%)`}} onClick={()=>{playSound("open");onFinn&&onFinn();}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:36,height:36,borderRadius:10,background:"rgba(200,16,46,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 <svg width="17" height="17" viewBox="0 0 22 22" fill="none" stroke={scarlet} strokeWidth="1.8"><polygon points="11,2 20,7 20,17 11,22 2,17 2,7"/><circle cx="11" cy="11" r="3"/></svg>
@@ -1394,7 +1435,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
 
           {/* XP / Rank */}
           {isEligible&&(
-            <Card style={{cursor:"pointer"}} onClick={()=>setPage("leaderboard")}>
+            <Card T={T} style={{cursor:"pointer"}} onClick={()=>setPage("leaderboard")}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:36,height:36,borderRadius:10,background:"rgba(200,16,46,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
@@ -1409,7 +1450,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           )}
 
           {/* Online team */}
-          <Card>
+          <Card T={T}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:36,height:36,borderRadius:10,background:"rgba(34,197,94,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
@@ -1425,7 +1466,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
 
         {/* ── XP PROGRESS BAR ── */}
         {isEligible&&lvInfo&&(
-          <Card>
+          <Card T={T}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:4,fontSize:12,fontWeight:700,color:T.txt}}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"><path d="M6 9H4a2 2 0 0 0-2 2v0a6 6 0 0 0 6 6h0"/><path d="M18 9h2a2 2 0 0 1 2 2v0a6 6 0 0 1-6 6h0"/><path d="M6 2h12v10a6 6 0 0 1-12 0V2z"/></svg>{lvInfo.title}</div>
               <div style={{fontSize:11,fontWeight:700,color:scarlet}}>{Math.round(lvInfo.pct)}%</div>
@@ -1437,11 +1478,51 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
           </Card>
         )}
 
+        {/* ── LAUNDRY STATUS ── */}
+        {(()=>{
+          const current = getLaundryLevel(laundryBaskets);
+          const LAUNDRY_LEVELS = [
+            {key:"nothing",        label:"Nothing",          color:"#22c55e"},
+            {key:"not_much",       label:"Not Much",         color:"#84cc16"},
+            {key:"needs_done",     label:"Needs Done",       color:"#f59e0b"},
+            {key:"needs_done_stat",label:"Needs Done STAT",  color:"#ef4444"},
+          ];
+          return (
+            <Card T={T} style={{cursor:"pointer"}} onClick={()=>setPage("inv")}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:700,color:T.txt}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={current.color} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="3"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="9" y1="6" x2="9.01" y2="6"/></svg>
+                  Laundry Status
+                </div>
+                <div style={{fontSize:11,fontWeight:800,color:current.color,padding:"3px 10px",borderRadius:20,background:`${current.color}18`}}>
+                  {current.label}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:4,marginBottom:8}}>
+                {LAUNDRY_LEVELS.map((l,i)=>(
+                  <div key={l.key} style={{
+                    flex:1,height:8,borderRadius:4,
+                    background:i<=current.idx?l.color:(T.dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)"),
+                    opacity:i<=current.idx?1:0.5,
+                    transition:"background .3s ease",
+                  }}/>
+                ))}
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.faint,fontWeight:600}}>
+                <span>Nothing</span>
+                <span>Not Much</span>
+                <span>Needs Done</span>
+                <span>Needs Done STAT</span>
+              </div>
+            </Card>
+          );
+        })()}
+
         {/* ── UPCOMING TASKS ── */}
         {myTasks.length>0&&(
           <div>
             <SecHeader label="Upcoming Tasks" link="View All" onLink={()=>setPage("tasks")}/>
-            <Card style={{padding:0,overflow:"hidden"}}>
+            <Card T={T} style={{padding:0,overflow:"hidden"}}>
               {myTasks.slice(0,3).map((t,i)=>{
                 const due=t.due?new Date(t.due):null;
                 const today=new Date(); today.setHours(23,59,59,0);
@@ -1466,7 +1547,7 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
         {/* ── RECENT ACTIVITY ── */}
         <div>
           <SecHeader label="Recent Activity" link="View All" onLink={()=>setPage("act")}/>
-          <Card style={{padding:0,overflow:"hidden"}}>
+          <Card T={T} style={{padding:0,overflow:"hidden"}}>
             {doneTasks.slice(0,2).map((t,i)=>(
               <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",borderBottom:i===0?`1px solid ${T.dark?"rgba(255,255,255,0.05)":"rgba(0,0,0,0.05)"}`:0}}>
                 <div style={{width:32,height:32,borderRadius:9,background:"rgba(34,197,94,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
@@ -1520,14 +1601,14 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
                 icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>,
                 action:()=>setPage("inv")
               },
-              {
+              ...(isEligible?[{
                 label:"XP Shop",
                 sub:"Spend your XP",
                 icon:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={scarlet} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
                 action:onShop
-              },
+              }]:[]),
             ].map(({label,sub,icon,action})=>(
-              <Card key={label} style={{cursor:"pointer",padding:12}} onClick={()=>{action&&action();playSound("click");}}>
+              <Card T={T} key={label} style={{cursor:"pointer",padding:12}} onClick={()=>{action&&action();playSound("click");}}>
                 <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   <div style={{width:32,height:32,borderRadius:9,background:"rgba(200,16,46,0.1)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                     {icon}
@@ -5002,6 +5083,9 @@ export default function App() {
   const [pinRevealed,setPinRevealed]=useState(false);
 
   const [emps,setEmps]=useState([]); // loaded from Supabase — no local default
+  const [invTab,setInvTab]=useState("items"); // "items" | "laundry"
+  const [laundryBaskets,setLaundryBaskets]=useState(0);
+  const [laundryClean,setLaundryClean]=useState(true); // true=clean, false=dirty
   const [dataLoaded,setDataLoaded]=useState(false);
   const [tasks,setTasks]=useState([]);
   const [inv,setInv]=useState([]);
@@ -5046,7 +5130,7 @@ export default function App() {
   useEffect(()=>{
     let alive=true;
     (async()=>{
-      const [empRows,taskRows,invRows,annRows,actRows,errRows,bkpRows,dmRows,sn,dk,cp,accentVal,offlineVal]=await Promise.all([
+      const [empRows,taskRows,invRows,annRows,actRows,errRows,bkpRows,dmRows,sn,dk,cp,accentVal,offlineVal,laundryBasketsVal,laundryCleanVal]=await Promise.all([
         SB.select("employees","?order=created_at.asc"),
         SB.select("tasks","?order=created_at.desc"),
         SB.select("inventory","?order=created_at.asc"),
@@ -5056,8 +5140,11 @@ export default function App() {
         SB.select("backups","?order=at.desc&limit=10"),
         SB.select("direct_messages","?order=at.asc"),
         DB.get("nl3-notice"),Promise.resolve(LS.get("nl3-dark")),Promise.resolve(LS.get("nl3-compact")),Promise.resolve(LS.get("nl3-accent")),DB.get("nl3-offline"),
+        DB.get("nl3-laundry-baskets"),DB.get("nl3-laundry-clean"),
       ]);
       if(!alive) return;
+      if(typeof laundryBasketsVal==="number") setLaundryBaskets(laundryBasketsVal);
+      if(typeof laundryCleanVal==="boolean") setLaundryClean(laundryCleanVal);
       // Map Supabase rows → app format
       // All employees live in Supabase — no local seed fallback except tech admin bootstrap
       const mapEmp=e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",equipped_frame:e.equipped_frame||"",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at});
@@ -5172,6 +5259,10 @@ export default function App() {
     }
     if(actRows) setAct(actRows.map(a=>({id:a.id,type:a.type,msg:a.msg,userId:a.user_id,at:a.at})));
     if(errRows) setErrs(errRows.map(e=>({id:e.id,level:e.level,msg:e.msg,at:e.at})));
+    // Sync laundry state across devices
+    const [laundryB,laundryC]=await Promise.all([DB.get("nl3-laundry-baskets"),DB.get("nl3-laundry-clean")]);
+    if(typeof laundryB==="number") setLaundryBaskets(laundryB);
+    if(typeof laundryC==="boolean") setLaundryClean(laundryC);
     if(dmRows){
       const newDms=dmRows.map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback}));
       setDms(prev=>{
@@ -5781,6 +5872,30 @@ export default function App() {
     saveInv([item,...inv]);
   };
   const adjStock=async(id,d)=>await saveInv(inv.map(i=>i.id===id?{...i,stock:Math.max(0,i.stock+d)}:i));
+
+  // ── LAUNDRY ──────────────────────────────────────────────────────────────────
+  const adjLaundryBaskets=async(delta)=>{
+    const next=Math.max(0,laundryBaskets+delta);
+    setLaundryBaskets(next);
+    await DB.set("nl3-laundry-baskets",next);
+  };
+  const toggleLaundryClean=async()=>{
+    const next=!laundryClean;
+    setLaundryClean(next);
+    await DB.set("nl3-laundry-clean",next);
+  };
+  const didLaundryLoad=async()=>{
+    // Doing a load = washing dirty baskets, so mark clean and reduce count by 1
+    // (one basket's worth of laundry has now been washed and put away)
+    const next=Math.max(0,laundryBaskets-1);
+    setLaundryBaskets(next);
+    setLaundryClean(true);
+    await DB.set("nl3-laundry-baskets",next);
+    await DB.set("nl3-laundry-clean",true);
+    addAct("laundry done",`${user?.name} did a load of laundry`,user?.id);
+    toast("Nice work! Laundry updated.","ok");
+    playSound("success"); haptic("light");
+  };
   const delItem=async id=>{await saveInv(inv.filter(i=>i.id!==id));toast("Removed","warn");};
 
   // ANNOUNCEMENTS
@@ -5823,15 +5938,25 @@ export default function App() {
     const empId=uid();
     const now=Date.now();
     const emp={id:empId,name:san(name),email,role:form.eRole||"employee",pin:"",status:"offline",createdAt:now,avatar_url:"",equipped_badges:"[]",badge_grants:"[]",name_color:"base",equipped_frame:"",max_xp:0};
-    // INSERT directly via fetch — more reliable than upsert for new records
+    // INSERT directly via fetch — pin/pin_hash omitted entirely (not sent as "")
+    // to avoid unique-constraint collisions if that column has a UNIQUE index
     const res=await fetch(`${SUPABASE_URL}/rest/v1/employees`,{
       method:"POST",
       headers:{...SB.headers,"Prefer":"return=representation"},
-      body:JSON.stringify({id:emp.id,email:emp.email,name:emp.name,role:emp.role,pin:"",pin_hash:"",status:"offline",created_at:now})
+      body:JSON.stringify({id:emp.id,email:emp.email,name:emp.name,role:emp.role,status:"offline",created_at:now})
     });
     if(!res.ok){
       const err=await res.text().catch(()=>"");
-      toast("Failed to add employee — "+((()=>{try{return JSON.parse(err)?.message||err;}catch{return err;}})()),"err");
+      let msg=err;
+      try{ msg=JSON.parse(err)?.message||JSON.parse(err)?.hint||err; }catch{}
+      console.error("createEmp failed:",res.status,err);
+      toast("Failed to add employee ("+res.status+"): "+msg,"err");
+      return; // don't touch local state — nothing was actually saved
+    }
+    // Confirm the row actually came back from Supabase before trusting it
+    const created=await res.json().catch(()=>null);
+    if(!created||(Array.isArray(created)&&created.length===0)){
+      toast("Employee insert returned no data — check Supabase RLS policies for INSERT on employees","err");
       return;
     }
     setEmps(prev=>[...prev,emp]);
@@ -6373,7 +6498,7 @@ export default function App() {
                 }}>
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} onAlerts={()=>{setShowNotifCenter(true);playSound("open");haptic("light");}} equippedBadges={equippedBadges} nameColorId={nameColorId} onNewTask={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}} onNewAnn={()=>{setForm({aLvl:"info"});setModal("ann");}}/> }
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} onAlerts={()=>{setShowNotifCenter(true);playSound("open");haptic("light");}} equippedBadges={equippedBadges} nameColorId={nameColorId} onNewTask={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}} onNewAnn={()=>{setForm({aLvl:"info"});setModal("ann");}} laundryBaskets={laundryBaskets}/> }
 
               {/* TASKS */}
               {page==="tasks"&&(
@@ -6400,7 +6525,24 @@ export default function App() {
               {/* INVENTORY */}
               {page==="inv"&&can(user,"inv")&&(
                 <div className="fu">
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10,marginTop:48}}>
+                  {/* ── TOGGLE: Items / Donated Laundry ── */}
+                  <div style={{display:"flex",gap:6,marginBottom:16,marginTop:48,background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:4}}>
+                    {[{key:"items",label:"Items"},{key:"laundry",label:"Donated Laundry"}].map(t=>(
+                      <button key={t.key} onClick={()=>{setInvTab(t.key);playSound("click");}}
+                        style={{
+                          flex:1,padding:"9px 12px",borderRadius:9,border:"none",cursor:"pointer",
+                          fontFamily:"inherit",fontWeight:700,fontSize:13,
+                          background:invTab===t.key?T.scarlet:"transparent",
+                          color:invTab===t.key?"#fff":T.sub,
+                          transition:"all .15s",
+                        }}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {invTab==="items"&&(<>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:10}}>
                     <div style={{fontSize:T.fs.md,color:T.sub}}>{inv.length} items · {inv.reduce((a,i)=>a+i.stock,0)} in stock</div>
                     <Btn T={T} sm onClick={()=>{setForm({});setModal("item");}}>+ Add Item</Btn>
                   </div>
@@ -6426,6 +6568,85 @@ export default function App() {
                       ))}
                     </div>
                   )}
+                  </>)}
+
+                  {invTab==="laundry"&&(()=>{
+                    const level=getLaundryLevel(laundryBaskets);
+                    return (
+                      <div style={{display:"grid",gap:16}}>
+                        {/* Status banner */}
+                        <Card T={T}>
+                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,fontSize:14,fontWeight:800,color:T.txt}}>
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={level.color} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="3"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="9" y1="6" x2="9.01" y2="6"/></svg>
+                              Donated Laundry
+                            </div>
+                            <div style={{fontSize:12,fontWeight:800,color:level.color,padding:"4px 12px",borderRadius:20,background:`${level.color}18`}}>
+                              {level.label}
+                            </div>
+                          </div>
+                          <div style={{display:"flex",gap:4,marginBottom:8}}>
+                            {["nothing","not_much","needs_done","needs_done_stat"].map((k,i)=>{
+                              const colors=["#22c55e","#84cc16","#f59e0b","#ef4444"];
+                              return (
+                                <div key={k} style={{
+                                  flex:1,height:8,borderRadius:4,
+                                  background:i<=level.idx?colors[i]:(T.dark?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.07)"),
+                                  opacity:i<=level.idx?1:0.5,
+                                  transition:"background .3s ease",
+                                }}/>
+                              );
+                            })}
+                          </div>
+                          <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.faint,fontWeight:600}}>
+                            <span>Nothing</span><span>Not Much</span><span>Needs Done</span><span>Needs Done STAT</span>
+                          </div>
+                        </Card>
+
+                        {/* Basket counter */}
+                        <Card T={T}>
+                          <div style={{fontSize:12,fontWeight:700,color:T.sub,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:14,textAlign:"center"}}>
+                            Baskets of Laundry
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:20}}>
+                            <QBtn onClick={()=>adjLaundryBaskets(-1)} T={T} big>−</QBtn>
+                            <div style={{textAlign:"center",minWidth:80}}>
+                              <div style={{fontFamily:"'Clash Display',sans-serif",fontSize:48,fontWeight:800,color:level.color,lineHeight:1,transition:"color .3s"}}>{laundryBaskets}</div>
+                              <div style={{fontSize:10,color:T.mut,fontWeight:700,marginTop:4}}>BASKETS</div>
+                            </div>
+                            <QBtn onClick={()=>adjLaundryBaskets(1)} T={T} big>+</QBtn>
+                          </div>
+                        </Card>
+
+                        {/* Clean/Dirty toggle */}
+                        <Card T={T}>
+                          <div style={{fontSize:12,fontWeight:700,color:T.sub,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:12,textAlign:"center"}}>
+                            Condition
+                          </div>
+                          <div style={{display:"flex",gap:8}}>
+                            <button onClick={()=>{if(!laundryClean)toggleLaundryClean();playSound("click");}}
+                              style={{flex:1,padding:"14px",borderRadius:12,border:`2px solid ${laundryClean?"#22c55e":T.bor}`,background:laundryClean?"#22c55e18":"transparent",cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:6,transition:"all .15s"}}>
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={laundryClean?"#22c55e":T.sub} strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                              <span style={{fontSize:13,fontWeight:700,color:laundryClean?"#22c55e":T.sub}}>Clean</span>
+                            </button>
+                            <button onClick={()=>{if(laundryClean)toggleLaundryClean();playSound("click");}}
+                              style={{flex:1,padding:"14px",borderRadius:12,border:`2px solid ${!laundryClean?T.scarlet:T.bor}`,background:!laundryClean?T.scarlet+"18":"transparent",cursor:"pointer",fontFamily:"inherit",display:"flex",flexDirection:"column",alignItems:"center",gap:6,transition:"all .15s"}}>
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={!laundryClean?T.scarlet:T.sub} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="3"/></svg>
+                              <span style={{fontSize:13,fontWeight:700,color:!laundryClean?T.scarlet:T.sub}}>Dirty</span>
+                            </button>
+                          </div>
+                        </Card>
+
+                        {/* Did a load button */}
+                        <Btn T={T} onClick={didLaundryLoad} style={{width:"100%",padding:"16px",fontSize:15}}>
+                          <span style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="3"/></svg>
+                            I Did a Load of Laundry
+                          </span>
+                        </Btn>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -6504,7 +6725,7 @@ export default function App() {
               {page==="dms"&&<DMSection user={user} emps={emps} dms={dms} setDms={saveDms} T={T} toast={toast} onXP={()=>grantXP(5,"dm sent")}/>}
 
               {/* LEADERBOARD */}
-              {page==="leaderboard"&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T} onShop={()=>setShowShop(true)} onViewProfile={e=>setViewingProfile(e)}/>}
+              {page==="leaderboard"&&XP_ELIGIBLE_ROLES.includes(user?.role)&&<LeaderboardPage emps={emps} progress={progress} user={user} T={T} onShop={()=>setShowShop(true)} onViewProfile={e=>setViewingProfile(e)}/>}
 
               {/* ACTIVITY */}
               {page==="act"&&can(user,"act")&&(
@@ -7349,7 +7570,7 @@ export default function App() {
             {showRating&&<RatingModal T={T} user={user} open={showRating} onClose={()=>setShowRating(false)}/>}
             {viewingProfile&&<StaffProfileModal T={T} emp={viewingProfile} progress={progress} onClose={()=>setViewingProfile(null)}/>}
             {showPfpUpload&&<PfpUploadModal T={T} user={user} emps={emps} setEmps={setEmps} open={showPfpUpload} onClose={()=>setShowPfpUpload(false)} toast={toast}/>}
-            {showShop&&<XPShopModal T={T} user={user} progress={progress} open={showShop} onClose={()=>setShowShop(false)} onSpendXP={(uid,pg)=>setProgress(prev=>({...prev,[uid]:pg}))} onPurchase={(item)=>{
+            {showShop&&XP_ELIGIBLE_ROLES.includes(user?.role)&&<XPShopModal T={T} user={user} progress={progress} open={showShop} onClose={()=>setShowShop(false)} onSpendXP={(uid,pg)=>setProgress(prev=>({...prev,[uid]:pg}))} onPurchase={(item)=>{
               if(item.type==="color"||item.type==="rainbow"){
                 // Apply the color immediately
                 applyTheme(dark,compact,item.color==="linear-gradient(90deg)"?"#C8102E":item.color);
@@ -9047,11 +9268,12 @@ function FeedbackPanel({T,toast}) {
   );
 }
 
-function QBtn({onClick,children,T}) {
+function QBtn({onClick,children,T,big}) {
   const [p,setP]=useState(false);
+  const size=big?52:30;
   return (
     <button onClick={e=>{playSound("click");onClick(e);}} onMouseDown={()=>setP(true)} onMouseUp={()=>setP(false)} onMouseLeave={()=>setP(false)}
-      style={{background:T.surfH,border:`1px solid ${T.bor}`,color:T.sub,width:30,height:30,borderRadius:8,cursor:"pointer",fontSize:18,fontFamily:"inherit",transform:p?"scale(0.85)":"scale(1)",transition:"background .12s,transform .1s,color .12s"}}
+      style={{background:T.surfH,border:`1px solid ${T.bor}`,color:T.sub,width:size,height:size,borderRadius:big?14:8,cursor:"pointer",fontSize:big?26:18,fontFamily:"inherit",transform:p?"scale(0.85)":"scale(1)",transition:"background .12s,transform .1s,color .12s",flexShrink:0}}
       onMouseEnter={e=>{e.currentTarget.style.background=T.bor;e.currentTarget.style.color=T.txt;}}
       onMouseLeave={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.color=T.sub;}}
     >{children}</button>
