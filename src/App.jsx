@@ -1370,7 +1370,7 @@ function Card({children,style={},onClick,T,...rest}) {
   );
 }
 
-function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,onShop,onFinn,onSearch,onAlerts,equippedBadges,nameColorId,onNewTask,onNewAnn,laundryBaskets}) {
+function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,setPrevPage,isOffline,onShop,onFinn,onSearch,onAlerts,equippedBadges,nameColorId,onNewTask,onNewAnn,laundryBaskets,shopList}) {
   const myTasks=tasks.filter(t=>!t.done&&(t.assignedTo==="all"||t.assignedTo===user.id));
   const doneTasks=tasks.filter(t=>t.done&&(t.assignedTo===user.id||t.assignedTo==="all"));
   const online=emps.filter(e=>e.id!==user.id&&e.status==="online");
@@ -1402,6 +1402,32 @@ function HomePage({user,tasks,anns,emps,dms,T,setPage,toast,progress,prevPage,se
 
       {/* ── CONTENT ── */}
       <div style={{padding:"16px 14px",display:"flex",flexDirection:"column",gap:14}}>
+
+        {/* ── SHOPPING LIST — boss & manager only ── */}
+        {(user?.role==="boss"||user?.role==="manager")&&(()=>{
+          const activeCount=(shopList||[]).filter(s=>!s.checked).length;
+          return (
+            <Card T={T} style={{cursor:"pointer",padding:"14px 16px"}} onClick={()=>setPage("inv")}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:38,height:38,borderRadius:11,background:"rgba(124,58,237,0.12)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14,fontWeight:800,color:T.txt}}>Shopping List</div>
+                  <div style={{fontSize:11,color:T.sub,marginTop:2}}>
+                    {activeCount>0?`${activeCount} item${activeCount!==1?"s":""} to pick up`:"All caught up"}
+                  </div>
+                </div>
+                {activeCount>0&&(
+                  <div style={{background:"#7c3aed",color:"#fff",fontSize:12,fontWeight:800,minWidth:22,height:22,borderRadius:11,display:"flex",alignItems:"center",justifyContent:"center",padding:"0 6px"}}>
+                    {activeCount}
+                  </div>
+                )}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.faint} strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </div>
+            </Card>
+          );
+        })()}
 
         {/* ── STAT CARDS ── */}
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -5012,7 +5038,6 @@ export default function App() {
   const [techPinGate,setTechPinGate]=useState(false);
   const [selectedTasks,setSelectedTasks]=useState(new Set());
   const [selPatchNotes,setSelPatchNotes]=useState(()=>new Set((PATCH_NOTES[VERSION]||[]).map((_,i)=>i)));
-  const [showRating,setShowRating]=useState(false);
   // Badge + name color — stored in localStorage
   const [equippedBadges,setEquippedBadges]=useState(()=>{
     try{return JSON.parse(localStorage.getItem("nl3-badges")||"[]");}catch{return [];}
@@ -5056,16 +5081,6 @@ export default function App() {
   };
   const [showShop,setShowShop]=useState(false);
   const [showPfpUpload,setShowPfpUpload]=useState(false);
-  // Monthly rating check — show once per calendar month per user
-  useEffect(()=>{
-    if(!user) return;
-    const last=LS.get("nl3-last-rating");
-    const now=new Date();
-    const monthKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
-    if(last===monthKey) return; // already rated this month
-    const t=setTimeout(()=>setShowRating(true),15000);
-    return()=>clearTimeout(t);
-  },[user?.id]);
   const [showOnboarding,setShowOnboarding]=useState(false);
   const [viewingProfile,setViewingProfile]=useState(null); // emp object
   useEffect(()=>{window._startOnboarding=()=>setShowOnboarding(true);return()=>{delete window._startOnboarding;};},[]);
@@ -5083,7 +5098,8 @@ export default function App() {
   const [pinRevealed,setPinRevealed]=useState(false);
 
   const [emps,setEmps]=useState([]); // loaded from Supabase — no local default
-  const [invTab,setInvTab]=useState("items"); // "items" | "laundry"
+  const [invTab,setInvTab]=useState("items"); // "items" | "laundry" | "shopping"
+  const [shopList,setShopList]=useState([]); // [{id,name,category,repeat,checked,checkedAt,checkedBy,createdAt,createdBy}]
   const [laundryBaskets,setLaundryBaskets]=useState(0);
   const [laundryClean,setLaundryClean]=useState(true); // true=clean, false=dirty
   const [dataLoaded,setDataLoaded]=useState(false);
@@ -5130,7 +5146,7 @@ export default function App() {
   useEffect(()=>{
     let alive=true;
     (async()=>{
-      const [empRows,taskRows,invRows,annRows,actRows,errRows,bkpRows,dmRows,sn,dk,cp,accentVal,offlineVal,laundryBasketsVal,laundryCleanVal]=await Promise.all([
+      const [empRows,taskRows,invRows,annRows,actRows,errRows,bkpRows,dmRows,sn,dk,cp,accentVal,offlineVal,laundryBasketsVal,laundryCleanVal,shopRows]=await Promise.all([
         SB.select("employees","?order=created_at.asc"),
         SB.select("tasks","?order=created_at.desc"),
         SB.select("inventory","?order=created_at.asc"),
@@ -5141,10 +5157,12 @@ export default function App() {
         SB.select("direct_messages","?order=at.asc"),
         DB.get("nl3-notice"),Promise.resolve(LS.get("nl3-dark")),Promise.resolve(LS.get("nl3-compact")),Promise.resolve(LS.get("nl3-accent")),DB.get("nl3-offline"),
         DB.get("nl3-laundry-baskets"),DB.get("nl3-laundry-clean"),
+        SB.select("shopping_list","?order=created_at.desc"),
       ]);
       if(!alive) return;
       if(typeof laundryBasketsVal==="number") setLaundryBaskets(laundryBasketsVal);
       if(typeof laundryCleanVal==="boolean") setLaundryClean(laundryCleanVal);
+      if(shopRows) setShopList(shopRows.map(s=>({id:s.id,name:s.name,category:s.category||"needed",repeat:s.repeat||false,checked:s.checked||false,checkedAt:s.checked_at,checkedBy:s.checked_by||"",createdAt:s.created_at,createdBy:s.created_by||""})));
       // Map Supabase rows → app format
       // All employees live in Supabase — no local seed fallback except tech admin bootstrap
       const mapEmp=e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",equipped_frame:e.equipped_frame||"",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at});
@@ -5206,7 +5224,7 @@ export default function App() {
   },[user]);
 
   const refreshData=useCallback(async()=>{
-    const [empRows,taskRows,invRows,annRows,actRows,errRows,dmRows]=await Promise.all([
+    const [empRows,taskRows,invRows,annRows,actRows,errRows,dmRows,shopRows]=await Promise.all([
       SB.select("employees","?order=created_at.asc"),
       SB.select("tasks","?order=created_at.desc"),
       SB.select("inventory","?order=created_at.asc"),
@@ -5214,6 +5232,7 @@ export default function App() {
       SB.select("activity","?order=at.desc&limit=300"),
       SB.select("system_logs","?order=at.desc&limit=200"),
       SB.select("direct_messages","?order=at.asc"),
+      SB.select("shopping_list","?order=created_at.desc"),
     ]);
     if(empRows?.length) setEmps(empRows.map(e=>({id:e.id,email:e.email,name:e.name,role:e.role,pin:e.pin_hash||e.pin||"",avatar_url:e.avatar_url||"",badge_grants:e.badge_grants||"[]",equipped_badges:e.equipped_badges||"[]",name_color:e.name_color||"base",equipped_frame:e.equipped_frame||"",max_xp:e.max_xp||0,status:e.status||"offline",createdAt:e.created_at})));
     if(taskRows?.length>=0){
@@ -5263,6 +5282,7 @@ export default function App() {
     const [laundryB,laundryC]=await Promise.all([DB.get("nl3-laundry-baskets"),DB.get("nl3-laundry-clean")]);
     if(typeof laundryB==="number") setLaundryBaskets(laundryB);
     if(typeof laundryC==="boolean") setLaundryClean(laundryC);
+    if(shopRows) setShopList(shopRows.map(s=>({id:s.id,name:s.name,category:s.category||"needed",repeat:s.repeat||false,checked:s.checked||false,checkedAt:s.checked_at,checkedBy:s.checked_by||"",createdAt:s.created_at,createdBy:s.created_by||""})));
     if(dmRows){
       const newDms=dmRows.map(d=>({id:d.id,from:d.from_id,to:d.to_id,text:d.text,at:d.at,read:d.read,system:d.system,threadWith:d.thread_with,feedback:d.feedback}));
       setDms(prev=>{
@@ -5462,6 +5482,17 @@ export default function App() {
     const toSave=changedItem?[changedItem]:v;
     for(const i of toSave){
       await SB.upsert("inventory",{id:i.id,name:i.name,stock:i.stock||0,created_at:i.createdAt||Date.now()});
+    }
+  },[]);
+  const saveShopList=useCallback(async(v,changedItem)=>{
+    setShopList(v);
+    const toSave=changedItem?[changedItem]:v;
+    for(const s of toSave){
+      await SB.upsert("shopping_list",{
+        id:s.id,name:s.name,category:s.category||"needed",repeat:s.repeat||false,
+        checked:s.checked||false,checked_at:s.checkedAt||null,checked_by:s.checkedBy||"",
+        created_at:s.createdAt||Date.now(),created_by:s.createdBy||"",
+      });
     }
   },[]);
   const saveAnns =useCallback(async(v,changedAnn)=>{
@@ -5896,6 +5927,50 @@ export default function App() {
     toast("Nice work! Laundry updated.","ok");
     playSound("success"); haptic("light");
   };
+
+  // ── SHOPPING LIST ────────────────────────────────────────────────────────────
+  const addShopItem=async()=>{
+    const name=String(form.shName||"").trim();
+    if(!name){toast("Item name required","err");return;}
+    const item={
+      id:uid(), name:san(name), category:form.shCategory||"needed",
+      repeat:!!form.shRepeat, checked:false, checkedAt:null, checkedBy:"",
+      createdAt:Date.now(), createdBy:user?.name||"",
+    };
+    const next=[item,...shopList];
+    await saveShopList(next,item);
+    addAct("shopping list",`${user?.name} added "${item.name}" to the shopping list`,user?.id);
+    toast(`${item.name} added to list`);
+    setModal(null);setForm({});
+    playSound("success");
+  };
+  const toggleShopItem=async(id)=>{
+    const target=shopList.find(s=>s.id===id);
+    if(!target) return;
+    const nowChecked=!target.checked;
+    const updated={...target,checked:nowChecked,checkedAt:nowChecked?Date.now():null,checkedBy:nowChecked?(user?.name||""):""};
+    const next=shopList.map(s=>s.id===id?updated:s);
+    await saveShopList(next,updated);
+    if(nowChecked){
+      addAct("shopping list",`${user?.name} checked off "${target.name}"`,user?.id);
+      playSound("success"); haptic("light");
+      // If it's a repeat item, auto re-add a fresh unchecked copy after a short delay
+      if(target.repeat){
+        setTimeout(async()=>{
+          const fresh={id:uid(),name:target.name,category:target.category,repeat:true,checked:false,checkedAt:null,checkedBy:"",createdAt:Date.now(),createdBy:target.createdBy};
+          const withFresh=[fresh,...next];
+          await saveShopList(withFresh,fresh);
+        },600);
+      }
+    }
+  };
+  const removeShopItem=async(id)=>{
+    const target=shopList.find(s=>s.id===id);
+    await SB.delete("shopping_list",{id});
+    setShopList(prev=>prev.filter(s=>s.id!==id));
+    if(target) toast(`${target.name} removed`,"warn");
+  };
+
   const delItem=async id=>{await saveInv(inv.filter(i=>i.id!==id));toast("Removed","warn");};
 
   // ANNOUNCEMENTS
@@ -6498,7 +6573,7 @@ export default function App() {
                 }}>
 
               {/* HOME */}
-              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} onAlerts={()=>{setShowNotifCenter(true);playSound("open");haptic("light");}} equippedBadges={equippedBadges} nameColorId={nameColorId} onNewTask={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}} onNewAnn={()=>{setForm({aLvl:"info"});setModal("ann");}} laundryBaskets={laundryBaskets}/> }
+              {page==="home"&&<HomePage user={user} tasks={tasks} anns={anns} emps={emps} dms={dms} T={T} setPage={p=>{setSearch("");setPrevPage(page);setPage(p);}} toast={toast} progress={progress} prevPage={prevPage} setPrevPage={setPrevPage} isOffline={isOffline} onShop={()=>setShowShop(true)} onFinn={()=>openFinn()} onSearch={()=>setShowGlobalSearch(true)} onAlerts={()=>{setShowNotifCenter(true);playSound("open");haptic("light");}} equippedBadges={equippedBadges} nameColorId={nameColorId} onNewTask={()=>{setForm({tPri:"Medium",tAssign:"all",tRepeat:false});setModal("task");}} onNewAnn={()=>{setForm({aLvl:"info"});setModal("ann");}} laundryBaskets={laundryBaskets} shopList={shopList}/> }
 
               {/* TASKS */}
               {page==="tasks"&&(
@@ -6525,9 +6600,13 @@ export default function App() {
               {/* INVENTORY */}
               {page==="inv"&&can(user,"inv")&&(
                 <div className="fu">
-                  {/* ── TOGGLE: Items / Donated Laundry ── */}
+                  {/* ── TOGGLE: Items / Donated Laundry / Shopping List ── */}
                   <div style={{display:"flex",gap:6,marginBottom:16,marginTop:48,background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:4}}>
-                    {[{key:"items",label:"Items"},{key:"laundry",label:"Donated Laundry"}].map(t=>(
+                    {[
+                      {key:"items",label:"Items"},
+                      {key:"laundry",label:"Donated Laundry"},
+                      ...((user?.role==="boss"||user?.role==="manager")?[{key:"shopping",label:"Shopping List"}]:[]),
+                    ].map(t=>(
                       <button key={t.key} onClick={()=>{setInvTab(t.key);playSound("click");}}
                         style={{
                           flex:1,padding:"9px 12px",borderRadius:9,border:"none",cursor:"pointer",
@@ -6644,6 +6723,92 @@ export default function App() {
                             I Did a Load of Laundry
                           </span>
                         </Btn>
+                      </div>
+                    );
+                  })()}
+
+                  {invTab==="shopping"&&(user?.role==="boss"||user?.role==="manager")&&(()=>{
+                    const CATS=[
+                      {key:"repeat",   label:"Repeat Items", color:"#7c3aed", icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>},
+                      {key:"suggestions",label:"Suggestions", color:"#1e7fa8", icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="2" x2="12" y2="6"/><path d="M12 6a6 6 0 0 1 6 6c0 2.5-1.5 4.5-3 5.5V19a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-1.5C7.5 16.5 6 14.5 6 12a6 6 0 0 1 6-6z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>},
+                      {key:"needed",   label:"Needed",       color:"#f59e0b", icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>},
+                      {key:"not_needed",label:"Not Needed",  color:"#6b7280", icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>},
+                      {key:"talk_about",label:"Talk About It",color:"#C8102E", icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>},
+                    ];
+                    const unchecked=shopList.filter(s=>!s.checked);
+                    const checked=shopList.filter(s=>s.checked);
+                    return (
+                      <div style={{display:"grid",gap:16}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div style={{fontSize:T.fs.md,color:T.sub}}>{unchecked.length} active · {checked.length} checked off</div>
+                          <Btn T={T} sm onClick={()=>{setForm({shCategory:"needed"});setModal("shopItem");}}>+ Add Item</Btn>
+                        </div>
+
+                        {shopList.length===0?(
+                          <Empty icon={<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="1.5" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>} msg="Shopping list is empty" sub="Add items to track what's needed, suggestions, or things to discuss." cta="+ Add Item" onCta={()=>{setForm({shCategory:"needed"});setModal("shopItem");}} T={T}/>
+                        ):(
+                          <>
+                          {/* Active items, grouped by category */}
+                          {CATS.map(cat=>{
+                            const items=unchecked.filter(s=>s.category===cat.key);
+                            if(items.length===0) return null;
+                            return (
+                              <div key={cat.key}>
+                                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,fontSize:11,fontWeight:800,color:cat.color,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+                                  {cat.icon} {cat.label} <span style={{color:T.faint,fontWeight:600}}>({items.length})</span>
+                                </div>
+                                <div style={{display:"grid",gap:6}}>
+                                  {items.map(s=>(
+                                    <div key={s.id} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"11px 14px",display:"flex",alignItems:"center",gap:10}}>
+                                      <button onClick={()=>toggleShopItem(s.id)}
+                                        style={{width:22,height:22,borderRadius:7,border:`2px solid ${cat.color}`,background:"transparent",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                                      </button>
+                                      <div style={{flex:1,minWidth:0}}>
+                                        <div style={{fontWeight:700,fontSize:14,color:T.txt}}>{s.name}</div>
+                                        <div style={{fontSize:10,color:T.faint,marginTop:1}}>
+                                          {s.repeat&&<span style={{color:"#7c3aed",fontWeight:700}}>↻ Repeats · </span>}
+                                          Added by {s.createdBy||"Someone"}
+                                        </div>
+                                      </div>
+                                      <button onClick={()=>removeShopItem(s.id)}
+                                        style={{background:"none",border:"none",color:T.faint,cursor:"pointer",padding:6,flexShrink:0}}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Checked off items */}
+                          {checked.length>0&&(
+                            <div>
+                              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8,fontSize:11,fontWeight:800,color:T.faint,textTransform:"uppercase",letterSpacing:"0.05em"}}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> Checked Off <span style={{fontWeight:600}}>({checked.length})</span>
+                              </div>
+                              <div style={{display:"grid",gap:6}}>
+                                {checked.map(s=>(
+                                  <div key={s.id} style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:12,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,opacity:0.6}}>
+                                    <button onClick={()=>toggleShopItem(s.id)}
+                                      style={{width:22,height:22,borderRadius:7,border:"none",background:"#22c55e",cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                    </button>
+                                    <div style={{flex:1,minWidth:0}}>
+                                      <div style={{fontWeight:700,fontSize:14,color:T.txt,textDecoration:"line-through"}}>{s.name}</div>
+                                      <div style={{fontSize:10,color:T.faint,marginTop:1}}>Checked off by {s.checkedBy||"Someone"} · {fmtD(s.checkedAt)}</div>
+                                    </div>
+                                    <button onClick={()=>removeShopItem(s.id)}
+                                      style={{background:"none",border:"none",color:T.faint,cursor:"pointer",padding:6,flexShrink:0}}>
+                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          </>
+                        )}
                       </div>
                     );
                   })()}
@@ -7183,6 +7348,43 @@ export default function App() {
                             <div style={{width:21,height:21,borderRadius:"50%",background:T.dark?"#e0e0e0":"#fff",position:"absolute",top:3,left:voiceOnGlobal?26:3,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}/>
                           </button>
                         </div>
+                        {/* Push Notifications toggle */}
+                        <div style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div>
+                            <div style={{display:"flex",alignItems:"center",gap:7,fontWeight:700,color:T.txt}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.txt} strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications</div>
+                            <div style={{fontSize:T.fs.sm,color:T.sub,marginTop:2}}>
+                              {notifPerms==="denied"?"Blocked — enable in your browser/phone settings":
+                               notifPerms==="unsupported"?"Not supported on this device":
+                               "Get alerts for tasks, messages, and announcements"}
+                            </div>
+                          </div>
+                          <button onClick={async()=>{
+                              if(notifPerms==="denied"||notifPerms==="unsupported") { playSound("error"); return; }
+                              const next=!notifEnabled;
+                              if(next){
+                                const sub=await NOTIF.subscribe(user?.id);
+                                if(!sub){
+                                  toast("Couldn't enable notifications — check permissions","err");
+                                  setNotifPerms(NOTIF.supported()?NOTIF.permission():"unsupported");
+                                  return;
+                                }
+                                setNotifEnabled(true);
+                                LS.set("nl3-notif-enabled",true);
+                                playSound("success"); haptic("success");
+                                toast("Notifications enabled! 🔔");
+                              } else {
+                                await NOTIF.unsubscribe(user?.id);
+                                setNotifEnabled(false);
+                                LS.set("nl3-notif-enabled",false);
+                                playSound("click");
+                                toast("Notifications turned off","warn");
+                              }
+                            }}
+                            disabled={notifPerms==="denied"||notifPerms==="unsupported"}
+                            style={{width:50,height:27,borderRadius:14,background:notifEnabled?T.scarlet:"#909090",position:"relative",display:"flex",alignItems:"center",cursor:(notifPerms==="denied"||notifPerms==="unsupported")?"not-allowed":"pointer",border:"none",padding:0,opacity:(notifPerms==="denied"||notifPerms==="unsupported")?0.5:1}}>
+                            <div style={{width:21,height:21,borderRadius:"50%",background:T.dark?"#e0e0e0":"#fff",position:"absolute",top:3,left:notifEnabled?26:3,transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.3)"}}/>
+                          </button>
+                        </div>
                         {/* Haptics toggle */}
                         <div style={{background:T.surfH,border:"1px solid "+T.bor,borderRadius:12,padding:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                           <div>
@@ -7468,6 +7670,35 @@ export default function App() {
             </Modal>
           )}
 
+          {modal==="shopItem"&&(
+            <Modal T={T} title="Add to Shopping List" onClose={()=>{setModal(null);setForm({});}}>
+              <div style={{display:"grid",gap:14}}>
+                <Inp T={T} label="ITEM NAME *" placeholder="e.g. Paper Towels" value={form.shName||""} onChange={e=>setForm(p=>({...p,shName:e.target.value}))}/>
+                <Sel T={T} label="CATEGORY" value={form.shCategory||"needed"} onChange={e=>setForm(p=>({...p,shCategory:e.target.value}))}>
+                  <option value="repeat">Repeat Items</option>
+                  <option value="suggestions">Suggestions</option>
+                  <option value="needed">Needed</option>
+                  <option value="not_needed">Not Needed</option>
+                  <option value="talk_about">Talk About It</option>
+                </Sel>
+                <div onClick={()=>setForm(p=>({...p,shRepeat:!p.shRepeat}))}
+                  style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer",background:T.surfH,border:`1px solid ${T.bor}`,borderRadius:12,padding:"12px 14px"}}>
+                  <div style={{width:20,height:20,borderRadius:6,border:`2px solid ${form.shRepeat?T.scarlet:T.bor}`,background:form.shRepeat?T.scarlet:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all .15s"}}>
+                    {form.shRepeat&&<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                  </div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:700,color:T.txt}}>Repeat this item</div>
+                    <div style={{fontSize:11,color:T.sub,marginTop:1}}>Automatically re-adds when checked off, so it stays on the list every time</div>
+                  </div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:10,marginTop:18}}>
+                <Btn T={T} variant="ghost" flex={1} onClick={()=>{setModal(null);setForm({});}}>Cancel</Btn>
+                <Btn T={T} flex={2} onClick={addShopItem}>Add to List</Btn>
+              </div>
+            </Modal>
+          )}
+
           {modal==="ann"&&(
             <Modal T={T} title="Send Announcement" onClose={()=>{setModal(null);setForm({});}}>
               <div style={{display:"grid",gap:14}}>
@@ -7567,7 +7798,6 @@ export default function App() {
           {/* Finn chat panel */}
           {showFinn&&<FinnChat T={T} user={user} tasks={tasks} inv={inv} anns={anns} dms={dms} emps={emps} progress={progress} act={act} onClose={()=>setShowFinn(false)} setPage={p=>{setPrevPage(page);setPage(p);}} toast={toast} saveTask={(t)=>{setTasks(prev=>{const exists=prev.find(x=>x.id===t.id);return exists?prev.map(x=>x.id===t.id?t:x):[t,...prev];});upsertTask(t);}} saveInv={saveInv} saveAnns={saveAnns} saveDms={saveDms} addAct={addAct} grantXP={grantXP} saveStatus={saveStatus} applyTheme={applyTheme} dark={dark} compact={compact} upsertTask={upsertTask} dismissAnn={dismissAnn} voiceOnGlobal={voiceOnGlobal} setVoiceOnGlobal={setVoiceOnGlobal}/>}
 
-            {showRating&&<RatingModal T={T} user={user} open={showRating} onClose={()=>setShowRating(false)}/>}
             {viewingProfile&&<StaffProfileModal T={T} emp={viewingProfile} progress={progress} onClose={()=>setViewingProfile(null)}/>}
             {showPfpUpload&&<PfpUploadModal T={T} user={user} emps={emps} setEmps={setEmps} open={showPfpUpload} onClose={()=>setShowPfpUpload(false)} toast={toast}/>}
             {showShop&&XP_ELIGIBLE_ROLES.includes(user?.role)&&<XPShopModal T={T} user={user} progress={progress} open={showShop} onClose={()=>setShowShop(false)} onSpendXP={(uid,pg)=>setProgress(prev=>({...prev,[uid]:pg}))} onPurchase={(item)=>{
@@ -8074,9 +8304,8 @@ export default function App() {
                   {userActivity.length===0&&<div style={{color:T.sub,fontSize:12}}>No activity yet</div>}
                 </div>
               </div>
-            </div>
 
-            {/* Activity log */}
+              {/* Activity log */}
             <div style={{background:T.card,border:`1px solid ${T.bor}`,borderRadius:14,padding:16,marginBottom:14}}>
               <div style={{display:"flex",alignItems:"center",gap:6,fontWeight:700,color:T.txt,marginBottom:10}}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={T.sub} strokeWidth="2" strokeLinecap="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg> Activity Log ({act.length})</div>
               <div style={{maxHeight:220,overflowY:"auto",display:"grid",gap:5}}>
@@ -8532,6 +8761,7 @@ export default function App() {
                   ))}
                 </div>
               )}
+            </div>
             </div>
           </div>
           <div style={{marginTop:24,padding:"12px 0",borderTop:`1px solid ${T.bor}`,display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11,color:T.faint}}><span>Neer Locker Staff Portal · v{VERSION}</span><span>Vigil HyperCore v{VIGIL_VERSION}</span></div><VersionBadge T={T}/>
@@ -9277,100 +9507,6 @@ function QBtn({onClick,children,T,big}) {
       onMouseEnter={e=>{e.currentTarget.style.background=T.bor;e.currentTarget.style.color=T.txt;}}
       onMouseLeave={e=>{e.currentTarget.style.background=T.surfH;e.currentTarget.style.color=T.sub;}}
     >{children}</button>
-  );
-}
-
-// ─── MONTHLY RATING MODAL ──────────────────────────────────────────────────
-function RatingModal({T,user,open,onClose}) {
-  const [rating,setRating]=useState(0);
-  const [hover,setHover]=useState(0);
-  const [feedback,setFeedback]=useState("");
-  const [submitting,setSubmitting]=useState(false);
-  const [submitted,setSubmitted]=useState(false);
-
-  if(!open) return null;
-
-  const submit=async()=>{
-    if(rating===0){return;}
-    setSubmitting(true);
-    const now=new Date();
-    const monthKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
-    try{
-      await SB.upsert("app_ratings",{
-        id:uid(),
-        user_id:user?.id||"",
-        user_name:user?.name||"Anonymous",
-        user_role:user?.role||"employee",
-        rating,
-        feedback:feedback.trim(),
-        month_key:monthKey,
-        submitted_at:Date.now(),
-      });
-      LS.set("nl3-last-rating",monthKey);
-      playSound("success");
-      setSubmitted(true);
-      setTimeout(()=>{onClose();setSubmitted(false);setRating(0);setFeedback("");},1800);
-    }catch(e){
-      console.error("Rating save failed",e);
-      setSubmitting(false);
-    }
-  };
-
-  const later=()=>{playSound("click");onClose();};
-
-  return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:700,padding:16,animation:"fadeUp .25s ease both"}}>
-      <div style={{background:T.surf,border:`1px solid ${T.bor}`,borderRadius:18,width:"100%",maxWidth:440,overflow:"hidden",animation:"tourCardIn .35s cubic-bezier(.34,1.56,.64,1) both",boxShadow:"0 20px 60px rgba(0,0,0,.4)"}}>
-        {submitted?(
-          <div style={{padding:"48px 28px",textAlign:"center"}}>
-            <div style={{fontSize:52,marginBottom:14,animation:"tourIconPop .5s cubic-bezier(.34,1.85,.64,1)"}}>{E("🎉","★")}</div>
-            <div style={{fontSize:20,fontWeight:800,color:T.txt,marginBottom:6,letterSpacing:"-0.3px"}}>Thank you!</div>
-            <div style={{fontSize:13,color:T.sub,lineHeight:1.6}}>Your feedback helps make Neer Locker better for everyone.</div>
-          </div>
-        ):(
-          <>
-            <div style={{padding:"22px 24px 12px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                <div style={{width:44,height:44,borderRadius:12,background:T.accent+"18",border:"none",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{E("⭐","★")}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:18,fontWeight:800,color:T.txt,letterSpacing:"-0.3px",fontFamily:"inherit"}}>How's Neer Locker?</div>
-                  <div style={{fontSize:12,color:T.sub,marginTop:2}}>Rate your experience this month</div>
-                </div>
-              </div>
-              <div style={{background:T.surfH,borderRadius:12,padding:"14px 12px",marginBottom:14}}>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(10,1fr)",gap:4}}>
-                  {[1,2,3,4,5,6,7,8,9,10].map(n=>{
-                    const active=n<=(hover||rating);
-                    return (
-                      <button key={n} onMouseEnter={()=>setHover(n)} onMouseLeave={()=>setHover(0)}
-                        onClick={()=>{setRating(n);playSound("click");haptic&&haptic("light");}}
-                        style={{background:active?T.accent:T.bg,color:active?"#fff":T.sub,border:`1.5px solid ${active?T.accent:T.bor}`,borderRadius:8,padding:"10px 0",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",transition:"all .12s",transform:active?"scale(1.05)":"scale(1)"}}
-                      >{n}</button>
-                    );
-                  })}
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.sub,fontWeight:600,marginTop:8,letterSpacing:"0.04em"}}>
-                  <span>POOR</span><span>AMAZING</span>
-                </div>
-              </div>
-              <div>
-                <div style={{fontSize:11,fontWeight:700,color:T.sub,letterSpacing:"0.05em",marginBottom:6}}>ANY IMPROVEMENT IDEAS? (OPTIONAL)</div>
-                <textarea value={feedback} onChange={e=>setFeedback(e.target.value)}
-                  placeholder="What could we add or fix? What do you love?"
-                  rows={3} maxLength={500}
-                  style={{width:"100%",background:T.bg,border:`1px solid ${T.bor}`,borderRadius:10,color:T.txt,padding:"10px 12px",fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",minHeight:72}}
-                />
-                <div style={{fontSize:10,color:T.mut,textAlign:"right",marginTop:3}}>{feedback.length}/500</div>
-              </div>
-            </div>
-            <div style={{display:"flex",gap:10,padding:"0 20px 20px"}}>
-              <button onClick={later} disabled={submitting} style={{flex:1,background:"none",color:T.sub,border:`1px solid ${T.bor}`,borderRadius:9999,padding:"11px 18px",fontWeight:500,fontSize:13,cursor:submitting?"not-allowed":"pointer",fontFamily:"inherit",opacity:submitting?0.5:1}}>Maybe later</button>
-              <button onClick={submit} disabled={rating===0||submitting} style={{flex:1.5,background:T.accent,color:"#fff",border:"none",borderRadius:9999,padding:"11px 18px",fontWeight:700,fontSize:13,cursor:(rating===0||submitting)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(rating===0||submitting)?0.4:1,transition:"opacity .15s"}}>{submitting?"Sending…":"Submit rating"}</button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
   );
 }
 
