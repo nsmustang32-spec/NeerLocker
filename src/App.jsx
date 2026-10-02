@@ -2203,30 +2203,35 @@ const NOTIF = {
   },
 
   // Trigger server-side push (calls Vercel function)
+  // Relays a push to a SPECIFIC user via the server. This is sent from whoever
+  // triggered the event (e.g. the task creator) to notify a DIFFERENT person,
+  // so it must NOT be gated on the sender's own browser permission — only the
+  // recipient's subscription (stored server-side) determines delivery.
   async send(userId, title, body, tag="neer-locker") {
     if(!NOTIF._canFire(userId+"|"+tag+"|"+title)) return;
-    // Only fire if notification permission is actually granted
-    if(NOTIF.permission()!=="granted") return;
     try {
       const r=await fetch("/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({userId, title, body, tag}),
       });
-      if(!r.ok) console.warn("[NOTIF] Push API returned",r.status);
+      if(!r.ok) console.warn("[NOTIF] Push API returned",r.status, await r.text().catch(()=>""));
+      else console.log("[NOTIF] send ->", title, await r.json().catch(()=>""));
     } catch(e) { console.warn("[NOTIF] Send push failed:", e); }
   },
 
-  // Broadcast to all users (no userId filter)
+  // Broadcast to all users (no userId filter) — same reasoning as send(): this
+  // notifies OTHER people, so the sender's own permission state is irrelevant.
   async broadcast(title, body, tag="neer-locker") {
     if(!NOTIF._canFire("broadcast|"+tag+"|"+title)) return;
-    if(NOTIF.permission()!=="granted") return; // guard broadcast too
     try {
-      await fetch("/api/send-push", {
+      const r=await fetch("/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({title, body, tag}),
       });
+      if(!r.ok) console.warn("[NOTIF] Broadcast API returned",r.status, await r.text().catch(()=>""));
+      else console.log("[NOTIF] broadcast ->", title, await r.json().catch(()=>""));
     } catch(e) { console.warn("[NOTIF] Broadcast push failed:", e); }
   },
 };
