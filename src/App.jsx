@@ -2208,7 +2208,7 @@ const NOTIF = {
     // Only fire if notification permission is actually granted
     if(NOTIF.permission()!=="granted") return;
     try {
-      const r=await fetch("https://neer-locker.vercel.app/api/send-push", {
+      const r=await fetch("/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({userId, title, body, tag}),
@@ -2222,7 +2222,7 @@ const NOTIF = {
     if(!NOTIF._canFire("broadcast|"+tag+"|"+title)) return;
     if(NOTIF.permission()!=="granted") return; // guard broadcast too
     try {
-      await fetch("https://neer-locker.vercel.app/api/send-push", {
+      await fetch("/api/send-push", {
         method: "POST",
         headers: {"Content-Type":"application/json"},
         body: JSON.stringify({title, body, tag}),
